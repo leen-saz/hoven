@@ -8,7 +8,7 @@ export const SESSION_HOURS = 12;
 export const RECHECK_MS = 10 * 60 * 1000; // pages re-read the user's permissions every 10 minutes
 export const DASHBOARDS = { ceo: 'التحليلات', creative: 'الكرييتف', control: 'لوحة القرارات', connectors: 'الربط', social: 'السوشال', journeys: 'الرحلات', content: 'المحتوى و SEO', maestro: 'المايسترو' } as const;
 // Department scope: empty = all departments. A department manager sees only their department.
-export const DEPTS = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل' } as const;
+export const DEPTS = { hoven: 'هوفن' } as const;
 export const PASSWORD_MIN = 10;
 
 export type Dashboard = keyof typeof DASHBOARDS;

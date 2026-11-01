@@ -119,25 +119,25 @@ describe('auth', () => {
   });
 
   it('department managers only reach their department copy', async () => {
-    const ivMgr = { ...member, dashboards: ['ceo', 'creative'], departments: ['iv'] };
+    const ivMgr = { ...member, dashboards: ['ceo', 'creative'], departments: ['hoven'] };
     const c = await cookieFor(ivMgr);
-    expect(rewrite(await M(req('/', c)))).toBe('https://well.example/dept/iv/');
-    expect(rewrite(await M(req('/?view=creative', c)))).toBe('https://well.example/dept/iv/?view=creative');
+    expect(rewrite(await M(req('/', c)))).toBe('https://well.example/dept/hoven/');
+    expect(rewrite(await M(req('/?view=creative', c)))).toBe('https://well.example/dept/hoven/?view=creative');
     expect(status(await M(req('/dept/foot/', c)))).toBe(403);
-    expect(passed(await M(req('/dept/iv/', c)))).toBe(true);
+    expect(passed(await M(req('/dept/hoven/', c)))).toBe(true);
     // No scope: sees everything and can open any department copy
     const all = await cookieFor({ ...member, dashboards: ['ceo'] });
     expect(passed(await M(req('/', all)))).toBe(true);
     expect(passed(await M(req('/dept/foot/', all)))).toBe(true);
     // The department copy does not open without analytics
     const ctl = await cookieFor({ ...member, dashboards: ['control'] });
-    expect(status(await M(req('/dept/iv/', ctl)))).toBe(302);
+    expect(status(await M(req('/dept/hoven/', ctl)))).toBe(302);
   });
 
   it('owner is never department-scoped; unknown departments are dropped', () => {
-    const o = A.sessionFor({ id: member.id, email: 'leen@example.com', departments: ['iv'] }, cfg);
+    const o = A.sessionFor({ id: member.id, email: 'leen@example.com', departments: ['hoven'] }, cfg);
     expect(o.depts).toEqual([]);
-    expect(A.sessionFor({ ...member, departments: ['iv', 'hacker'] }, cfg).depts).toEqual(['iv']);
+    expect(A.sessionFor({ ...member, departments: ['hoven', 'hacker'] }, cfg).depts).toEqual(['hoven']);
   });
 
   it('images need any dashboard; creative-only users get the creative copy', async () => {

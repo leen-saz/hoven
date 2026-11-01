@@ -690,6 +690,9 @@ const EN = {
   'النقرات':'Clicks',
   'الإيراد':'Revenue',
   'الإيراد (ر.س)':'Revenue (SAR)',
+  'طلبات سلة':'Salla orders',
+  'مبيعات سلة':'Salla sales',
+  'العائد الحقيقي (سلة ÷ الصرف)':'True ROAS (Salla ÷ spend)',
   'x-unused':'WhatsApp and Messenger revenue',
   'نقرات الرابط والسوايب':'Link clicks and swipes',
   'نسبة النقر':'CTR',
@@ -1281,6 +1284,11 @@ function delta(a,b,lowerIsBetter){
   return `<span class="delta ${good?'good':'bad'}">${up?'▲':'▼'} ${fmt(Math.abs(ch),1)}% <span style="color:var(--muted)">${tr('عن الفترة السابقة')}</span></span>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-crmby]'); if(!b) return; S.crmBy = b.dataset.crmby; render(); });
+function sallaSum(from,to){
+  const o={orders:0,net:0};
+  for(const r of D.salla||[]) if(r.day>=from&&r.day<=to){o.orders+=r.orders||0;o.net+=r.net||0;}
+  return o;
+}
 function renderKpis(now,prev){
   const a=derive(now.tot), b=cur&&cur.compareOk&&prev?derive(prev.tot):{};
   const K=[
@@ -1295,6 +1303,13 @@ function renderKpis(now,prev){
       ['ROAS',a.roas==null?'—':fmt(a.roas,2)+'×','',delta(a.roas,b.roas,false)],
     ] : []),
     ['الإيراد (ر.س)',fmt(a.conv),'',delta(a.conv,b.conv,false)],
+    ['ROAS',a.spend?fmt(a.conv/a.spend,2)+'×':'—','',delta(a.spend?a.conv/a.spend:null,b.spend?b.conv/b.spend:null,false)],
+    ...(D.salla&&D.salla.length ? (()=>{const x=sallaSum(S.from,S.to), y=cur&&cur.compareOk&&prev?sallaSum(cur.pFrom,cur.pTo):{};
+      return [
+        ['طلبات سلة',fmt(x.orders),'',delta(x.orders,y.orders,false)],
+        ['مبيعات سلة',sar(x.net),money(),delta(x.net,y.net,false)],
+        ['العائد الحقيقي (سلة ÷ الصرف)',a.spend?fmt(x.net/a.spend,2)+'×':'—','',delta(a.spend?x.net/a.spend:null,b.spend&&y.net!=null?y.net/b.spend:null,false)],
+      ];})() : []),
     ['الظهور',fmt(a.impr),'',delta(a.impr,b.impr,false)],
     ['نقرات الرابط والسوايب',fmt(a.clicks),'',delta(a.clicks,b.clicks,false)],
     ['نسبة النقر',pct(a.ctr),'',delta(a.ctr,b.ctr,false)],

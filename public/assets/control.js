@@ -314,7 +314,7 @@ export default async function mount() {
     spark_code: 'كود Spark', lead_form: 'نموذج فوري', type: 'النوع', keywords: 'الكلمات', negatives: 'السلبية', headlines: 'العناوين', descriptions: 'الأوصاف', final_url: 'الرابط', bidding: 'المزايدة' };
   function campaignHTML(s) {
     const p = s.params || {}, e = s.evidence || {}, pend = new Set(e.ai_pending || []);
-    const VAL = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل', leads: 'Leads', sales: 'Sales', all: 'الكل', female: 'نساء', male: 'رجال',
+    const VAL = { hoven: 'هوفن', leads: 'Leads', sales: 'Sales', all: 'الكل', female: 'نساء', male: 'رجال',
       ar: 'عربي', en: 'إنجليزي', whatsapp: 'واتساب', form: 'نموذج فوري', site: 'الموقع', conversations: 'المحادثات', purchase: 'الشراء', abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)',
       single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن', lead_form: 'نموذج ليد داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)', auto: 'تلقائي', target: 'تكلفة مستهدفة',
       complete_payment: 'Complete Payment', max_conv: 'أكبر عدد تحويلات', tcpa: 'تكلفة تحويل مستهدفة', book: 'احجز الآن', learn: 'اعرف أكثر', signup: 'سجّل', '65': '65+',
