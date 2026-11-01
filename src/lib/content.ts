@@ -60,7 +60,7 @@ export function audit(pages: PageFacts[]): Item[] {
   const broken = pages.filter(p => p.status >= 400 || p.status === 0);
   if (broken.length) add('fix', `صلّح ${broken.length} صفحة ما تفتح`, broken.map(p => p.url).slice(0, 5).join('، '), 1);
   const noTitle = pages.filter(p => p.status === 200 && (!p.title || p.title.length > 65));
-  if (noTitle.length) add('fix', `عناوين ناقصة أو طويلة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتايج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه الخدمة والمدينة.', 1);
+  if (noTitle.length) add('fix', `عناوين ناقصة أو طويلة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتايج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه المنتج أو الفئة.', 1);
   const noDesc = pages.filter(p => p.status === 200 && !p.description);
   if (noDesc.length) add('fix', `وصف (meta description) ناقص في ${noDesc.length} صفحة`, 'بدونه قوقل يختار أي نص من الصفحة.', 2);
   const badH1 = pages.filter(p => p.status === 200 && p.h1.length !== 1);
@@ -68,20 +68,21 @@ export function audit(pages: PageFacts[]): Item[] {
   const thin = pages.filter(p => p.status === 200 && p.words < 250);
   if (thin.length) add('page', `وسّع ${thin.length} صفحة محتواها قليل`, 'الصفحات القصيرة نادراً تطلع أو تنذكر في إجابات الذكاء الاصطناعي.', 2);
   if (!pages.some(p => p.faq)) add('faq', 'أضف أسئلة شائعة بالسعودي مع FAQPage schema', 'محركات الإجابة (AEO) تقتبس الأسئلة والأجوبة المباشرة.', 1);
-  if (!pages.some(p => p.schema.some(s => ['MedicalClinic', 'MedicalBusiness', 'LocalBusiness', 'Organization'].includes(s)))) add('fix', 'أضف schema للمنشأة (MedicalClinic / LocalBusiness)', 'يربط اسمك وعنوانك وخدماتك في نتايج البحث والخرائط.', 1);
+  if (!pages.some(p => p.schema.some(s => ['Organization', 'OnlineStore', 'Store', 'LocalBusiness', 'Product'].includes(s)))) add('fix', 'أضف schema للمتجر (Organization / OnlineStore + Product)', 'يربط اسم المتجر ومنتجاته وأسعاره في نتايج البحث.', 1);
   if (pages.some(p => p.status === 200 && !p.canonical)) add('fix', 'أضف رابط canonical لكل صفحة', 'يمنع تكرار الصفحات في الفهرسة.', 3);
   return items;
 }
 
 export function prompt(site: string, niche: string, competitors: string[], pages: PageFacts[], gsc: Gsc[], rules: Item[]): string {
-  return `أنت خبير SEO و AEO للسوق السعودي (الرياض). الموقع: ${site}. النيش: ${niche || 'غير محدد'}.
+  return `أنت خبير SEO و AEO لمتجر إلكتروني سعودي. الموقع: ${site}. النيش: ${niche || 'غير محدد'}.
+قاعدة: اعتمد فقط على النيش والصفحات تحت. لا تخترع خدمات أو منتجات أو مجال ما هو مذكور، وإذا الصفحات فاضية اكتب البنود على النيش بس.
 المنافسين اللي يعجبون الماركتير (نبرة وأسلوب كمرجع): ${competitors.join('، ') || 'ما فيه'}.
 صفحات الموقع (عنوان | كلمات | schema):
 ${pages.map(p => `- ${p.url} | ${p.title} | ${p.words} | ${p.schema.join(',') || '-'}`).join('\n')}
 أعلى كلمات البحث من Search Console (كلمة | ظهور | نقرات | ترتيب):
 ${gsc.slice(0, 30).map(g => `- ${g.query} | ${g.impressions} | ${g.clicks} | ${g.position.toFixed(1)}`).join('\n') || '- غير مربوط'}
 ملاحظات القواعد الثابتة: ${rules.map(r => r.title).join('؛ ')}
-المطلوب: حدد البوزشن والنيش باختصار، وبعدين 8 بنود محتوى جديدة (مقالات، صفحات خدمات، أسئلة شائعة) بالسعودي، كل بند يستهدف بحث حقيقي في الرياض، بدون ادعاءات طبية (وزارة الصحة).
+المطلوب: حدد البوزشن والنيش باختصار، وبعدين 8 بنود محتوى جديدة (مقالات، صفحات خدمات، أسئلة شائعة) بالسعودي، كل بند يستهدف بحث شراء حقيقي في السعودية عن منتجات النيش، بدون ادعاءات مبالغ فيها.
 رد JSON فقط بهالشكل: {"position":"...","niche":"...","items":[{"kind":"article|page|faq","title":"...","why":"...","priority":1}]}`;
 }
 
