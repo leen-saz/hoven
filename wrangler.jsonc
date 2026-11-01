@@ -1,0 +1,34 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hoven",
+  "main": "./src/app.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  // OWNER_EMAIL is config, not a credential, so it lives here instead of in secrets.
+  // Top level = local dev only. Each env has its own bindings; nothing is inherited.
+  "env": {
+    "staging": {
+      "name": "hoven-staging",
+      "workers_dev": true,
+      "vars": { "APP_ENV": "staging", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files-staging" }],
+      "ai": { "binding": "AI" },
+      "workflows": [{ "name": "hoven-journey-run-staging", "binding": "JOURNEY", "class_name": "JourneyRun" }]
+    },
+    "production": {
+      "name": "hoven",
+      "workers_dev": false,
+      "vars": { "APP_ENV": "production", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files" }],
+      "ai": { "binding": "AI" },
+      "workflows": [{ "name": "hoven-journey-run", "binding": "JOURNEY", "class_name": "JourneyRun" }],
+      // Hourly data refresh (src/lib/cron.ts): GitHub's own schedule never fired for this repo; every 5 minutes: due social posts
+      "triggers": { "crons": ["7 * * * *", "*/5 * * * *"] }
+    }
+  },
+  "vars": { "APP_ENV": "local", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files-local" }],
+  "ai": { "binding": "AI" },
+  "workflows": [{ "name": "hoven-journey-run-local", "binding": "JOURNEY", "class_name": "JourneyRun" }]
+}

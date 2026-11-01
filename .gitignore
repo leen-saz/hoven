@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+backup/
+*.dump
+__pycache__/
+.venv/
+coverage/
+playwright-report/
+test-results/
+
+# pipeline outputs
+pipeline/data.json
+pipeline/cache_ads.json
+pipeline/thumbs/
+pipeline/web/
+pipeline/well-ads-dashboard.html

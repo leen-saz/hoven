@@ -1,0 +1,118 @@
+name: deploy
+
+# Staging: automatic on every push to main, after CI passes.
+# Production: manual only (Actions > deploy > Run workflow > production), after CI passes, through the
+# `production` environment that only accepts main (ADR-0005).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "staging or production"
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.target || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    # Same gates as ci.yml (kept identical)
+    uses: leen-saz/eng-policies/.github/workflows/ci.yml@d833f62b55b60f1421f6813ca0a7fd678470c3c6
+    with:
+      # Astro needs Node >= 22.23.4; the runner's Node 22 resolved to 22.23.3
+      node-version: "24"
+      install-command: "npm ci"
+      lint-command: "npm run lint"
+      typecheck-command: "npm run typecheck"
+      unit-command: "npm run test:unit"
+      integration-command: "npm run test:integration"
+      build-command: "npm run build"
+      audit-command: "npm audit --audit-level=high"
+      # Python pipeline (phase 3), copied as-is from the old repo. Lint is correctness-only until phase 8.
+      python-version: "3.12"
+      python-requirements: pipeline/requirements.txt
+      python-lint-command: "ruff check --isolated --select E9,F63,F7,F82 pipeline supabase"
+      python-test-command: "cd pipeline && python -m unittest discover -s tests -p 'test_*.py' && python -m unittest discover -s modules -t ."
+      # Supabase migrations applied in order to a throwaway Postgres
+      db-engine: postgres
+      migrations-dir: supabase/migrations
+
+  deploy:
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.target || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      TARGET: ${{ inputs.target || 'staging' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Cloudflare account check
+        run: npx wrangler whoami
+      - name: workers.dev subdomain of the account
+        id: sub
+        run: |
+          set -euo pipefail
+          res="$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain")"
+          ok="$(jq -r '.success' <<<"$res")"; sub="$(jq -r '.result.subdomain // empty' <<<"$res")"
+          if [ "$ok" != "true" ] || [ -z "$sub" ]; then
+            echo "::error title=workers.dev::No workers.dev subdomain readable for this account. API errors: $(jq -c '.errors' <<<"$res")"
+            exit 1
+          fi
+          echo "::notice title=workers.dev::subdomain is $sub"
+          echo "sub=$sub" >> "$GITHUB_OUTPUT"
+      - name: Ensure the R2 bucket of this environment exists
+        run: |
+          bucket="hoven-files"; [ "$TARGET" = staging ] && bucket="hoven-files-staging"
+          if npx wrangler r2 bucket info "$bucket" >/dev/null 2>&1; then echo "$bucket exists"
+          else npx wrangler r2 bucket create "$bucket"; fi
+      - name: Build for ${{ env.TARGET }}
+        env:
+          CLOUDFLARE_ENV: ${{ env.TARGET }}
+        run: npm run build
+      - name: Deploy
+        id: deploy
+        env:
+          CLOUDFLARE_ENV: ${{ env.TARGET }}
+        run: |
+          npx wrangler deploy
+          if [ "$TARGET" = staging ]; then
+            url="https://hoven-staging.${{ steps.sub.outputs.sub }}.workers.dev"
+          else
+            # Production has no workers.dev address; the Pages project in proxy/ is its public link.
+            # The Astro build's redirect file is only for the Worker deploy; Pages must read proxy/wrangler.jsonc.
+            rm -f .wrangler/deploy/config.json
+            npx wrangler pages project list | grep -qw well-ads || npx wrangler pages project create well-ads --production-branch main
+            (cd proxy && npx wrangler pages deploy --branch main --commit-dirty=true)
+            res="$(curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/hoven")"
+            url="https://$(jq -r '.result.subdomain' <<<"$res")"
+          fi
+          echo "::notice title=deployed::$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: Smoke test
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            body="$(curl -fsS "$URL/api/health" || true)"; [ "$body" = '{"ok":true}' ] && break; sleep 5
+          done
+          [ "$body" = '{"ok":true}' ] || { echo "::error title=smoke::health check failed at $URL: $body"; exit 1; }
+          curl -fsSI "$URL/robots.txt" | grep -i "^x-robots-tag: noindex"
