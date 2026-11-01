@@ -43,9 +43,9 @@ import { ClientRouter } from 'astro:transitions';
           <h2 id="formTitle">رحلة جديدة</h2>
           <form id="f" novalidate>
             <input type="hidden" id="jid">
-            <label for="name">اسم الرحلة</label><input type="text" id="name" placeholder="مثال: متابعة ليد المحاليل">
+            <label for="name">اسم الرحلة</label><input type="text" id="name" placeholder="مثال: متابعة طلب جديد">
             <label for="trigger">تبدأ</label>
-            <select id="trigger"><option value="manual">يدوي (أنت تضيف العميل)</option><option value="lead_created">لما يجي ليد جديد</option></select>
+            <select id="trigger"><option value="manual">يدوي (أنت تضيف العميل)</option><option value="lead_created">لما يجي طلب جديد</option></select>
             <label>الخطوات</label><div id="steps" class="jr-steps"></div>
             <div class="bar"><select id="addType" style="max-width:180px"></select><button class="btn sm secondary" type="button" id="add">أضف خطوة</button></div>
             <label>طريقة التشغيل</label>

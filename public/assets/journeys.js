@@ -25,7 +25,7 @@ export default async function mount() {
   function setMode(m) {
     mode = m;
     $$('.seg [data-mode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mode === m)));
-    $('#modeNote').textContent = m === 'auto' ? 'تنبيه: تبدأ لحالها لكل ليد جديد وترسل بدون موافقة. تأكد من الرسائل والامتثال.' : 'ما تبدأ لأي عميل إلا لما تضغط تشغيل.';
+    $('#modeNote').textContent = m === 'auto' ? 'تنبيه: تبدأ لحالها لكل طلب جديد وترسل بدون موافقة. تأكد من الرسائل والامتثال.' : 'ما تبدأ لأي عميل إلا لما تضغط تشغيل.';
   }
   function edit(j) {
     $('#jid').value = j?.id || ''; $('#name').value = j?.name || ''; $('#trigger').value = j?.trigger || 'manual';
@@ -38,7 +38,7 @@ export default async function mount() {
     CH = r.channels; journeys = r.journeys;
     if (!$('#addType').innerHTML) $('#addType').innerHTML = Object.entries(CH).map(([k, c]) => `<option value="${k}">${esc(c.name)}${c.soon ? ' (قريباً)' : ''}</option>`).join('');
     $('#list').innerHTML = journeys.map(j => `<article class="card so-post" data-id="${j.id}"><div class="so-top"><b>${esc(j.name)}</b>
-        <span class="so-chip">${j.trigger === 'lead_created' ? 'ليد جديد' : 'يدوي'}</span><span class="so-chip">${j.mode === 'auto' ? 'تلقائي' : 'يدوي'}</span>
+        <span class="so-chip">${j.trigger === 'lead_created' ? 'طلب جديد' : 'يدوي'}</span><span class="so-chip">${j.mode === 'auto' ? 'تلقائي' : 'يدوي'}</span>
         <span class="so-st muted">${j.active ? 'مفعّلة' : 'موقفة'} · ${j.steps.length} خطوات</span></div>
       <form class="bar jr-start" novalidate><input type="text" placeholder="جوال 05… أو إيميل" aria-label="جوال أو إيميل" style="flex:1;min-width:160px;margin:0"><button class="btn sm primary">شغّل لعميل</button><button class="btn sm ghost" type="button" data-edit>عدّل</button></form></article>`).join('')
       || '<p class="muted">ما فيه رحلات. ابدأ من النموذج.</p>';

@@ -6,7 +6,7 @@ from datetime import date
 
 MIN_DAYS_BEFORE_PAUSE = 3          # ما فيه إيقاف قبل 3 أيام من تشغيل الحملة أو الإعلان
 MAX_BUDGET_CHANGE_PCT = 20         # أقصى رفع أو تنزيل ميزانية بخطوة وحدة (قاعدة +20%)
-KILL_MULTIPLIER = 2.0              # قاعدة الإيقاف #56: صرف ≥ ضعف تكلفة الليد المستهدفة بدون نتيجة
+KILL_MULTIPLIER = 2.0              # قاعدة الإيقاف #56: صرف ≥ ضعف تكلفة الطلب المستهدفة بدون نتيجة
 ALLOWED_OBJECTIVES = {"lead", "sales"}   # Sales أو Leads بس، أبد مو Traffic
 FORBIDDEN_OBJECTIVES = {"traffic"}
 GEO = "الرياض بس (ميتا: نصف قطر 10 ميل)"

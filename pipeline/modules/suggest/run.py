@@ -36,16 +36,16 @@ def plan(s):
     if k in ("pause", "pause_campaign"):
         s["before"], s["after"] = {"status": "ACTIVE"}, {"status": "PAUSED"}
         s["expect"] = {"save_per_week": round(sp, 2)}
-        s["measure_plan"] = "بعد 3 و7 أيام: صرف الحملة ينزل بقيمة هذا الإعلان، والليدز ما تنزل."
+        s["measure_plan"] = "بعد 3 و7 أيام: صرف الحملة ينزل بقيمة هذا الإعلان، والطلبات ما تنزل."
         s["reversal_plan"] = "إعادة تشغيل الإعلان من نفس المكان (resume)."
     elif k in ("budget_up", "budget_down"):
         pct = p.get("pct") or 0
         s["before"], s["after"] = {"budget": None, "note": "يتقرا من المنصة وقت التنفيذ"}, {"change_pct": pct if k == "budget_up" else -pct}
         s["expect"] = {"extra_spend_per_week": round(sp * pct / 100, 2), "extra_leads_per_week": round(ld * pct / 100, 1)}
-        s["measure_plan"] = "بعد 3 و7 أيام: تكلفة الليد ما تطلع أكثر من 15% فوق قبل الرفع."
+        s["measure_plan"] = "بعد 3 و7 أيام: تكلفة الطلب ما تطلع أكثر من 15% فوق قبل الرفع."
         s["reversal_plan"] = f"ترجيع الميزانية للقيمة السابقة (-{pct}%)."
         if ld < 20:
-            risk.append("ليدز قليلة")
+            risk.append("طلبات قليلة")
     else:
         s["before"] = s["after"] = None
         s["expect"] = {}
@@ -114,11 +114,11 @@ def build(data, today=None):
         if a.get("goal") == "lead" and t:
             if x["l7"] == 0 and x["s7"] >= rules.KILL_MULTIPLIER * t and (rules.days_running(first, today) or 0) >= rules.MIN_DAYS_BEFORE_PAUSE:
                 add(p, "ad", tid, a.get("name"), a.get("campaign"), "pause",
-                    f"صرف {x['s7']:.0f} ريال آخر 7 أيام بدون ولا ليد، وهذا ضعف تكلفة الليد المستهدفة ({t:.2f}) أو أكثر.", ev, 90)
+                    f"صرف {x['s7']:.0f} ريال آخر 7 أيام بدون ولا طلب، وهذا ضعف تكلفة الطلب المستهدفة ({t:.2f}) أو أكثر.", ev, 90)
             elif x["l7"] >= 10 and x["s7"] / x["l7"] <= 0.8 * t:
                 cpl = x["s7"] / x["l7"]
                 add(p, "ad", tid, a.get("name"), a.get("campaign"), "budget_up",
-                    f"جاب {x['l7']:.0f} ليد آخر 7 أيام بتكلفة {cpl:.2f} ريال، أقل من هدف المنصة ({t:.2f}) بـ {100 - 100 * cpl / t:.0f}%. ارفع ميزانية مجموعته 20%.",
+                    f"جاب {x['l7']:.0f} طلب آخر 7 أيام بتكلفة {cpl:.2f} ريال، أقل من هدف المنصة ({t:.2f}) بـ {100 - 100 * cpl / t:.0f}%. ارفع ميزانية مجموعته 20%.",
                     {**ev, "cpl": round(cpl, 2)}, 60, {"pct": rules.MAX_BUDGET_CHANGE_PCT, "scope": "adset"})
         tc = target_chat.get(p)
         if a.get("goal") == "messages" and tc:

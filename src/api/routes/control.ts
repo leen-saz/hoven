@@ -223,7 +223,7 @@ export const campaigns = {
       params: { ...f, objective: f.objective, platform }, reason: `طلب حملة جديدة لقسم ${DEPTS[dept as keyof typeof DEPTS]} من ${user.email}`,
       evidence: { moh, ai_pending: aiPending, dept }, priority: 70, source: 'manual', status: 'open',
       before: null, after, risk: [...(moh.length ? ['وزارة الصحة'] : []), ...(aiPending.length ? ['يحتاج تعبئة كلود'] : [])],
-      expect: {}, measure_plan: 'أول 3 أيام: الصرف وتكلفة الليد مقابل هدف المنصة، وبعد 7 أيام القرار: تكمل أو تتوقف.',
+      expect: {}, measure_plan: 'أول 3 أيام: الصرف وتكلفة الطلب مقابل هدف المنصة، وبعد 7 أيام القرار: تكمل أو تتوقف.',
       reversal_plan: 'إيقاف الحملة (pause_campaign).', revision: 1, requested_by: user.email,
     };
     s.digest = await digest({ platform, level: s.level, target_id: s.target_id, kind: s.kind, params: s.params, after });
