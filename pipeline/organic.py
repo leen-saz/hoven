@@ -9,9 +9,9 @@ from classify import classify_pair
 from common import http
 
 GRAPH = "https://graph.facebook.com/v23.0"
-FB_PAGES = ("Hoven Care.",)
-HIDDEN_FB_PAGES = ("Hoven Home Care", "Hoven Women Health")
-IG_USER = "hoven.sa"
+FB_PAGES = ((__import__("os").environ.get("HOVEN_FB_PAGE") or "Hoven").strip(),)   # page name as in /me/accounts (Hoven.gcc, id 112929865237703)
+HIDDEN_FB_PAGES = ()
+IG_USER = "hoven.gcc"
 PAGE_PERMS = (
     "pages_show_list",
     "pages_read_engagement",
@@ -577,7 +577,7 @@ def _load_fb_pages(graph, start, end, prev_pages):
         posts_status = "pending" if posts_err else "ok"
         # Hoven Care. يرجع 200 فارغاً لمنشورات الصفحة ورؤاها عندما تنقص الصلاحية.
         # السلسلة الفارغة ليست صفراً مقاساً، فتبقى «بانتظار الصلاحية».
-        if _norm(name) == _norm("Hoven Care.") and not days and not posts and insights == "ok" and posts_status == "ok":
+        if _norm(name) == _norm(FB_PAGES[0]) and not days and not posts and insights == "ok" and posts_status == "ok":
             insights = "pending"
             posts_status = "pending"
         needs = [f"مقياس غير متاح في هذا الإصدار: {m}" for m in bad]
