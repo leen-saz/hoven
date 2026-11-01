@@ -8,7 +8,7 @@ export interface Gsc { query: string; clicks: number; impressions: number; posit
 
 export const AI_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const MAX_PAGES = 12;
-const UA = { 'user-agent': 'HovenContentAgent/1.0 (+https://hoven.pages.dev)' };
+const UA = { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', 'accept': 'text/html,application/xhtml+xml', 'accept-language': 'ar,en;q=0.8' };   // store hosts (Salla/Cloudflare) block bot user agents
 
 export function normalizeSite(s: unknown): string | null {
   try {
