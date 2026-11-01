@@ -11,7 +11,8 @@
 المخرجات: data.json  {ads: {key: meta}, rows: [[key, date, spend, impr, clicks, leads], ...]}
 - كل المبالغ بالريال (Meta بالدولار × 3.75، وتيك توك كذلك إذا كانت عملة الحساب الدولار).
 - النقرات: ميتا = نقرات الرابط، جوجل = النقرات، سناب = السوايب، تيك توك = clicks.
-- الليدز: ميتا = action_type "lead"، جوجل = conversions، سناب = native_leads، تيك توك = conversion.
+- هوفن: عمود الليدز = الطلبات (ميتا omni_purchase، جوجل تحويلات فئة PURCHASE، سناب conversion_purchases)،
+  وعمود المحادثات = قيمة الطلبات بالريال (الإيراد). ADR-0007.
 - تيك توك من Marketing API إن وُجد TIKTOK_ACCESS_TOKEN و TIKTOK_ADVERTISER_IDS، وإلا من فرع tiktok-data.
 - إذا فشلت منصة، تبقى آخر بيانات كاملة لها مع علامة stale_from. لا يطبع أي توكن.
 """
@@ -133,7 +134,7 @@ class Plat:
 
     def row(self, key, date, spend, impr, clicks, leads, conv=0):
         if spend or impr or clicks or leads or conv:
-            self.rows.append([key, date, round(float(spend), 2), int(impr), int(clicks), round(float(leads), 2), int(conv)])
+            self.rows.append([key, date, round(float(spend), 2), int(impr), int(clicks), round(float(leads), 2), int(round(float(conv)))])
 
 
 def google_delivery(ad_status, group_status, campaign_status):
@@ -183,7 +184,7 @@ def carry_forward(prev_ads, fresh_ads, prefix):
 
 GOALS = {"lead": "ليدز", "messages": "محادثات", "profile": "زيارات البروفايل", "traffic": "زيارات الموقع", "other": "أخرى"}
 def meta_goal(opt):
-    if opt in ("QUALITY_LEAD", "LEAD_GENERATION", "OFFSITE_CONVERSIONS"): return "lead"
+    if opt in ("QUALITY_LEAD", "LEAD_GENERATION", "OFFSITE_CONVERSIONS", "VALUE"): return "lead"   # Hoven: "lead" = sale
     if opt in ("REPLIES", "CONVERSATIONS"): return "messages"
     if opt == "PROFILE_VISIT": return "profile"
     if opt in ("LINK_CLICKS", "LANDING_PAGE_VIEWS"): return "traffic"
@@ -199,18 +200,20 @@ def meta(P):
             nxt = r.get("paging", {}).get("next")
             if not nxt: return
             r = retry(http, nxt)
-    act = lambda acts, t: next((int(a["value"]) for a in acts or [] if a["action_type"] == t), 0)
+    act = lambda acts, t: next((float(a["value"]) for a in acts or [] if a["action_type"] == t), 0)
+    buy = lambda acts: act(acts, "omni_purchase") or act(acts, "purchase")   # Hoven: result = purchase (store)
     ids, goal = set(), {}
     for s, e in windows(FROM, TO):
         for x in pages(g(f"{A}/insights", level="ad", time_increment=1, limit=500,
                          breakdowns="publisher_platform",
                          time_range=json.dumps({"since": ds(s), "until": ds(e)}),
-                         fields="ad_id,spend,impressions,inline_link_clicks,actions")):
+                         fields="ad_id,spend,impressions,inline_link_clicks,actions,action_values,account_currency")):
             ids.add(x["ad_id"])
             key, _plat = meta_key(x["ad_id"], x.get("publisher_platform"))
-            P.row(key, x["date_start"], float(x.get("spend", 0)) * USD_SAR,
-                  x.get("impressions", 0), x.get("inline_link_clicks", 0), act(x.get("actions"), "lead"),
-                  act(x.get("actions"), "onsite_conversion.messaging_conversation_started_7d"))
+            fx = USD_SAR if x.get("account_currency", "USD") == "USD" else 1
+            P.row(key, x["date_start"], float(x.get("spend", 0)) * fx,
+                  x.get("impressions", 0), x.get("inline_link_clicks", 0), buy(x.get("actions")),
+                  buy(x.get("action_values")) * fx)
     f = ("name,effective_status,adset{name,effective_status,optimization_goal},campaign{name,effective_status},"
          "creative.thumbnail_width(320).thumbnail_height(320){thumbnail_url,image_url,title,body,object_type,video_id,"
          "instagram_permalink_url,effective_object_story_id,object_story_id}")
@@ -347,6 +350,15 @@ def google(P):
         data=json.dumps({"query": query}).encode(), method="POST",
         headers={"Authorization": f"Bearer {tok}", "login-customer-id": E["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
                  "Content-Type": "application/json"}).get("results", [])
+    buys = {}
+    try:
+        for r in q("SELECT ad_group_ad.ad.id, segments.date, metrics.conversions, metrics.conversions_value FROM ad_group_ad "
+                   f"WHERE segments.date BETWEEN '{ds(FROM)}' AND '{ds(TO)}' AND segments.conversion_action_category = 'PURCHASE'"):
+            k = ("g" + r["adGroupAd"]["ad"]["id"], r["segments"]["date"])
+            b = buys.setdefault(k, [0.0, 0.0]); m = r.get("metrics", {})
+            b[0] += float(m.get("conversions", 0)); b[1] += float(m.get("conversionsValue", 0))
+    except Exception as ex:
+        print("جوجل: تعذر سحب المشتريات", str(ex)[:160], file=sys.stderr)
     for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.responsive_search_ad.headlines, "
                "ad_group_ad.ad.responsive_search_ad.descriptions, ad_group_ad.ad.final_urls, ad_group_ad.status, "
                "ad_group.status, campaign.status, campaign.advertising_channel_type, campaign.advertising_channel_sub_type, "
@@ -371,8 +383,9 @@ def google(P):
             word, live = google_delivery(r["adGroupAd"]["status"], r["adGroup"]["status"], r["campaign"]["status"])
             P.ads[key]["status"] = word
             P.ads[key]["live"] = live
+        b = buys.get((key, r["segments"]["date"]), (0, 0))
         P.row(key, r["segments"]["date"], int(m.get("costMicros", 0)) / 1e6, m.get("impressions", 0),
-              m.get("clicks", 0), float(m.get("conversions", 0)))
+              m.get("clicks", 0), b[0], b[1])
     # حالة كل إعلان حتى الذي بلا صرف في النافذة. بدونها يُعلَّم النشط خطأً كمتوقف.
     try:
         for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.final_urls, ad_group_ad.status, "
@@ -408,6 +421,10 @@ def snap(P):
     H = {"Authorization": f"Bearer {tok}"}
     g = lambda p, **q: retry(http, f"https://adsapi.snapchat.com/v1/{p}" + ("?" + urllib.parse.urlencode(q) if q else ""), headers=H)
     A = E["SNAP_AD_ACCOUNT_ID"]
+    try:
+        fx = USD_SAR if g(f"adaccounts/{A}")["adaccounts"][0]["adaccount"].get("currency", "USD") == "USD" else 1
+    except Exception:
+        fx = USD_SAR
     camps = {c["campaign"]["id"]: c["campaign"] for c in g(f"adaccounts/{A}/campaigns")["campaigns"]}
     squads = {s["adsquad"]["id"]: s["adsquad"] for s in g(f"adaccounts/{A}/adsquads")["adsquads"]}
     ads = {a["ad"]["id"]: a["ad"] for a in g(f"adaccounts/{A}/ads")["ads"]}
@@ -417,7 +434,7 @@ def snap(P):
         c_from = max(FROM, datetime.strptime(made[:10], "%Y-%m-%d").replace(tzinfo=RIYADH)) if made else FROM
         for s, e in windows(c_from, TO):   # سناب يقبل 31 يوم كحد أقصى للتقسيم اليومي. أي خطأ يوقف السحب كامل
             st = g(f"campaigns/{cid}/stats", granularity="DAY", breakdown="ad",
-                   fields="impressions,swipes,spend,native_leads",
+                   fields="impressions,swipes,spend,conversion_purchases,conversion_purchases_value",
                    start_time=s.strftime("%Y-%m-%dT00:00:00+03:00"),
                    end_time=(e + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00+03:00"))
             for b in st["timeseries_stats"][0]["timeseries_stat"].get("breakdown_stats", {}).get("ad", []):
@@ -425,8 +442,8 @@ def snap(P):
                     x = t.get("stats", {})
                     if x.get("spend") or x.get("impressions"):
                         seen.add(b["id"])
-                        P.row("s" + b["id"], t["start_time"][:10], x.get("spend", 0) / 1e6, x.get("impressions", 0),
-                              x.get("swipes", 0), x.get("native_leads", 0))
+                        P.row("s" + b["id"], t["start_time"][:10], x.get("spend", 0) / 1e6 * fx, x.get("impressions", 0),
+                              x.get("swipes", 0), x.get("conversion_purchases", 0), x.get("conversion_purchases_value", 0) / 1e6 * fx)
     def is_live(a):
         sq = squads.get(a["ad_squad_id"], {})
         return a["status"] == "ACTIVE" and sq.get("status") == "ACTIVE" and camps.get(sq.get("campaign_id"), {}).get("status") == "ACTIVE"
@@ -448,7 +465,7 @@ def snap(P):
         word, live = delivery(a)
         base = dict(platform="snap", family="snap", name=a["name"], campaign=camps[sq["campaign_id"]]["name"], group=sq["name"],
                     status=word, live=live,
-                    goal="lead" if camps[sq["campaign_id"]].get("objective") in ("LEADS", "LEAD_GENERATION") else "other")
+                    goal="lead" if camps[sq["campaign_id"]].get("objective") in ("LEADS", "LEAD_GENERATION", "SALES", "WEB_CONVERSION") else "other")
         old = CACHE.get(key, {})
         if old.get("thumb") and old.get("media_type"):
             merged = {**old, **base}

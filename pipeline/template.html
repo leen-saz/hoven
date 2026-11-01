@@ -424,18 +424,18 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
     <div class="hint">اضغط على أي عمود عشان تركّز الفترة عليه.</div>
     <div class="charts">
       <div><div class="sub" id="chSpendT">الصرف (ر.س)</div><div class="chart" id="chSpend"></div></div>
-      <div><div class="sub" id="chLeadsT">الليدز</div><div class="chart" id="chLeads"></div></div>
-      <div><div class="sub">تكلفة الليد حسب المنصة (ر.س)</div><div class="chart" id="chCpl"></div></div>
+      <div><div class="sub" id="chLeadsT">الطلبات</div><div class="chart" id="chLeads"></div></div>
+      <div><div class="sub">تكلفة الطلب حسب المنصة (ر.س)</div><div class="chart" id="chCpl"></div></div>
     </div>
   </section>
 
   <section data-mode="ads" data-page="overview" class="panel" aria-labelledby="biH">
     <div class="panel-h"><h2 id="biH">تحليل الأداء</h2></div>
     <div class="bi-grid">
-      <div class="bi-card"><h3>القمع: من الظهور إلى الليد</h3><div class="funnel" id="funnel"></div></div>
-      <div class="bi-card"><h3>حصة كل منصة من الصرف ومن الليدز</h3><div id="share"></div><div class="hint">لما تكون حصة الليدز أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.</div></div>
+      <div class="bi-card"><h3>القمع: من الظهور إلى الطلب</h3><div class="funnel" id="funnel"></div></div>
+      <div class="bi-card"><h3>حصة كل منصة من الصرف ومن الطلبات</h3><div id="share"></div><div class="hint">لما تكون حصة الطلبات أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.</div></div>
       <div class="bi-card"><h3>وتيرة الشهر الحالي وتوقع نهايته</h3><div id="pace"></div><div class="hint">التوقع = المعدل اليومي لهذا الشهر × عدد أيامه، وما يحسب اليوم الحالي لأنه ناقص.</div></div>
-      <div class="bi-card"><h3>تكلفة الليد حسب يوم الأسبوع</h3><div class="tbl"><table class="heat" id="heat"></table></div><div class="hint">الأغمق = الأغلى.</div></div>
+      <div class="bi-card"><h3>تكلفة الطلب حسب يوم الأسبوع</h3><div class="tbl"><table class="heat" id="heat"></table></div><div class="hint">الأغمق = الأغلى.</div></div>
     </div>
   </section>
 
@@ -444,7 +444,7 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
     <div class="dcards" id="deptCards"></div>
   </section>
   <section data-mode="ads" data-page="depts" class="panel" aria-labelledby="dxH">
-    <div class="panel-h"><h2 id="dxH">القسم × المنصة</h2><span class="sub">الصرف · الليدز · تكلفة الليد</span></div>
+    <div class="panel-h"><h2 id="dxH">القسم × المنصة</h2><span class="sub">الصرف · الطلبات · تكلفة الطلب</span></div>
     <div class="tbl"><table id="tDeptPlat"></table></div>
   </section>
   <section data-mode="ads" data-page="channels" class="panel" aria-labelledby="platH">
@@ -453,13 +453,13 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
   </section>
 
   <section data-mode="ads" data-page="channels" class="panel" aria-labelledby="campH">
-    <div class="panel-h"><h2 id="campH">الحملات</h2><div class="row"><span class="sub" id="campCount"></span><label class="field" for="tgt">هدف تكلفة الليد <input type="number" id="tgt" min="0" step="0.5" inputmode="decimal" placeholder="مثلاً 15" style="width:90px"> ر.س</label><button type="button" class="btn" id="csv">تصدير Excel (CSV)</button></div></div>
+    <div class="panel-h"><h2 id="campH">الحملات</h2><div class="row"><span class="sub" id="campCount"></span><label class="field" for="tgt">هدف تكلفة الطلب <input type="number" id="tgt" min="0" step="0.5" inputmode="decimal" placeholder="مثلاً 15" style="width:90px"> ر.س</label><button type="button" class="btn" id="csv">تصدير Excel (CSV)</button></div></div>
     <div class="hint">اضغط على أي حملة عشان تفلتر اللوحة كاملة عليها.</div>
     <div class="tbl"><table id="tCamp"></table></div>
   </section>
 
   <section data-mode="ads" data-page="channels" class="panel" aria-labelledby="monH">
-    <div class="panel-h"><h2 id="monH">شهر بشهر</h2><span class="sub">الصرف والليدز وتكلفة الليد لكل منصة</span></div>
+    <div class="panel-h"><h2 id="monH">شهر بشهر</h2><span class="sub">الصرف والطلبات وتكلفة الطلب لكل منصة</span></div>
     <div class="tbl"><table class="pv" id="tMonth"></table></div>
   </section>
 
@@ -483,8 +483,8 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
         <label class="field" for="sort">ترتيب
           <select id="sort">
             <option value="spend">الأعلى صرفاً</option>
-            <option value="leads">الأكثر نتائج (ليدز ومحادثات)</option>
-            <option value="cpl">الأقل تكلفة لليد</option>
+            <option value="leads">الأكثر نتائج (طلبات والإيراد)</option>
+            <option value="cpl">الأقل تكلفة للطلب</option>
             <option value="ctr">الأعلى نسبة نقر</option>
             <option value="impr">الأكثر ظهوراً</option>
           </select>
@@ -499,11 +499,11 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
   <section data-mode="ads" data-page="notes" class="panel" aria-label="ملاحظات البيانات">
     <h2>كيف تنحسب الأرقام</h2>
     <div class="ins">
-      <div class="item"><span class="b">تكلفة الليد</span><span class="sub">صرف إعلانات الليدز فقط ÷ عدد الليدز.</span></div>
+      <div class="item"><span class="b">تكلفة الطلب</span><span class="sub">صرف إعلانات الطلبات فقط ÷ عدد الطلبات.</span></div>
       <div class="item"><span class="b">ميتا</span><span class="sub">فيسبوك وإنستغرام منفصلان، والدولار يُحسب بـ 3.75.</span></div>
       <div class="item"><span class="b">جوجل</span><span class="sub">يتقسم حسب نوع الحملة. سناب وتيك توك كما هما.</span></div>
       <div class="item"><span class="b">المقارنة</span><span class="sub">الفترة السابقة بنفس عدد الأيام، بتوقيت الرياض.</span></div>
-      <div class="item"><span class="b">تيك توك</span><span class="sub">يأتي من فرع tiktok-data، والليد من حملات الليدز.</span></div>
+      <div class="item"><span class="b">تيك توك</span><span class="sub">يأتي من فرع tiktok-data، والطلب من حملات الطلبات.</span></div>
     </div>
   </section>
   <section data-mode="ads organic" data-page="notes" class="panel notes" id="rulesNote" aria-label="تصنيف الأقسام"></section>
@@ -566,7 +566,7 @@ const EN = {
   'الاقفالات (مدفوعة)':'Closings (paid)',
   'المدفوع':'Paid',
   'الاقفالات حسب':'Closings by',
-  'يوم الليد':'Lead day',
+  'يوم الطلب':'Lead day',
   'يوم الدفع':'Payment day',
   'تكلفة الاقفالة':'Cost per closing',
   'نسبة الاقفال':'Close rate',
@@ -599,27 +599,27 @@ const EN = {
   'شهري':'Monthly',
   'اضغط على أي عمود عشان تركّز الفترة عليه.':'Click a bar to focus the range on it.',
   'الصرف (ر.س)':'Spend (SAR)',
-  'الليدز':'Leads',
-  'تكلفة الليد حسب المنصة (ر.س)':'Cost per lead by platform (SAR)',
+  'الطلبات':'Leads',
+  'تكلفة الطلب حسب المنصة (ر.س)':'Cost per lead by platform (SAR)',
   'تحليل الأداء':'Performance',
-  'القمع: من الظهور إلى الليد':'Funnel: impressions to leads',
-  'حصة كل منصة من الصرف ومن الليدز':'Each platform’s share of spend and leads',
-  'لما تكون حصة الليدز أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'When the lead share is higher than the spend share, the platform is pulling more than its weight.',
+  'القمع: من الظهور إلى الطلب':'Funnel: impressions to orders',
+  'حصة كل منصة من الصرف ومن الطلبات':'Each platform’s share of spend and orders',
+  'لما تكون حصة الطلبات أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'When the lead share is higher than the spend share, the platform is pulling more than its weight.',
   'وتيرة الشهر الحالي وتوقع نهايته':'This month’s pace and month-end forecast',
   'التوقع = المعدل اليومي لهذا الشهر × عدد أيامه، وما يحسب اليوم الحالي لأنه ناقص.':'Forecast = this month’s daily average × its days. Today is left out because it is incomplete.',
-  'تكلفة الليد حسب يوم الأسبوع':'Cost per lead by weekday',
+  'تكلفة الطلب حسب يوم الأسبوع':'Cost per lead by weekday',
   'الأغمق = الأغلى.':'Darker means more expensive.',
   'بطاقات الأقسام':'Department cards',
   'القسم × المنصة':'Department × platform',
-  'الصرف · الليدز · تكلفة الليد':'Spend · leads · cost per lead',
+  'الصرف · الطلبات · تكلفة الطلب':'Spend · orders · cost per lead',
   'المنصات':'Platforms',
   'الحملات':'Campaigns',
-  'هدف تكلفة الليد':'Cost-per-lead target',
+  'هدف تكلفة الطلب':'Cost-per-lead target',
   'ر.س':'SAR',
   'تصدير Excel (CSV)':'Export Excel (CSV)',
   'اضغط على أي حملة عشان تفلتر اللوحة كاملة عليها.':'Click a campaign to filter the whole report.',
   'شهر بشهر':'Month by month',
-  'الصرف والليدز وتكلفة الليد لكل منصة':'Spend, leads, and cost per lead by platform',
+  'الصرف والطلبات وتكلفة الطلب لكل منصة':'Spend, orders, and cost per lead by platform',
   'تفصيل هرمي':'Breakdown',
   'فتح الكل':'Expand all',
   'طي الكل':'Collapse all',
@@ -633,21 +633,21 @@ const EN = {
   'متوقف':'Paused',
   'ترتيب':'Sort',
   'الأعلى صرفاً':'Highest spend',
-  'الأكثر نتائج (ليدز ومحادثات)':'Most results (leads and conversations)',
-  'الأقل تكلفة لليد':'Lowest cost per lead',
+  'الأكثر نتائج (طلبات والإيراد)':'Most results (orders and revenue)',
+  'الأقل تكلفة للطلب':'Lowest cost per lead',
   'الأعلى نسبة نقر':'Highest CTR',
   'الأكثر ظهوراً':'Most impressions',
   'عرض المزيد':'Show more',
   'كيف تنحسب الأرقام':'How the numbers are calculated',
-  'تكلفة الليد':'Cost per lead',
-  'صرف إعلانات الليدز فقط ÷ عدد الليدز.':'Spend on lead ads only ÷ number of leads.',
+  'تكلفة الطلب':'Cost per lead',
+  'صرف إعلانات الطلبات فقط ÷ عدد الطلبات.':'Spend on lead ads only ÷ number of orders.',
   'ميتا':'Meta',
   'فيسبوك وإنستغرام منفصلان، والدولار يُحسب بـ 3.75.':'Facebook and Instagram are separate. Dollars convert at 3.75.',
   'يتقسم حسب نوع الحملة. سناب وتيك توك كما هما.':'Split by campaign type. Snapchat and TikTok stay as they are.',
   'المقارنة':'Comparison',
   'الفترة السابقة بنفس عدد الأيام، بتوقيت الرياض.':'The previous period has the same number of days, in Riyadh time.',
   'تيك توك':'TikTok',
-  'يأتي من فرع tiktok-data، والليد من حملات الليدز.':'Comes from the tiktok-data branch. Leads come from lead campaigns.',
+  'يأتي من فرع tiktok-data، والطلب من حملات الطلبات.':'Comes from the tiktok-data branch. Orders come from lead campaigns.',
   'المنشورات':'Posts',
   'الأحدث':'Newest',
   'الأكثر مشاهدة':'Most views',
@@ -688,20 +688,21 @@ const EN = {
   'الصرف':'Spend',
   'الظهور':'Impressions',
   'النقرات':'Clicks',
-  'محادثات':'Conversations',
-  'محادثات واتساب وماسنجر':'WhatsApp and Messenger conversations',
+  'الإيراد':'Revenue',
+  'الإيراد (ر.س)':'Revenue (SAR)',
+  'x-unused':'WhatsApp and Messenger revenue',
   'نقرات الرابط والسوايب':'Link clicks and swipes',
   'نسبة النقر':'CTR',
   'تكلفة النقرة':'CPC',
   'تكلفة الألف ظهور':'CPM',
-  'تكلفة المحادثة':'Cost per conversation',
+  'تكلفة الطلب':'Cost per conversation',
   'المنصة':'Platform',
   'الحصة':'Share',
-  'تكلفة الليد قبل':'Previous cost per lead',
+  'تكلفة الطلب قبل':'Previous cost per lead',
   'إعلانات صرفت':'Ads with spend',
   'نشط / صرف':'Active / spending',
   'المجموع':'Total',
-  'ليدز':'Leads',
+  'طلبات':'Leads',
   'شهر':'Month',
   'الاسم':'Name',
   'الإعلان':'Ad',
@@ -738,8 +739,8 @@ const EN = {
   'فيديو':'Video',
   'صورة':'Image',
   'أخرى':'Other',
-  'ليدز':'Leads',
-  'محادثات':'Conversations',
+  'طلبات':'Leads',
+  'الإيراد':'Revenue',
   'زيارات البروفايل':'Profile visits',
   'زيارات الموقع':'Website visits',
   '— لا مقارنة':'— no comparison',
@@ -757,7 +758,7 @@ const EN = {
   'فلترة على هذي الحملة':'Filter to this campaign',
   'لا توجد بيانات.':'No data.',
   'لا توجد بيانات في هذه الفترة.':'No data in this range.',
-  'ما فيه ليدز في هذي الفترة.':'No leads in this range.',
+  'ما فيه طلبات في هذي الفترة.':'No orders in this range.',
   'لا يوجد كرييتف يطابق الفلاتر في هذه الفترة.':'No creative matches the filters in this range.',
   'لا يوجد منشور يطابق البحث أو الفلاتر في هذه الفترة.':'No post matches the search or filters in this range.',
   'لا توجد حملات.':'No campaigns.',
@@ -806,9 +807,9 @@ const EN = {
   'النص لا يحدد القسم':'The text does not identify a department',
   'معاينة الفيديو':'Video preview',
   'الصرف اليومي':'Daily spend',
-  'الليدز اليومية':'Daily leads',
+  'الطلبات اليومية':'Daily orders',
   'الصرف اليومي للإعلان':'Daily spend for this ad',
-  'تكلفة الليد حسب المنصة':'Cost per lead by platform',
+  'تكلفة الطلب حسب المنصة':'Cost per lead by platform',
   'الصرف اليومي في الفترة المختارة':'Daily spend in the selected range',
   'منشور':'Post',
   'تفاصيل':'Details',
@@ -817,14 +818,14 @@ const EN = {
   'الصرف اليومي (ر.س)':'Daily spend (SAR)',
   'الصرف الأسبوعي (ر.س)':'Weekly spend (SAR)',
   'الصرف الشهري (ر.س)':'Monthly spend (SAR)',
-  'الليدز اليومية':'Daily leads',
-  'الليدز الأسبوعية':'Weekly leads',
-  'الليدز الشهرية':'Monthly leads',
-  'الليدز والمحادثات':'Leads and conversations',
+  'الطلبات اليومية':'Daily orders',
+  'الطلبات الأسبوعية':'Weekly orders',
+  'الطلبات الشهرية':'Monthly orders',
+  'الطلبات والإيراد':'Leads and revenue',
   'مثلاً 15':'e.g. 15',
   'تعذّر تحديث':'Update failed',
   'بيانات تيك توك غير متوفرة':'TikTok data is unavailable',
-  'المحادثات':'Conversations',
+  'الإيراد':'Revenue',
   'نسبة النقر %':'CTR %',
   'يناير':'January','فبراير':'February','مارس':'March','أبريل':'April','مايو':'May','يونيو':'June','يوليو':'July','أغسطس':'August','سبتمبر':'September','أكتوبر':'October','نوفمبر':'November','ديسمبر':'December',
   'الأحد':'Sunday','الاثنين':'Monday','الثلاثاء':'Tuesday','الأربعاء':'Wednesday','الخميس':'Thursday','الجمعة':'Friday','السبت':'Saturday',
@@ -832,8 +833,8 @@ const EN = {
   'صورة':'Image',
   'ملخص الحسابات':'Account summary',
   'صرف سابق':'Previous spend',
-  'ليدز سابقة':'Previous leads',
-  'تكلفة ليد سابقة':'Previous cost per lead',
+  'طلبات سابقة':'Previous orders',
+  'تكلفة طلب سابقة':'Previous cost per lead',
   'مقارنة الفترة السابقة':'Previous period',
   'أفضل الإعلانات':'Top ads',
   'الشهر':'Month',
@@ -1146,8 +1147,8 @@ function agg(from,to){
     const d = byDay[date] ||= {}; const dp = d[a.platform] ||= {spend:0,leads:0,ls:0,ln:0}; dp.spend+=sp; dp.leads+=ld; dp.ls+=lg; dp.ln+=ln;
     const p = byPlat[a.platform] ||= {spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0,ads:new Set()}; p.spend+=sp;p.impr+=im;p.clicks+=cl;p.leads+=ld;p.conv+=cv;p.leadSpend+=lg;p.leadN+=ln;p.ads.add(k);
   }
-  // CRM (pipeline/crm/join.py): leads matched to ads. A closing is a payment; its value is the amount paid.
-  // Leads count on their own day; closings on the lead's day or on the payment day (S.crmBy), as Leen picks.
+  // CRM (pipeline/crm/join.py): orders matched to ads. A closing is a payment; its value is the amount paid.
+  // Orders count on their own day; closings on the lead's day or on the payment day (S.crmBy), as Leen picks.
   const add = (k,f,v) => { const a = ADS[k]; if(!a || !matchesSlice(a)) return;
     const o = byAd[k] ||= {spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0,days:{}}; o[f]=(o[f]||0)+v;
     const p = byPlat[a.platform] ||= {spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0,ads:new Set()}; p[f]=(p[f]||0)+v; };
@@ -1284,8 +1285,8 @@ function renderKpis(now,prev){
   const a=derive(now.tot), b=cur&&cur.compareOk&&prev?derive(prev.tot):{};
   const K=[
     ['الصرف',sar(a.spend),money(),delta(a.spend,b.spend,null),true],
-    ['الليدز',qty(a.leads),'',delta(a.leads,b.leads,false)],
-    ['تكلفة الليد',sar(a.cpl),money(),delta(a.cpl,b.cpl,true)],
+    ['الطلبات',qty(a.leads),'',delta(a.leads,b.leads,false)],
+    ['تكلفة الطلب',sar(a.cpl),money(),delta(a.cpl,b.cpl,true)],
     ...(D.crm ? [
       ['الاقفالات (مدفوعة)',fmt(a.booked||0),'',delta(a.booked,b.booked,false)],
       ['تكلفة الاقفالة',sar(a.cpb),money(),delta(a.cpb,b.cpb,true)],
@@ -1293,7 +1294,7 @@ function renderKpis(now,prev){
       ['المدفوع',sar(a.value||0),money(),delta(a.value,b.value,false)],
       ['ROAS',a.roas==null?'—':fmt(a.roas,2)+'×','',delta(a.roas,b.roas,false)],
     ] : []),
-    ['محادثات واتساب وماسنجر',fmt(a.conv),'',delta(a.conv,b.conv,false)],
+    ['الإيراد (ر.س)',fmt(a.conv),'',delta(a.conv,b.conv,false)],
     ['الظهور',fmt(a.impr),'',delta(a.impr,b.impr,false)],
     ['نقرات الرابط والسوايب',fmt(a.clicks),'',delta(a.clicks,b.clicks,false)],
     ['نسبة النقر',pct(a.ctr),'',delta(a.ctr,b.ctr,false)],
@@ -1301,7 +1302,7 @@ function renderKpis(now,prev){
     ['تكلفة الألف ظهور',sar(a.cpm),money(),delta(a.cpm,b.cpm,true)],
   ];
   const by = D.crm ? `<div class="kpi crm-by"><span class="l">${tr('الاقفالات حسب')}</span><span class="seg" role="group">`
-    + [['lead','يوم الليد'],['paid','يوم الدفع']].map(([v,l])=>`<button type="button" data-crmby="${v}" aria-pressed="${(S.crmBy||'lead')===v}">${tr(l)}</button>`).join('')
+    + [['lead','يوم الطلب'],['paid','يوم الدفع']].map(([v,l])=>`<button type="button" data-crmby="${v}" aria-pressed="${(S.crmBy||'lead')===v}">${tr(l)}</button>`).join('')
     + `</span></div>` : '';
   $('#kpis').innerHTML = by + K.map(([l,v,u,d,hero])=>`<div class="kpi${hero?' hero':''}"><span class="l">${l}</span><span class="v">${v}${u?`<small>${u}</small>`:''}</span>${d.replace('class="delta','class="delta').replace(/delta (good|bad)">/, (m,g)=> l==='الصرف' ? 'delta flat">' : m)}</div>`).join('');
 }
@@ -1322,7 +1323,7 @@ function stacked(el,now,field,unit){
   const max = niceMax(Math.max(...tot,0));
   const bw = iw/days.length, gap = Math.min(2,bw*.2), w=Math.max(1,bw-gap);
   const y = v => T+ih-(v/max)*ih;
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${field==='spend'?'الصرف اليومي':'الليدز اليومية'}">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${field==='spend'?'الصرف اليومي':'الطلبات اليومية'}">`;
   for(let i=0;i<=4;i++){const v=max*i/4, yy=y(v); s+=`<line class="grid" x1="${L}" x2="${L+iw}" y1="${yy}" y2="${yy}"/><text x="${W-R+6}" y="${yy+4}" text-anchor="start">${fmt(v)}</text>`;}
   days.forEach((d,i)=>{
     const x = barX(L,iw,bw,i)+gap/2;
@@ -1357,10 +1358,10 @@ function stacked(el,now,field,unit){
 function renderCharts(now){
   const plats = orderNow();
   $('#legend').innerHTML = plats.map(p=>`<span><span class="dot" style="background:var(${PL[p].c})"></span>${platName(p)}</span>`).join('');
-  stacked($('#chSpend'),now,'spend'); stacked($('#chLeads'),now,'leads'); cplLine($('#chCpl'),now);
+  stacked($('#chSpend'),now,'spend'); stacked($('#chLeads'),now,'orders'); cplLine($('#chCpl'),now);
   const g=granOf();
   $('#chSpendT').textContent={day:'الصرف اليومي (ر.س)',week:'الصرف الأسبوعي (ر.س)',month:'الصرف الشهري (ر.س)'}[g];
-  $('#chLeadsT').textContent={day:'الليدز اليومية',week:'الليدز الأسبوعية',month:'الليدز الشهرية'}[g];
+  $('#chLeadsT').textContent={day:'الطلبات اليومية',week:'الطلبات الأسبوعية',month:'الطلبات الشهرية'}[g];
   document.querySelectorAll('#gran button').forEach(b=>b.setAttribute('aria-pressed',S.gran===b.dataset.v));
   localize();
 }
@@ -1386,10 +1387,10 @@ function renderPlat(now,prev){
     {k:'p',l:'المنصة',f:r=>platCell(r.p)},
     {k:'spend',l:'الصرف',n:1,f:r=>sar(r.spend)},
     {k:'share',l:'الحصة',n:1,f:r=>`${fmt(r.share,0)}%<span class="bar-cell" style="width:${Math.round(r.share*.6)}px"></span>`},
-    {k:'leads',l:'الليدز',n:1,f:r=>qty(r.leads)},
-    {k:'cpl',l:'تكلفة الليد',n:1,asc:1,f:r=>sar(r.cpl)},
-    {k:'conv',l:'محادثات',n:1,f:r=>family(r.p)==='meta'?fmt(r.conv):'—'},
-    {k:'pcpl',l:'تكلفة الليد قبل',n:1,asc:1,f:r=>sar(r.pcpl)},
+    {k:'orders',l:'الطلبات',n:1,f:r=>qty(r.leads)},
+    {k:'cpl',l:'تكلفة الطلب',n:1,asc:1,f:r=>sar(r.cpl)},
+    {k:'conv',l:'الإيراد',n:1,f:r=>family(r.p)==='meta'?fmt(r.conv):'—'},
+    {k:'pcpl',l:'تكلفة الطلب قبل',n:1,asc:1,f:r=>sar(r.pcpl)},
     {k:'impr',l:'الظهور',n:1,f:r=>fmt(r.impr)},
     {k:'clicks',l:'النقرات',n:1,f:r=>fmt(r.clicks)},
     {k:'ctr',l:'نسبة النقر',n:1,f:r=>pct(r.ctr)},
@@ -1410,14 +1411,14 @@ function renderCamp(now){
     {k:'name',l:'الحملة',cls:'name'},
     {k:'goal',l:'الهدف',f:r=>goalPill(r.goal)},
     {k:'spend',l:'الصرف',n:1,f:r=>sar(r.spend)},
-    {k:'leads',l:'الليدز',n:1,f:r=>r.goal==='lead'?qty(r.leadN):'—'},
-    {k:'cpl',l:'تكلفة الليد',n:1,asc:1,f:r=>r.goal==='lead'?tgtCell(r.cpl):'—'},
+    {k:'orders',l:'الطلبات',n:1,f:r=>r.goal==='lead'?qty(r.leadN):'—'},
+    {k:'cpl',l:'تكلفة الطلب',n:1,asc:1,f:r=>r.goal==='lead'?tgtCell(r.cpl):'—'},
     ...(D.crm ? [
       {k:'booked',l:'الاقفالات',n:1,f:r=>fmt(r.booked||0)},
       {k:'cpb',l:'تكلفة الاقفالة',n:1,asc:1,f:r=>sar(r.cpb)},
       {k:'roas',l:'ROAS',n:1,f:r=>r.roas==null?'—':fmt(r.roas,2)+'×'},
     ] : []),
-    {k:'conv',l:'محادثات',n:1,f:r=>family(r.p)==='meta'?fmt(r.conv):'—'},
+    {k:'conv',l:'الإيراد',n:1,f:r=>family(r.p)==='meta'?fmt(r.conv):'—'},
     {k:'impr',l:'الظهور',n:1,f:r=>fmt(r.impr)},
     {k:'ctr',l:'نسبة النقر',n:1,f:r=>pct(r.ctr)},
     {k:'cpc',l:'تكلفة النقرة',n:1,asc:1,f:r=>sar(r.cpc)},
@@ -1446,10 +1447,10 @@ function cplLine(el,now){
   const W=640,H=200,L=8,R=46,T=10,Bm=26, iw=W-L-R, ih=H-T-Bm, bw=iw/Math.max(1,ks.length);
   const val=(k,p)=>{ const o=(B.byKey[k]||{})[p]; const n=o?(o.ln==null?o.leads:o.ln):0; return o&&n>0&&o.ls>0 ? o.ls/n : null; };
   const all=[]; ks.forEach(k=>plats.forEach(p=>{const v=val(k,p); if(v!=null) all.push(v);}));
-  if(!all.length){ el.innerHTML='<div class="empty">ما فيه ليدز في هذي الفترة.</div>'; return; }
+  if(!all.length){ el.innerHTML='<div class="empty">ما فيه طلبات في هذي الفترة.</div>'; return; }
   all.sort((a,b)=>a-b); const max=niceMax(all[Math.floor(all.length*0.95)]||all[all.length-1]);
   const y=v=>T+ih-(Math.min(v,max)/max)*ih, x=i=>midX(L,iw,bw,i);
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="تكلفة الليد حسب المنصة">`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="تكلفة الطلب حسب المنصة">`;
   for(let i=0;i<=4;i++){const v=max*i/4,yy=y(v); s+=`<line class="grid" x1="${L}" x2="${L+iw}" y1="${yy}" y2="${yy}"/><text x="${W-R+6}" y="${yy+4}">${fmt(v)}</text>`;}
   plats.forEach(p=>{ let d='', pts=''; ks.forEach((k,i)=>{ const v=val(k,p); if(v==null){ d+=' '; return; } const span=B.span(k); const open=dayOpen(family(p), span[0])||dayOpen(family(p), span[1]); d+=(d.trim()&&!d.endsWith(' ')?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1);
       pts+=`<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="2.5" fill="var(${PL[p].c})"><title>${platName(p)} · ${B.label(k)}: ${sar(v)} ${money()}${open?' · '+ui('ناقص','incomplete'):''}</title></circle>`; });
@@ -1491,22 +1492,22 @@ $('#fFmt').addEventListener('change',e=>{ S.fmt=e.target.value; S.shown=24; rend
 $('#gran').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; S.gran=b.dataset.v; renderCharts(cur.now); });
 
 function renderBI(now){
-  const t=derive(now.tot), steps=[['الظهور',t.impr],['النقرات',t.clicks],['الليدز والمحادثات',t.leads+t.conv]];
+  const t=derive(now.tot), steps=[['الظهور',t.impr],['النقرات',t.clicks],['الطلبات والإيراد',t.leads+t.conv]];
   const mx=Math.max(1,t.impr), w=v=>Math.max(4, Math.round(100*Math.sqrt(v/mx)));
   $('#funnel').innerHTML = steps.map(([l,v],i)=>`<div class="fstep"><span class="lbl">${l}</span><div class="fbar" style="width:${w(v)}%">${i===2?qty(v):fmt(v)}</div>`
-    + (i? `<span class="frate">${i===1?`${tr('نسبة النقر')} ${pct(t.ctr)}`:`${ui('من النقرة لليد','Click to result')} ${pct(t.clicks?100*(t.leads+t.conv)/t.clicks:null)} · ${ui('تكلفة النتيجة','Cost per result')} ${sar((t.leads+t.conv)?t.spend/(t.leads+t.conv):null)} ${money()}`}</span>`:'')+`</div>`).join('');
+    + (i? `<span class="frate">${i===1?`${tr('نسبة النقر')} ${pct(t.ctr)}`:`${ui('من النقرة للطلب','Click to result')} ${pct(t.clicks?100*(t.leads+t.conv)/t.clicks:null)} · ${ui('تكلفة النتيجة','Cost per result')} ${sar((t.leads+t.conv)?t.spend/(t.leads+t.conv):null)} ${money()}`}</span>`:'')+`</div>`).join('');
   const plats=ORDER.filter(p=>now.byPlat[p]), ts=plats.reduce((a,p)=>a+now.byPlat[p].spend,0)||1, tl=plats.reduce((a,p)=>a+now.byPlat[p].leads,0)||1;
   const bar=(f,tot)=>`<div class="share-bar">${plats.map(p=>{const v=100*now.byPlat[p][f]/tot; return v>0?`<span style="width:${v}%;background:var(${PL[p].c})" title="${platName(p)}: ${fmt(v,1)}%"></span>`:'';}).join('')}</div>`;
-  $('#share').innerHTML = plats.length ? `<div class="share-row"><span>الصرف</span>${bar('spend',ts)}</div><div class="share-row"><span>الليدز</span>${bar('leads',tl)}</div>`
-    + `<div class="legend" style="margin-top:8px">${plats.map(p=>`<span><span class="dot" style="background:var(${PL[p].c})"></span>${platName(p)}: ${fmt(100*now.byPlat[p].spend/ts,0)}% ${ui('صرف','Spend')} · ${fmt(100*now.byPlat[p].leads/tl,0)}% ${ui('ليدز','Leads')}</span>`).join('')}</div>` : '<div class="empty">لا توجد بيانات.</div>';
-  // day-of-week heatmap of CPL (lead campaigns)
+  $('#share').innerHTML = plats.length ? `<div class="share-row"><span>الصرف</span>${bar('spend',ts)}</div><div class="share-row"><span>الطلبات</span>${bar('orders',tl)}</div>`
+    + `<div class="legend" style="margin-top:8px">${plats.map(p=>`<span><span class="dot" style="background:var(${PL[p].c})"></span>${platName(p)}: ${fmt(100*now.byPlat[p].spend/ts,0)}% ${ui('صرف','Spend')} · ${fmt(100*now.byPlat[p].leads/tl,0)}% ${ui('طلبات','Leads')}</span>`).join('')}</div>` : '<div class="empty">لا توجد بيانات.</div>';
+  // day-of-week heatmap of CPA (lead campaigns)
   const hm={}; for(const [k,date,sp,im,cl,ld] of D.rows){ if(date<S.from||date>S.to) continue; const a=ADS[k]; if(!a||!now.byAd[k]||a.goal!=='lead') continue;
     const w=toD(date).getUTCDay(), o=(hm[a.platform] ||= {})[w] ||= {s:0,l:0}; o.s+=sp; o.l+=ld; }
   const hp=ORDER.filter(p=>hm[p]); let vals=[]; hp.forEach(p=>Object.values(hm[p]).forEach(o=>{ if(o.l) vals.push(o.s/o.l); }));
   const lo=Math.min(...vals), hi=Math.max(...vals);
   $('#heat').innerHTML = hp.length ? `<thead><tr><th></th>${[0,1,2,3,4,5,6].map(d=>`<th>${dayName(d)}</th>`).join('')}</tr></thead><tbody>`+hp.map(p=>`<tr><th>${platName(p)}</th>${[0,1,2,3,4,5,6].map(w=>{ const o=hm[p][w]; const v=o&&o.l?o.s/o.l:null;
       const a = v==null?0:(hi>lo?(v-lo)/(hi-lo):.5); return `<td style="background:color-mix(in srgb, var(--accent) ${Math.round(10+a*70)}%, var(--surface));color:${a>.55?'#fff':'var(--ink)'}" title="${platName(p)} · ${dayName(w)}: ${v==null?'—':sar(v)+' '+money()}">${v==null?'—':sar(v)}</td>`; }).join('')}</tr>`).join('')+'</tbody>'
-    : '<tbody><tr><td class="empty">ما فيه ليدز في هذي الفترة.</td></tr></tbody>';
+    : '<tbody><tr><td class="empty">ما فيه طلبات في هذي الفترة.</td></tr></tbody>';
 }
 function monthEnd(ym){ return addDays(addDays(ym+'-28',4).slice(0,8)+'01',-1); }
 function renderPace(){
@@ -1544,15 +1545,15 @@ function renderPace(){
   const sameLabel = ui(`مقارنة بنفس الأيام من ${mname(prevYm)}`,`Same days versus ${mname(prevYm)}`);
   const prevCount = prevDays.size;
   const prevLabel = prevCount && prevCount===toD(prevMonthEnd).getUTCDate() && done===dim
-    ? ui(`${mname(prevYm)} كامل: ليدز ومحادثات`,`${mname(prevYm)} full: leads and chats`)
-    : ui(`نفس الأيام من ${mname(prevYm)}: ليدز ومحادثات`,`Same days in ${mname(prevYm)}: leads and chats`);
+    ? ui(`${mname(prevYm)} كامل: طلبات والإيراد`,`${mname(prevYm)} full: orders and SAR revenue`)
+    : ui(`نفس الأيام من ${mname(prevYm)}: طلبات والإيراد`,`Same days in ${mname(prevYm)}: orders and SAR revenue`);
   $('#pace').innerHTML = `<div class="kv">
     <div><div class="k">${spendLabel}</div><div class="mini">${spendShown==null?'—':sar(spendShown)+' '+money()}</div></div>
     <div><div class="k">${ui('نتائج حتى الآن','Results so far')}</div><div class="mini">${resultShown==null?'—':qty(resultShown)}</div></div>
     <div><div class="k">${ui('توقع الصرف لنهاية الشهر','Spend forecast to month end')}</div><div class="mini">${proj?sar(proj.s)+' '+money():'—'}</div></div>
     <div><div class="k">${ui('توقع النتائج لنهاية الشهر','Results forecast to month end')}</div><div class="mini">${proj?qty(proj.l):'—'}</div></div>
     <div><div class="k">${sameLabel}</div><div class="mini">${open||!prevKnown?'—':ui('صرف','Spend')+' '+ch(curM.s,prevSame.s)+' · '+ui('نتائج','results')+' '+ch(curM.l,prevSame.l)}</div></div>
-    <div><div class="k">${prevLabel}</div><div class="mini">${prevKnown?qty(prevSame.l):'—'} ${ui('ليد أو محادثة','leads or chats')}</div><div class="k">${prevKnown?`${sar(prevSame.s)} ${money()} · ${ui('تكلفة النتيجة','cost per result')} ${prevSame.l?sar(prevSame.s/prevSame.l)+' '+money():'—'}`:'—'}</div></div></div>`;
+    <div><div class="k">${prevLabel}</div><div class="mini">${prevKnown?qty(prevSame.l):'—'} ${ui('طلب أو ريال إيراد','orders or SAR revenue')}</div><div class="k">${prevKnown?`${sar(prevSame.s)} ${money()} · ${ui('تكلفة النتيجة','cost per result')} ${prevSame.l?sar(prevSame.s/prevSame.l)+' '+money():'—'}`:'—'}</div></div></div>`;
 }
 function renderMonths(){
   const m={}, plats=orderNow();
@@ -1563,7 +1564,7 @@ function renderMonths(){
   const cpls=[]; months.forEach(ym=>used.forEach(p=>{const o=m[ym][p]; if(o&&o.ln) cpls.push(o.ls/o.ln);})); const lo=Math.min(...cpls), hi=Math.max(...cpls);
   const shade=v=>{ if(v==null||!isFinite(v)) return ''; const a=hi>lo?(v-lo)/(hi-lo):.5; return ` style="background:color-mix(in srgb, var(--pulse) ${Math.round(a*45)}%, transparent)"`; };
   const name=ym=>`${monthName(+ym.slice(5)-1)} ${ym.slice(0,4)}`;
-  let h=`<thead><tr><th>الشهر</th>${used.map(p=>`<th class="n">${platName(p)} ${ui('صرف','Spend')}</th><th class="n">ليدز</th><th class="n">تكلفة الليد</th>`).join('')}<th class="n">${ui('المجموع صرف','Total spend')}</th><th class="n">ليدز</th><th class="n">تكلفة الليد</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>الشهر</th>${used.map(p=>`<th class="n">${platName(p)} ${ui('صرف','Spend')}</th><th class="n">طلبات</th><th class="n">تكلفة الطلب</th>`).join('')}<th class="n">${ui('المجموع صرف','Total spend')}</th><th class="n">طلبات</th><th class="n">تكلفة الطلب</th></tr></thead><tbody>`;
   months.forEach(ym=>{ let ts=0,tl=0,tls=0,leadN=0; h+=`<tr class="click" data-ym="${ym}" title="${ui('ركّز اللوحة على','Focus the report on')} ${name(ym)}"><td>${name(ym)}</td>`;
     used.forEach(p=>{ const o=m[ym][p]||{s:0,l:0,ls:0,ln:0}; const c=o.ln?o.ls/o.ln:null; h+=`<td class="n">${sar(o.s)}</td><td class="n">${qty(o.l)}</td><td class="n hot"${shade(c)}>${sar(c)}</td>`; });
     for(const o of Object.values(m[ym])){ ts+=o.s; tl+=o.l; tls+=o.ls; leadN+=o.ln||0; }
@@ -1582,7 +1583,7 @@ function renderTree(now){
   const rows=[]; const walk=(keys)=>{ [...keys].map(k=>T[k]).sort((a,b)=>b.spend-a.spend).forEach(n=>{ rows.push(n); if(n.kids.size&&S.open.has(n.key)) walk(n.kids); }); };
   walk(Object.values(T).filter(n=>n.lv===1 && !HIDDEN_PLAT.has(n.key)).map(n=>n.key));
   const tot=derive(now.tot);
-  $('#tTree').innerHTML = `<thead><tr><th>الاسم</th><th class="n">الصرف</th><th class="n">الحصة</th><th class="n">الليدز</th><th class="n">تكلفة الليد</th><th class="n">محادثات</th><th class="n">الظهور</th><th class="n">نسبة النقر</th></tr></thead><tbody>`
+  $('#tTree').innerHTML = `<thead><tr><th>الاسم</th><th class="n">الصرف</th><th class="n">الحصة</th><th class="n">الطلبات</th><th class="n">تكلفة الطلب</th><th class="n">الإيراد</th><th class="n">الظهور</th><th class="n">نسبة النقر</th></tr></thead><tbody>`
     + rows.map(n=>{ const d=derive(n); return `<tr class="lv${n.lv}row"><td class="name lv${n.lv}">${n.kids.size?`<button type="button" class="tg" data-k="${esc(n.key)}" aria-expanded="${S.open.has(n.key)}">${S.open.has(n.key)?'▾':'▸'}</button>`:'<span class="tg"></span>'}${n.lv===1?platCell(n.key):esc(n.lab)}${n.lv===4&&n.live?' <span class="pill st-live"><span class="dot"></span>نشط</span>':''}</td>`
       + `<td class="n">${sar(d.spend)}</td><td class="n">${fmt(tot.spend?100*d.spend/tot.spend:0,0)}%</td><td class="n">${qty(d.leads)}</td><td class="n">${sar(d.cpl)}</td><td class="n">${fmt(d.conv)}</td><td class="n">${fmt(d.impr)}</td><td class="n">${pct(d.ctr)}</td></tr>`; }).join('')
     + `<tr class="lv1row"><td><b>المجموع</b></td><td class="n"><b>${sar(tot.spend)}</b></td><td class="n">100%</td><td class="n"><b>${qty(tot.leads)}</b></td><td class="n"><b>${sar(tot.cpl)}</b></td><td class="n">${fmt(tot.conv)}</td><td class="n">${fmt(tot.impr)}</td><td class="n">${pct(tot.ctr)}</td></tr></tbody>`;
@@ -1594,7 +1595,7 @@ function renderTree(now){
 
 // ---- export: every ad in the current filters, with its totals for the period
 function exportCSV(){
-  const head=['المنصة','القسم','الحملة','المجموعة','الإعلان','الحالة','الهدف','الصيغة','من','إلى','الصرف (ر.س)','الظهور','النقرات','الليدز','المحادثات','تكلفة الليد','نسبة النقر %','تكلفة النقرة','تكلفة الألف ظهور'].map(tr);
+  const head=['المنصة','القسم','الحملة','المجموعة','الإعلان','الحالة','الهدف','الصيغة','من','إلى','الصرف (ر.س)','الظهور','النقرات','الطلبات','الإيراد','تكلفة الطلب','نسبة النقر %','تكلفة النقرة','تكلفة الألف ظهور'].map(tr);
   const q=v=>{ const t=v==null?'':String(v); return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t; };
   const n=(v,d=2)=>v==null||!isFinite(v)?'':v.toFixed(d);
   const lines=[head.join(',')];
@@ -1632,11 +1633,11 @@ function cardsList(c){
   const key={spend:x=>-x.spend,leads:x=>-(x.leads+x.conv),cpl:x=>(x.a.goal==='lead'?x.cpl:null)??1e12,ctr:x=>-(x.ctr??-1),impr:x=>-x.impr}[S.sort];
   return list.sort((x,y)=>key(x)-key(y));
 }
-// Winner: the ad got 30+ leads in its first 3 days (launch day = its first day with spend or impressions).
+// Winner: the ad got 30+ orders in its first 3 days (launch day = its first day with spend or impressions).
 // Placements of one Meta ad (m123|facebook, m123|instagram) count together. Ads already running on the
 // first day of the data are skipped: their real launch day is unknown.
 const WIN_MIN_LEADS = 30, WIN_DAYS = 3;
-// Off until the CRM is linked: a winner should be judged on closed patients, not raw leads.
+// Off until the CRM is linked: a winner should be judged on closed patients, not raw orders.
 const WIN_ON = false;
 const WIN = !WIN_ON ? new Set() : (()=>{
   const base = k => String(k).split('|')[0], first={}, rows=D.rows.filter(r=>ADS[r[0]] && ADS[r[0]].goal==='lead' && (r[2]||r[3]));
@@ -1647,7 +1648,7 @@ const WIN = !WIN_ON ? new Set() : (()=>{
   const won=new Set(Object.keys(early).filter(b=>first[b]>start && early[b]>=WIN_MIN_LEADS));
   return new Set(Object.keys(ADS).filter(k=>won.has(base(k))));
 })();
-function winBadge(k){ return WIN.has(k) ? `<span class="pill win" title="${ui('جاب 30 ليد أو أكثر في أول 3 أيام من إطلاقه','30+ leads in its first 3 days')}">🏆 Winner</span>` : ''; }
+function winBadge(k){ return WIN.has(k) ? `<span class="pill win" title="${ui('جاب 30 طلب أو أكثر في أول 3 أيام من إطلاقه','30+ orders in its first 3 days')}">🏆 Winner</span>` : ''; }
 // ---- production insights
 // Idea = the same creative across ad sets / platforms: the name without the uploaded file prefix and the Spark/Own suffix.
 function ideaKey(a){
@@ -1670,7 +1671,7 @@ const TIRED = (()=>{ const by={}; for(const [k,date,sp,im,cl] of D.rows){ if(!im
 function tiredTag(k){ const t=TIRED[k]; return t && ADS[k] && ADS[k].live ? `<span class="pill tired" title="${ui('نسبة النقر آخر 7 أيام نزلت عن أول 7 أيام','CTR in its last 7 days fell vs its first 7')}">${ui('بدأ يتعب','Wearing out')} · ${pct(t.from)} → ${pct(t.to)}</span>` : ''; }
 function ideaList(list){
   const g={}; for(const x of list){ const id=ideaKey(x.a); const y=g[id]||(g[id]={k:'idea:'+id, id, members:[], spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0});
-    y.members.push(x); for(const f of ['spend','impr','clicks','leads','conv','leadSpend','leadN']) y[f]+=x[f]||0; }
+    y.members.push(x); for(const f of ['spend','impr','clicks','orders','conv','leadSpend','leadN']) y[f]+=x[f]||0; }
   return Object.values(g).map(y=>{ const lead=y.members.slice().sort((p,q)=>(q.a.thumb?1:0)-(p.a.thumb?1:0)||q.spend-p.spend)[0];
     return {...derive(y), k:y.k, a:lead.a, members:y.members, idea:true}; });
 }
@@ -1679,7 +1680,7 @@ function openIdea(k){
   const y=IDEAS[k]; if(!y) return;
   const plats=[...new Set(y.members.map(m=>platName(family(m.a.platform))))].join(ui('، ',', '));
   const vids=y.members.some(m=>m.a.vid&&m.a.vid.v);
-  const resCell=m=>m.a.goal==='messages'?`${qty(m.conv)} <span class="sub">${ui('محادثة','chats')}</span>`:m.a.goal==='lead'?`${qty(m.leads)} <span class="sub">${ui('ليد','leads')}</span>`:'—';
+  const resCell=m=>m.a.goal==='messages'?`${qty(m.conv)} <span class="sub">${ui('ريال إيراد','SAR revenue')}</span>`:m.a.goal==='lead'?`${qty(m.leads)} <span class="sub">${ui('طلب','orders')}</span>`:'—';
   $('#dlgBody').innerHTML = `<div class="panel-h"><h2 id="dlgTitle">${esc(y.a.name)}</h2><button type="button" class="btn" id="dlgClose">إغلاق</button></div>
     <div class="dlg-top"><div class="thumb">${mediaHTML(y.a,true)}</div><div style="display:grid;gap:8px;min-width:0">
       <div class="sub">${fmt(y.members.length)} ${ui('إعلان بنفس الفكرة',y.members.length===1?'ad with this idea':'ads with this idea')} · ${esc(plats)}</div>
@@ -1703,7 +1704,7 @@ function cmpItem(k){
 }
 function openCompare(){
   const items=[...CMP].map(cmpItem).filter(Boolean); if(items.length<2) return;
-  const metrics=[[ui('الصرف','Spend'),i=>i.x.spend,0],[ui('الليدز','Leads'),i=>i.x.leads,1],[ui('تكلفة الليد','CPL'),i=>i.a.goal==='lead'?i.x.cpl:null,-1],[ui('نسبة النقر','CTR'),i=>i.x.ctr,1],[ui('الظهور','Impressions'),i=>i.x.impr,0],[ui('وقفوا يشوفون','Hook'),i=>hookRate(i.vid),1],[ui('كمّلوا للنهاية','Watched to end'),i=>holdRate(i.vid),1]];
+  const metrics=[[ui('الصرف','Spend'),i=>i.x.spend,0],[ui('الطلبات','Leads'),i=>i.x.leads,1],[ui('تكلفة الطلب','CPL'),i=>i.a.goal==='lead'?i.x.cpl:null,-1],[ui('نسبة النقر','CTR'),i=>i.x.ctr,1],[ui('الظهور','Impressions'),i=>i.x.impr,0],[ui('وقفوا يشوفون','Hook'),i=>hookRate(i.vid),1],[ui('كمّلوا للنهاية','Watched to end'),i=>holdRate(i.vid),1]];
   const best=metrics.map(([,f,dir])=>{ if(!dir) return null; const v=items.map(f).filter(x=>x!=null&&isFinite(x)); if(v.length<2) return null; return dir>0?Math.max(...v):Math.min(...v); });
   const show=(j,v)=> j===0||j===2? sar(v) : j===1? qty(v) : j===4? fmt(v) : pct(v);
   $('#dlgBody').innerHTML = `<div class="panel-h"><h2 id="dlgTitle">${ui('مقارنة','Compare')}</h2><button type="button" class="btn" id="dlgClose">إغلاق</button></div>
@@ -1716,8 +1717,8 @@ function openCompare(){
 }
 function resultCells(x){
   const g=x.a.goal;
-  if(g==='lead') return statCell('الليدز',qty(x.leads))+statCell('تكلفة الليد',sar(x.cpl));
-  if(g==='messages') return statCell('محادثات',fmt(x.conv))+statCell('تكلفة المحادثة',sar(x.cpm2));
+  if(g==='lead') return statCell('الطلبات',qty(x.leads))+statCell('تكلفة الطلب',sar(x.cpl));
+  if(g==='messages') return statCell('الإيراد',fmt(x.conv))+statCell('تكلفة الطلب',sar(x.cpm2));
   return statCell('نقرات',fmt(x.clicks))+statCell('تكلفة النقرة',sar(x.cpc));
 }
 function statCell(k,v){ return `<div><span class="k">${k}</span><span class="mini">${v}</span></div>`; }
@@ -1813,8 +1814,8 @@ function renderCards(c){
     badges:`${x.idea?`<span class="pill">${fmt(x.members.length)} ${ui('إعلان',x.members.length===1?'ad':'ads')}</span>`:platCell(x.a.platform)}${liveBadge(x.idea?{live:x.members.some(m=>m.a.live)}:x.a)}${x.idea?(x.members.some(m=>WIN.has(m.k))?winBadge(x.members.find(m=>WIN.has(m.k)).k):''):winBadge(x.k)}`,
     title:esc(x.a.name),
     sub:`${x.idea?'':campTag(x.a)+' '+tiredTag(x.k)} ${depCell(x.a.dept)} ${goalPill(x.a.goal)} ${esc(x.a.campaign)} · ${esc(x.a.group)}${x.a.format?` · <span>${esc(tr(x.a.format))}</span>`:''}`,
-    stats:statCell('الصرف',sar(x.spend))+resultCells(x)+statCell('الظهور',fmt(x.impr))+statCell(family(x.a.platform)==='meta'&&x.a.goal==='lead'?'محادثات':'النقرات', family(x.a.platform)==='meta'&&x.a.goal==='lead'?fmt(x.conv):fmt(x.clicks))+statCell('نسبة النقر',pct(x.ctr)),
-    flag:(x.a.goal==='lead'&&x.leads===0&&x.conv===0&&x.spend>=50&&family(x.a.platform)!=='google'?`<span class="flag">${ui(`صرف ${sar(x.spend)} ${money()} بدون ليد أو محادثة`,`Spend ${sar(x.spend)} ${money()} with no lead or conversation`)}</span>`:''),
+    stats:statCell('الصرف',sar(x.spend))+resultCells(x)+statCell('الظهور',fmt(x.impr))+statCell(family(x.a.platform)==='meta'&&x.a.goal==='lead'?'الإيراد':'النقرات', family(x.a.platform)==='meta'&&x.a.goal==='lead'?fmt(x.conv):fmt(x.clicks))+statCell('نسبة النقر',pct(x.ctr)),
+    flag:(x.a.goal==='lead'&&x.leads===0&&x.conv===0&&x.spend>=50&&family(x.a.platform)!=='google'?`<span class="flag">${ui(`صرف ${sar(x.spend)} ${money()} بدون طلب أو ريال إيراد`,`Spend ${sar(x.spend)} ${money()} with no lead or conversation`)}</span>`:''),
     view:hookRow(x.idea?sumVid(x.members.map(m=>m.a)):x.a.vid)+viewControl(x.a)+cmpBox(x.k),
   })).join('') : '<div class="empty">لا يوجد كرييتف يطابق الفلاتر في هذه الفترة.</div>';
   $('#more').hidden = list.length<=S.shown;
@@ -1848,9 +1849,9 @@ function weekly(k){
   const w={}; for(const [kk,date,sp,im,cl,ld] of D.rows){ if(kk!==k) continue; const d=toD(date); d.setUTCDate(d.getUTCDate()-d.getUTCDay()); const wk=toS(d); const x=w[wk]||(w[wk]={sp:0,im:0,cl:0,ld:0}); x.sp+=sp; x.im+=im; x.cl+=cl; x.ld+=ld; }
   const rows=Object.entries(w).sort((p,q)=>p[0]<q[0]?-1:1); if(rows.length<2) return '';
   const lead=ADS[k].goal==='lead';
-  return `<div><div class="sub">${ui('أسبوع بأسبوع من أول ما اشتغل الإعلان','Week by week since the ad started')}</div><div class="tbl"><table><thead><tr><th>${ui('الأسبوع','Week')}</th><th class="n">${ui('الصرف','Spend')}</th><th class="n">${ui('الظهور','Impressions')}</th><th class="n">${ui('نسبة النقر','CTR')}</th>${lead?`<th class="n">${ui('الليدز','Leads')}</th><th class="n">${ui('تكلفة الليد','CPL')}</th>`:''}</tr></thead><tbody>${rows.map(([wk,x])=>`<tr><td>${nice(wk)}</td><td class="n">${sar(x.sp)}</td><td class="n">${fmt(x.im)}</td><td class="n">${x.im?pct(100*x.cl/x.im):'—'}</td>${lead?`<td class="n">${qty(x.ld)}</td><td class="n">${x.ld?sar(x.sp/x.ld):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;
+  return `<div><div class="sub">${ui('أسبوع بأسبوع من أول ما اشتغل الإعلان','Week by week since the ad started')}</div><div class="tbl"><table><thead><tr><th>${ui('الأسبوع','Week')}</th><th class="n">${ui('الصرف','Spend')}</th><th class="n">${ui('الظهور','Impressions')}</th><th class="n">${ui('نسبة النقر','CTR')}</th>${lead?`<th class="n">${ui('الطلبات','Leads')}</th><th class="n">${ui('تكلفة الطلب','CPL')}</th>`:''}</tr></thead><tbody>${rows.map(([wk,x])=>`<tr><td>${nice(wk)}</td><td class="n">${sar(x.sp)}</td><td class="n">${fmt(x.im)}</td><td class="n">${x.im?pct(100*x.cl/x.im):'—'}</td>${lead?`<td class="n">${qty(x.ld)}</td><td class="n">${x.ld?sar(x.sp/x.ld):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div></div>`;
 }
-// ---- المشاهدين ومشاهد الفيديو (من a.aud و a.vid). كل صف [الفئة، ظهور، نقرات، صرف، ليدز أو null]
+// ---- المشاهدين ومشاهد الفيديو (من a.aud و a.vid). كل صف [الفئة، ظهور، نقرات، صرف، طلبات أو null]
 const AUD_DIMS=[['age','العمر','Age'],['gender','الجنس','Gender'],['region','المنطقة','Region'],['device','الجهاز','Device'],['place','المنصة','Placement'],['hour','وقت المشاهدة','Time of day']];
 const AUD_WORD={male:['ذكور','Men'],female:['إناث','Women'],unknown:['غير معروف','Unknown'],android_smartphone:['أندرويد جوال','Android phone'],android_tablet:['أندرويد تابلت','Android tablet'],
   iphone:['آيفون','iPhone'],ipad:['آيباد','iPad'],ipod:['آيبود','iPod'],desktop:['كمبيوتر','Desktop'],mobile:['جوال','Mobile'],tablet:['تابلت','Tablet'],connected_tv:['تلفزيون','TV'],ios:['آيفون (iOS)','iOS'],android:['أندرويد','Android'],
@@ -1862,7 +1863,7 @@ function audLabel(dim,v){
   if(dim==='region'&&LANG!=='en'){ const r=AUD_REGION.find(([re])=>re.test(v)); if(r) return r[1]; }
   return String(v);
 }
-// أكثر فئة تتفاعل: أعلى نسبة نقر بين الفئات اللي لها ظهور كافي (5% من البعد و100 ظهور على الأقل)، وأرخص ليد إذا الليدز متوفرة
+// أكثر فئة تتفاعل: أعلى نسبة نقر بين الفئات اللي لها ظهور كافي (5% من البعد و100 ظهور على الأقل)، وأرخص طلب إذا الطلبات متوفرة
 function audBest(rows){
   const tot=rows.reduce((s,r)=>s+r[1],0), clk=rows.reduce((s,r)=>s+r[2],0); if(!tot) return null;
   const ok=rows.filter(r=>r[1]>=Math.max(100,tot*.05)); if(!ok.length) return null;
@@ -1879,7 +1880,7 @@ function audTable(dim,rows,lead){
       <div class="sub" style="display:flex;justify-content:space-between;direction:ltr"><span>0:00</span><span>12:00</span><span>23:00</span></div>`;
   }
   const showLeads=lead&&rows.some(r=>r[4]!=null);
-  return `<div class="tbl"><table><thead><tr><th>${ui('الفئة','Segment')}</th><th>${ui('من الظهور','Share of impressions')}</th><th class="n">${ui('نسبة النقر','CTR')}</th><th class="n">${ui('الصرف','Spend')}</th>${showLeads?`<th class="n">${ui('الليدز','Leads')}</th><th class="n">${ui('تكلفة الليد','CPL')}</th>`:''}</tr></thead>
+  return `<div class="tbl"><table><thead><tr><th>${ui('الفئة','Segment')}</th><th>${ui('من الظهور','Share of impressions')}</th><th class="n">${ui('نسبة النقر','CTR')}</th><th class="n">${ui('الصرف','Spend')}</th>${showLeads?`<th class="n">${ui('الطلبات','Leads')}</th><th class="n">${ui('تكلفة الطلب','CPL')}</th>`:''}</tr></thead>
     <tbody>${rows.slice(0,12).map(r=>`<tr><td>${esc(audLabel(dim,r[0]))}</td><td><div style="display:flex;gap:8px;align-items:center"><div class="aud-bar" style="flex:1"><i style="width:${100*r[1]/tot}%"></i></div><span class="sub">${pct(100*r[1]/tot)}</span></div></td><td class="n">${r[1]?pct(100*r[2]/r[1]):'—'}</td><td class="n">${sar(r[3])}</td>${showLeads?`<td class="n">${r[4]==null?'—':qty(r[4])}</td><td class="n">${r[4]?sar(r[3]/r[4]):'—'}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
 }
 function audBox(a, dim){
@@ -1889,10 +1890,10 @@ function audBox(a, dim){
   const fam=family(a.platform), notes=[ui('آخر 30 يوم','Last 30 days')];
   if(A.hour&&(fam==='snap'||fam==='tiktok')) notes.push(ui('الساعة: آخر 7 أيام بتوقيت الرياض','Hours: last 7 days, Riyadh time'));
   if(A.lvl==='group') notes.push(ui('قوقل يعطي العمر والجنس والمنطقة والساعة للمجموعة الإعلانية كاملة','Google reports age, gender, region and hour for the whole ad group'));
-  if(fam==='snap') notes.push(ui('سناب ما يقسم الليدز على الفئات، والنقرات هي السوايب','Snap does not split leads by segment; clicks are swipes'));
+  if(fam==='snap') notes.push(ui('سناب ما يقسم الطلبات على الفئات، والنقرات هي السوايب','Snap does not split orders by segment; clicks are swipes'));
   const best=dims.map(([d,ar,en])=>{ const b=audBest(A[d]); if(!b) return '';
     const lift=b.lift!=null&&isFinite(b.lift)&&Math.abs(b.lift)>=.05?` (${b.lift>0?ui('أعلى','above'):ui('أقل','below')} ${ui('من المتوسط بـ','average by')} ${fmt(Math.abs(b.lift)*100)}%)`:'';
-    const cheap=lead&&b.cheap?` · ${ui('أرخص ليد','cheapest lead')}: ${esc(audLabel(d,b.cheap[0]))} ${sar(b.cpl)} ${money()}`:'';
+    const cheap=lead&&b.cheap?` · ${ui('أرخص طلب','cheapest lead')}: ${esc(audLabel(d,b.cheap[0]))} ${sar(b.cpl)} ${money()}`:'';
     return `<li><b>${ui(ar,en)}:</b> ${esc(audLabel(d,b.top[0]))} · ${ui('نسبة النقر','CTR')} ${pct(b.ctr)}${lift}${cheap}</li>`; }).filter(Boolean);
   return `<section class="aud" data-aud-root>
     <div class="aud-h"><h3 style="margin:0">${ui('المشاهدين','Audience')}</h3><span class="sub">${notes.join(' · ')}</span></div>
@@ -1952,9 +1953,9 @@ function openAd(k){
     </div>
     <div class="kv">
       <div><div class="k">الصرف</div><div class="mini">${sar(o.spend)} ${money()}</div></div>
-      <div><div class="k">الليدز</div><div class="mini">${qty(o.leads)}</div></div>
-      <div><div class="k">تكلفة الليد</div><div class="mini">${a.goal==='lead'?sar(o.cpl):'—'}</div></div>
-      <div><div class="k">محادثات</div><div class="mini">${family(a.platform)==='meta'?fmt(o.conv):'—'}</div></div>
+      <div><div class="k">الطلبات</div><div class="mini">${qty(o.leads)}</div></div>
+      <div><div class="k">تكلفة الطلب</div><div class="mini">${a.goal==='lead'?sar(o.cpl):'—'}</div></div>
+      <div><div class="k">الإيراد</div><div class="mini">${family(a.platform)==='meta'?fmt(o.conv):'—'}</div></div>
       <div><div class="k">الظهور</div><div class="mini">${fmt(o.impr)}</div></div>
       <div><div class="k">النقرات</div><div class="mini">${fmt(o.clicks)}</div></div>
       <div><div class="k">نسبة النقر</div><div class="mini">${pct(o.ctr)}</div></div>
@@ -1989,7 +1990,7 @@ function aggAllDepts(from,to){
     const a=ADS[k], dk=a.dept||'brand';
     const x=by[dk] ||= {spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0,ads:0};
     const y=(byDP[dk] ||= {})[a.platform] ||= {spend:0,leads:0,leadSpend:0,leadN:0,conv:0,impr:0,clicks:0};
-    for(const f of ['spend','impr','clicks','leads','conv','leadSpend','leadN']){ x[f]+=o[f]||0; if(y[f]!=null) y[f]+=o[f]||0; }
+    for(const f of ['spend','impr','clicks','orders','conv','leadSpend','leadN']){ x[f]+=o[f]||0; if(y[f]!=null) y[f]+=o[f]||0; }
     x.ads++;
   }
   return {by,byDP,tot:r.tot};
@@ -2018,25 +2019,25 @@ function renderWins(){
   $('#winsSub').textContent = B ? `${nice(from)} – ${nice(to)} ${ui('مقارنة بـ','vs')} ${nice(pFrom)} – ${nice(pTo)}` : `${nice(from)} – ${nice(to)} · ${ui('ما فيه فترة سابقة كاملة للمقارنة','no full previous period to compare')}`;
   const a=derive(A.tot), b=B?derive(B.tot):null, out=[], ch=(x,y)=>y?100*(x-y)/Math.abs(y):null;
   const add=(ic,title,detail)=>out.push(`<div class="win-i"><span class="ic" aria-hidden="true">${ic}</span><div><b>${title}</b><span>${detail}</span></div></div>`);
-  if(b){ const c=ch(a.leads,b.leads); if(c!=null&&c>=3) add('📈',ui(`الليدز زادت ${fmt(c,0)}%`,`Leads up ${fmt(c,0)}%`),ui(`${qty(a.leads)} ليد مقابل ${qty(b.leads)}`,`${qty(a.leads)} vs ${qty(b.leads)}`));
-    const d=ch(a.cpl,b.cpl); if(d!=null&&d<=-3) add('💰',ui(`تكلفة الليد نزلت ${fmt(-d,0)}%`,`Cost per lead down ${fmt(-d,0)}%`),ui(`${sar(a.cpl)} ريال مقابل ${sar(b.cpl)}`,`${sar(a.cpl)} vs ${sar(b.cpl)} SAR`));
-    const m=ch(a.conv,b.conv); if(m!=null&&m>=5&&a.conv>=10) add('💬',ui(`المحادثات زادت ${fmt(m,0)}%`,`Chats up ${fmt(m,0)}%`),ui(`${qty(a.conv)} محادثة مقابل ${qty(b.conv)}`,`${qty(a.conv)} vs ${qty(b.conv)}`)); }
+  if(b){ const c=ch(a.leads,b.leads); if(c!=null&&c>=3) add('📈',ui(`الطلبات زادت ${fmt(c,0)}%`,`Orders up ${fmt(c,0)}%`),ui(`${qty(a.leads)} طلب مقابل ${qty(b.leads)}`,`${qty(a.leads)} vs ${qty(b.leads)}`));
+    const d=ch(a.cpl,b.cpl); if(d!=null&&d<=-3) add('💰',ui(`تكلفة الطلب نزلت ${fmt(-d,0)}%`,`Cost per order down ${fmt(-d,0)}%`),ui(`${sar(a.cpl)} ريال مقابل ${sar(b.cpl)}`,`${sar(a.cpl)} vs ${sar(b.cpl)} SAR`));
+    const m=ch(a.conv,b.conv); if(m!=null&&m>=5&&a.conv>=10) add('💬',ui(`الإيراد زادت ${fmt(m,0)}%`,`Revenue up ${fmt(m,0)}%`),ui(`${qty(a.conv)} ريال إيراد مقابل ${qty(b.conv)}`,`${qty(a.conv)} vs ${qty(b.conv)}`)); }
   const cnt=(n,one,two,few)=>n===1?one:n===2?two:`${n} ${n<=10?few:one}`;
   const base=k=>String(k).split('|')[0], seen=new Set(), newWins=[];
   for(const k of Object.keys(A.byAd)){ const bk=base(k); if(seen.has(bk)) continue; seen.add(bk); if(WIN.has(k) && FIRST.ad[bk]>=addDays(from,-(WIN_DAYS-1))) newWins.push(ADS[k].name); }
   if(newWins.length) add('🏆',ui(cnt(newWins.length,'إعلان فايز جديد','إعلانين فايزين جداد','إعلانات فايزة جديدة'),`${newWins.length} new winning ads`),esc(newWins.slice(0,3).join(' · '))+(newWins.length>3?' …':''));
   const ideas={}; for(const [k,o] of Object.entries(A.byAd)){ const a1=ADS[k]; if(a1.goal!=='lead') continue; const id=ideaKey(a1), y=ideas[id]||(ideas[id]={name:a1.name,leadSpend:0,leadN:0}); y.leadSpend+=o.leadSpend; y.leadN+=o.leadN; }
   const best=Object.values(ideas).filter(y=>y.leadN>=10).sort((p,q)=>p.leadSpend/p.leadN-q.leadSpend/q.leadN)[0];
-  if(best) add('🎬',ui('أرخص فكرة في الفترة','Cheapest idea in this period'),`${esc(best.name)} · ${qty(best.leadN)} ${ui('ليد بـ','leads at')} ${sar(best.leadSpend/best.leadN)} ${ui('ريال','SAR')}`);
+  if(best) add('🎬',ui('أرخص فكرة في الفترة','Cheapest idea in this period'),`${esc(best.name)} · ${qty(best.leadN)} ${ui('طلب بـ','orders at')} ${sar(best.leadSpend/best.leadN)} ${ui('ريال','SAR')}`);
   if(B && !S.dept){ const ad=aggAllDepts(from,to), bd=aggAllDepts(pFrom,pTo);
     const imp=DORDER.map(k=>{ const x=derive(ad.by[k]||{}), y=derive(bd.by[k]||{}); return {k,c:(x.leadN>=10&&y.cpl)?ch(x.cpl,y.cpl):null,x,y}; }).filter(r=>r.c!=null&&r.c<=-5).sort((p,q)=>p.c-q.c)[0];
-    if(imp) add('🩺',ui(`${depName(imp.k)}: تكلفة الليد نزلت ${fmt(-imp.c,0)}%`,`${depName(imp.k)}: cost per lead down ${fmt(-imp.c,0)}%`),ui(`${sar(imp.x.cpl)} ريال مقابل ${sar(imp.y.cpl)}`,`${sar(imp.x.cpl)} vs ${sar(imp.y.cpl)} SAR`)); }
+    if(imp) add('🩺',ui(`${depName(imp.k)}: تكلفة الطلب نزلت ${fmt(-imp.c,0)}%`,`${depName(imp.k)}: cost per lead down ${fmt(-imp.c,0)}%`),ui(`${sar(imp.x.cpl)} ريال مقابل ${sar(imp.y.cpl)}`,`${sar(imp.x.cpl)} vs ${sar(imp.y.cpl)} SAR`)); }
   if(B){ const pl=Object.keys(A.byPlat).map(p=>{ const x=derive(A.byPlat[p]), y=B.byPlat[p]?derive(B.byPlat[p]):null; return {p,c:(y&&x.leadN>=10&&y.cpl)?ch(x.cpl,y.cpl):null,x,y}; }).filter(r=>r.c!=null&&r.c<=-5).sort((p,q)=>p.c-q.c)[0];
-    if(pl) add('📣',ui(`${platName(family(pl.p))}: تكلفة الليد نزلت ${fmt(-pl.c,0)}%`,`${platName(family(pl.p))}: cost per lead down ${fmt(-pl.c,0)}%`),ui(`${sar(pl.x.cpl)} ريال مقابل ${sar(pl.y.cpl)}`,`${sar(pl.x.cpl)} vs ${sar(pl.y.cpl)} SAR`)); }
+    if(pl) add('📣',ui(`${platName(family(pl.p))}: تكلفة الطلب نزلت ${fmt(-pl.c,0)}%`,`${platName(family(pl.p))}: cost per lead down ${fmt(-pl.c,0)}%`),ui(`${sar(pl.x.cpl)} ريال مقابل ${sar(pl.y.cpl)}`,`${sar(pl.x.cpl)} vs ${sar(pl.y.cpl)} SAR`)); }
   const days=Object.entries(A.byDay).map(([d,v])=>[d,Object.values(v).reduce((s,x)=>s+x.leads,0)]).sort((p,q)=>q[1]-p[1]);
   if(days.length){ const all=agg(MIN,addDays(from,-1));
     const rec=Math.max(0,...Object.entries(all.byDay).map(([,v])=>Object.values(v).reduce((s,x)=>s+x.leads,0)));
-    if(days[0][1]>rec && rec>0) add('⭐',ui('أعلى يوم ليدز من بداية البيانات','Best lead day on record'),`${nice(days[0][0])} · ${qty(days[0][1])} ${ui('ليد','leads')}`); }
+    if(days[0][1]>rec && rec>0) add('⭐',ui('أعلى يوم طلبات من بداية البيانات','Best lead day on record'),`${nice(days[0][0])} · ${qty(days[0][1])} ${ui('طلب','orders')}`); }
   const camps=new Set(), ads=new Set();
   for(const k of Object.keys(A.byAd)){ const a1=ADS[k]; if(FIRST.camp[a1.platform+'|'+a1.campaign]>=from) camps.add(a1.platform+'|'+a1.campaign); if(FIRST.ad[base(k)]>=from) ads.add(base(k)); }
   const en=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
@@ -2063,7 +2064,7 @@ function renderDeptMini(A){
   el.innerHTML = DORDER.map(k=>{ const o=derive(A.by[k]||{spend:0,leads:0,leadSpend:0,conv:0,impr:0,clicks:0});
     return `<div class="dbar-row${S.dept&&S.dept!==k?' dim':''}" data-d="${k}">${depCell(k)}
       <div style="display:grid;gap:3px"><div class="dbar"><span style="width:${100*(o.spend||0)/mx}%;background:var(${DEP[k].color})"></span></div><div class="dbar" style="height:8px"><span style="width:${100*(o.leads||0)/ml}%;background:var(--ink)"></span></div></div>
-      <span class="num">${sar2(o.spend)} ${money()} · ${qty(o.leads)} ${ui('ليد','leads')} · ${sar(o.cpl)}</span></div>`; }).join('');
+      <span class="num">${sar2(o.spend)} ${money()} · ${qty(o.leads)} ${ui('طلب','orders')} · ${sar(o.cpl)}</span></div>`; }).join('');
   el.querySelectorAll('[data-d]').forEach(r=>r.onclick=()=>setDept(r.dataset.d));
 }
 function renderDeptCards(A,B){
@@ -2072,8 +2073,8 @@ function renderDeptCards(A,B){
   el.innerHTML = DORDER.map(k=>{ const z={spend:0,leads:0,leadSpend:0,leadN:0,conv:0,impr:0,clicks:0}; const o=derive(A.by[k]||z), p=cur&&cur.compareOk&&B?derive(B.by[k]||z):{};
     return `<button type="button" class="dcard${S.dept&&S.dept!==k?' dim':''}" data-d="${k}" aria-pressed="${S.dept===k}" style="--dc:var(${DEP[k].color})">
       <span class="nm">${depName(k)}</span>
-      <div class="kv"><div><div class="k">الصرف</div><div class="mini">${sar2(o.spend)} ${money()}</div></div><div><div class="k">الليدز</div><div class="mini">${qty(o.leads)}</div></div>
-      <div><div class="k">تكلفة الليد</div><div class="mini">${sar(o.cpl)}</div></div><div><div class="k">محادثات</div><div class="mini">${fmt(o.conv)}</div></div></div>
+      <div class="kv"><div><div class="k">الصرف</div><div class="mini">${sar2(o.spend)} ${money()}</div></div><div><div class="k">الطلبات</div><div class="mini">${qty(o.leads)}</div></div>
+      <div><div class="k">تكلفة الطلب</div><div class="mini">${sar(o.cpl)}</div></div><div><div class="k">الإيراد</div><div class="mini">${fmt(o.conv)}</div></div></div>
       ${delta(o.leads,p.leads,false)}
       ${delta(o.cpl,p.cpl,true)}
       <span class="hint">${ui('آخر صرف','Last spend')}: ${lastSpendDate(k,true)?nice(lastSpendDate(k,true)):'—'}</span></button>`; }).join('');
@@ -2082,7 +2083,7 @@ function renderDeptCards(A,B){
 function renderDeptPlat(A){
   const el=$('#tDeptPlat'); if(!el) return;
   const used=ORDER.filter(p=>DORDER.some(k=>A.byDP[k]?.[p]?.spend>0));
-  let h=`<thead><tr><th>القسم</th>${used.map(p=>`<th class="n">${platName(p)} ${ui('صرف','Spend')}</th><th class="n">ليدز</th><th class="n">تكلفة الليد</th>`).join('')}<th class="n">المجموع</th><th class="n">ليدز</th><th class="n">تكلفة الليد</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>القسم</th>${used.map(p=>`<th class="n">${platName(p)} ${ui('صرف','Spend')}</th><th class="n">طلبات</th><th class="n">تكلفة الطلب</th>`).join('')}<th class="n">المجموع</th><th class="n">طلبات</th><th class="n">تكلفة الطلب</th></tr></thead><tbody>`;
   DORDER.forEach(k=>{ h+=`<tr class="click${S.dept===k?' lv1row':''}" data-d="${k}"><td>${depCell(k)}</td>`;
     used.forEach(p=>{ const o=derive(A.byDP[k]?.[p]||{spend:0,leads:0,leadSpend:0,leadN:0}); h+=`<td class="n">${o.spend?sar2(o.spend):'—'}</td><td class="n">${o.spend?qty(o.leads):'—'}</td><td class="n">${sar(o.cpl)}</td>`; });
     const t=derive(A.by[k]||{spend:0,leads:0,leadSpend:0,leadN:0}); h+=`<td class="n"><b>${sar2(t.spend)}</b></td><td class="n"><b>${qty(t.leads)}</b></td><td class="n"><b>${sar(t.cpl)}</b></td></tr>`; });
@@ -2099,18 +2100,18 @@ function renderDeptPage(now,prev){
   const ads=Object.entries(now.byAd).map(([id,o])=>({id,...derive(o),a:ADS[id]})).filter(x=>x.spend>0).sort((x,y)=>(y.leads+y.conv)-(x.leads+x.conv)||y.spend-x.spend).slice(0,12);
   const prevTot=cur&&cur.compareOk&&prev?derive(prev.tot):{};
   const tot=derive(now.tot);
-  root.innerHTML = `<div class="panel-h"><h2>${depName(S.dept)}</h2><span class="sub">${ui('مقارنة بالفترة السابقة','Compared with the previous period')} · ${ui('الصرف','Spend')} ${sar2(tot.spend)} ${money()} · ${ui('الليدز','Leads')} ${qty(tot.leads)}</span></div>
+  root.innerHTML = `<div class="panel-h"><h2>${depName(S.dept)}</h2><span class="sub">${ui('مقارنة بالفترة السابقة','Compared with the previous period')} · ${ui('الصرف','Spend')} ${sar2(tot.spend)} ${money()} · ${ui('الطلبات','Leads')} ${qty(tot.leads)}</span></div>
     <div class="vgrid">
-      <div class="bi-card"><h3>المنصات</h3>${rows.length?`<div class="tbl"><table><thead><tr><th>المنصة</th><th class="n">الصرف</th><th class="n">الليدز</th><th class="n">تكلفة الليد</th><th class="n">محادثات</th><th class="n">نسبة النقر</th></tr></thead><tbody>${rows.map(r=>`<tr class="click" data-p="${r.p}"><td>${platCell(r.p)}</td><td class="n">${sar2(r.spend)}</td><td class="n">${qty(r.leads)}</td><td class="n">${sar(r.cpl)}</td><td class="n">${family(r.p)==='meta'?fmt(r.conv):'—'}</td><td class="n">${pct(r.ctr)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">'+ui('لا يوجد صرف لهذا القسم في الفترة. آخر صرف: ','No spend for this department in this range. Last spend: ')+(lastSpendDate(S.dept,false)?nice(lastSpendDate(S.dept,false)):'—')+'</div>'}</div>
-      <div class="bi-card"><h3>مقارنة الفترة السابقة</h3><div class="kv"><div><div class="k">صرف سابق</div><div class="mini">${sar2(prevTot.spend)}</div></div><div><div class="k">ليدز سابقة</div><div class="mini">${qty(prevTot.leads)}</div></div><div><div class="k">تكلفة ليد سابقة</div><div class="mini">${sar(prevTot.cpl)}</div></div></div>${delta(tot.spend,prevTot.spend,true)}${delta(tot.leads,prevTot.leads,false)}${delta(tot.cpl,prevTot.cpl,true)}</div>
+      <div class="bi-card"><h3>المنصات</h3>${rows.length?`<div class="tbl"><table><thead><tr><th>المنصة</th><th class="n">الصرف</th><th class="n">الطلبات</th><th class="n">تكلفة الطلب</th><th class="n">الإيراد</th><th class="n">نسبة النقر</th></tr></thead><tbody>${rows.map(r=>`<tr class="click" data-p="${r.p}"><td>${platCell(r.p)}</td><td class="n">${sar2(r.spend)}</td><td class="n">${qty(r.leads)}</td><td class="n">${sar(r.cpl)}</td><td class="n">${family(r.p)==='meta'?fmt(r.conv):'—'}</td><td class="n">${pct(r.ctr)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">'+ui('لا يوجد صرف لهذا القسم في الفترة. آخر صرف: ','No spend for this department in this range. Last spend: ')+(lastSpendDate(S.dept,false)?nice(lastSpendDate(S.dept,false)):'—')+'</div>'}</div>
+      <div class="bi-card"><h3>مقارنة الفترة السابقة</h3><div class="kv"><div><div class="k">صرف سابق</div><div class="mini">${sar2(prevTot.spend)}</div></div><div><div class="k">طلبات سابقة</div><div class="mini">${qty(prevTot.leads)}</div></div><div><div class="k">تكلفة طلب سابقة</div><div class="mini">${sar(prevTot.cpl)}</div></div></div>${delta(tot.spend,prevTot.spend,true)}${delta(tot.leads,prevTot.leads,false)}${delta(tot.cpl,prevTot.cpl,true)}</div>
     </div>
     <h3>الاتجاه</h3>
-    <div class="charts"><div><div class="sub">الصرف</div><div class="chart" id="dSpend"></div></div><div><div class="sub">الليدز</div><div class="chart" id="dLeads"></div></div><div><div class="sub">تكلفة الليد</div><div class="chart" id="dCpl"></div></div></div>
+    <div class="charts"><div><div class="sub">الصرف</div><div class="chart" id="dSpend"></div></div><div><div class="sub">الطلبات</div><div class="chart" id="dLeads"></div></div><div><div class="sub">تكلفة الطلب</div><div class="chart" id="dCpl"></div></div></div>
     <h3>الحملات</h3>
-    <div class="tbl"><table id="dCamp"><thead><tr><th>المنصة</th><th>الحملة</th><th class="n">الصرف</th><th class="n">الليدز</th><th class="n">تكلفة الليد</th></tr></thead><tbody>${campRows.map(r=>`<tr class="click" data-c="${esc(r.p+'|'+r.name)}"><td>${platCell(r.p)}</td><td class="name">${esc(r.name)}</td><td class="n">${sar2(r.spend)}</td><td class="n">${r.goal==='lead'?qty(r.leadN):'—'}</td><td class="n">${r.goal==='lead'?sar(r.cpl):'—'}</td></tr>`).join('')||'<tr><td class="empty">لا توجد حملات.</td></tr>'}</tbody></table></div>
+    <div class="tbl"><table id="dCamp"><thead><tr><th>المنصة</th><th>الحملة</th><th class="n">الصرف</th><th class="n">الطلبات</th><th class="n">تكلفة الطلب</th></tr></thead><tbody>${campRows.map(r=>`<tr class="click" data-c="${esc(r.p+'|'+r.name)}"><td>${platCell(r.p)}</td><td class="name">${esc(r.name)}</td><td class="n">${sar2(r.spend)}</td><td class="n">${r.goal==='lead'?qty(r.leadN):'—'}</td><td class="n">${r.goal==='lead'?sar(r.cpl):'—'}</td></tr>`).join('')||'<tr><td class="empty">لا توجد حملات.</td></tr>'}</tbody></table></div>
     <h3>أفضل الإعلانات</h3>
-    <div class="tbl"><table><thead><tr><th>الإعلان</th><th>المنصة</th><th class="n">الصرف</th><th class="n">ليدز</th><th class="n">محادثات</th><th class="n">تكلفة الليد</th></tr></thead><tbody>${ads.map(x=>`<tr class="click" data-k="${x.id}"><td class="name">${esc(x.a.name)}</td><td>${platCell(x.a.platform)}</td><td class="n">${sar2(x.spend)}</td><td class="n">${qty(x.leads)}</td><td class="n">${fmt(x.conv)}</td><td class="n">${x.a.goal==='lead'?sar(x.cpl):'—'}</td></tr>`).join('')||'<tr><td class="empty">لا توجد إعلانات صرفت.</td></tr>'}</tbody></table></div>`;
-  stacked($('#dSpend'), now, 'spend'); stacked($('#dLeads'), now, 'leads'); cplLine($('#dCpl'), now);
+    <div class="tbl"><table><thead><tr><th>الإعلان</th><th>المنصة</th><th class="n">الصرف</th><th class="n">طلبات</th><th class="n">الإيراد</th><th class="n">تكلفة الطلب</th></tr></thead><tbody>${ads.map(x=>`<tr class="click" data-k="${x.id}"><td class="name">${esc(x.a.name)}</td><td>${platCell(x.a.platform)}</td><td class="n">${sar2(x.spend)}</td><td class="n">${qty(x.leads)}</td><td class="n">${fmt(x.conv)}</td><td class="n">${x.a.goal==='lead'?sar(x.cpl):'—'}</td></tr>`).join('')||'<tr><td class="empty">لا توجد إعلانات صرفت.</td></tr>'}</tbody></table></div>`;
+  stacked($('#dSpend'), now, 'spend'); stacked($('#dLeads'), now, 'orders'); cplLine($('#dCpl'), now);
   root.querySelectorAll('tr[data-p]').forEach(tr=>tr.onclick=()=>{ S.plat=tr.dataset.p; save(); render(); });
   root.querySelectorAll('tr[data-c]').forEach(tr=>tr.onclick=()=>{ S.camp=tr.dataset.c; render(); });
   root.querySelectorAll('tr[data-k]').forEach(tr=>tr.onclick=()=>openAd(tr.dataset.k));
@@ -2387,7 +2388,7 @@ $('#osort').addEventListener('change',e=>{ S.orgSort=e.target.value; S.orgShown=
 $('#omore').addEventListener('click',()=>{ S.orgShown+=24; renderPosts(); });
 window.__check = () => { const keep={...S}; S.plat='all'; S.stat='all'; S.camp=''; S.goal=''; S.fmt=''; S.dept='';
   const A=aggAllDepts('2026-09-14','2026-10-11'); const out={};
-  for(const k of DORDER){ const o=derive(A.by[k]||{spend:0,leads:0,leadSpend:0}); out[k]={spend:+(o.spend||0).toFixed(2), leads:o.leads||0}; }
+  for(const k of DORDER){ const o=derive(A.by[k]||{spend:0,leads:0,leadSpend:0}); out[k]={spend:+(o.spend||0).toFixed(2), orders:o.leads||0}; }
   Object.assign(S,keep); return out; };
 
 // ---- header meta
