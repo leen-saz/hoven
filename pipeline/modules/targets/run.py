@@ -1,4 +1,4 @@
-"""الأهداف لكل منصة: تكلفة الليد (cpl) وتكلفة المحادثة (chat). المكتوبة في config/targets.json، وإذا null نرجع لمتوسط آخر 30 يوم.
+"""الأهداف لكل منصة: تكلفة الطلب (cpl) وتكلفة المحادثة (chat). المكتوبة في config/targets.json، وإذا null نرجع لمتوسط آخر 30 يوم.
 كل هدف يرجع معه مصدره (written أو avg30) عشان يبان في لوحة القرارات."""
 import json, os
 from collections import defaultdict

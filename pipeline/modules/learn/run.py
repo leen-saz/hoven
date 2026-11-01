@@ -2,7 +2,7 @@
 وحركاته داخل المنصات نفسها (من observe). ويطلع دروس يقراها suggest وcritic.
 
 - قاعدة يرفضها الفريق باستمرار (5 قرارات أو أكثر، والموافقة أقل من 20%) تتعلّم "block"، والمراجع يرفض اقتراحاتها لين تراجعها لين.
-- قاعدة نتيجتها سيئة (تكلفة الليد طلعت بعد الموافقة) تطلع درس تحذير.
+- قاعدة نتيجتها سيئة (تكلفة الطلب طلعت بعد الموافقة) تطلع درس تحذير.
 - حركات يدوية متكررة داخل المنصة (مثل رفع ميزانية بدون اقتراح) تطلع درس: النظام فاته شي.
 قراءة فقط على حسابات الإعلانات.
 """
@@ -41,7 +41,7 @@ def lessons(decisions, outcomes, activity):
                    if o["day"] == 7 and (o.get("vs_expect") or {}).get("cpl_change_pct") is not None]
         if len(changes) >= 3:
             m = median(changes)
-            out.append({"platform": p, "kind": k, "lesson": f"بعد 7 أيام من {KIND.get(k, k)} في {PN.get(p, p)}، تكلفة الليد {'طلعت' if m > 0 else 'نزلت'} {abs(m):.0f}% (الوسيط من {len(changes)}).",
+            out.append({"platform": p, "kind": k, "lesson": f"بعد 7 أيام من {KIND.get(k, k)} في {PN.get(p, p)}، تكلفة الطلب {'طلعت' if m > 0 else 'نزلت'} {abs(m):.0f}% (الوسيط من {len(changes)}).",
                         "evidence": {"cpl_change_median": m, "n": len(changes)}, "confidence": round(min(1, len(changes) / 8), 2), "block": False})
     moves = Counter((a["platform"], a["event"]) for a in activity)
     actors = defaultdict(Counter)

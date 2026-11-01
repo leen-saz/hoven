@@ -34,7 +34,7 @@ export default async function mount() {
   const PLAT = {
     meta: [
       C('destination', 'وين يروح العميل', 'seg', { options: { whatsapp: 'واتساب', form: 'نموذج فوري', site: 'الموقع' }, value: 'whatsapp' }),
-      C('optimization', 'التحسين على', 'select', { options: { conversations: 'المحادثات', leads: 'الليدز', purchase: 'الشراء' }, value: 'conversations' }),
+      C('optimization', 'التحسين على', 'select', { options: { conversations: 'المحادثات', leads: 'الطلبات', purchase: 'الشراء' }, value: 'conversations' }),
       C('placements', 'أماكن الظهور', 'checks', { options: { fb_feed: 'فيسبوك فيد', ig_feed: 'إنستغرام فيد', ig_stories: 'ستوري', ig_reels: 'ريلز' }, value: ['ig_feed', 'ig_stories', 'ig_reels'], hint: 'يدوي. Advantage+ ممنوع.' }),
       C('budget_type', 'نوع الميزانية', 'seg', { options: { abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)' }, value: 'abo' }),
       C('partnership', 'إعلان شراكة مع حساب المؤثرة', 'toggle'),
@@ -43,7 +43,7 @@ export default async function mount() {
     ],
     snap: [
       C('ad_type', 'نوع الإعلان', 'seg', { options: { single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن' }, value: 'single' }),
-      C('goal', 'الهدف في سناب', 'select', { options: { lead_form: 'نموذج ليد داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)' }, value: 'lead_form' }),
+      C('goal', 'الهدف في سناب', 'select', { options: { lead_form: 'نموذج طلب داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)' }, value: 'lead_form' }),
       C('qualify', 'سؤال التأهيل في النموذج', 'text', { hint: 'مثل: متى تبي الجلسة؟', ai: true }),
       C('bid', 'المزايدة', 'seg', { options: { auto: 'تلقائي', target: 'تكلفة مستهدفة' }, value: 'auto' }),
     ],

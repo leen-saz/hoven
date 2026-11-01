@@ -185,7 +185,7 @@ def carry_forward(prev_ads, fresh_ads, prefix):
 GOALS = {"lead": "ليدز", "messages": "محادثات", "profile": "زيارات البروفايل", "traffic": "زيارات الموقع", "other": "أخرى"}
 def meta_goal(opt):
     if opt in ("QUALITY_LEAD", "LEAD_GENERATION", "OFFSITE_CONVERSIONS", "VALUE"): return "lead"   # Hoven: "lead" = sale
-    if opt in ("REPLIES", "CONVERSATIONS"): return "messages"
+    if opt in ("REPLIES", "CONVERSATIONS"): return "other"   # Hoven: conv = revenue (ADR-0007), not chats; no chat rules
     if opt == "PROFILE_VISIT": return "profile"
     if opt in ("LINK_CLICKS", "LANDING_PAGE_VIEWS"): return "traffic"
     return "other"
