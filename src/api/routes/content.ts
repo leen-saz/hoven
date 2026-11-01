@@ -52,8 +52,9 @@ export const item = { PATCH: handle(async (request, e: AiEnv) => {
     const ai = aiOf(e);
     if (!ai) return json(503, { error: 'الكتابة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
     const out = await ai(AI_MODEL, { max_tokens: 2500, messages: [{ role: 'user', content:
-      `اكتب ${it.kind === 'faq' ? 'أسئلة وأجوبة شائعة (8 أسئلة)' : it.kind === 'page' ? 'نص صفحة خدمة' : 'مقال'} بالعربي السعودي الواضح لموقع ${p.site} بعنوان: "${it.title}". السبب: ${it.why}.
-النبرة مثل: ${(p.competitors as string[]).join('، ') || 'ودودة ومهنية'}. بدون ادعاءات طبية مضمونة (وزارة الصحة). استخدم عناوين فرعية، واختم بدعوة للحجز. Markdown فقط.` }] });
+      `اكتب ${it.kind === 'faq' ? 'أسئلة وأجوبة شائعة (8 أسئلة)' : it.kind === 'page' ? 'نص صفحة فئة أو منتج' : 'مقال'} بالعربي السعودي الواضح لمتجر ${p.site} (النيش: ${String(p.niche || '') || 'غير محدد'}) بعنوان: "${it.title}". السبب: ${it.why}.
+قاعدة: اكتب عن النيش هذا بس. لا تخترع خدمات أو مجالات أو أسعار أو سياسات (شحن، استرجاع) ما هي مذكورة، وحط [تأكد] جنب أي معلومة لازم المتجر يأكدها.
+النبرة مثل: ${(p.competitors as string[]).join('، ') || 'ودودة وواضحة'}. استخدم عناوين فرعية، واختم بدعوة للتسوق من المتجر. Markdown فقط.` }] });
     it.draft = String((out as { response?: unknown })?.response ?? '').slice(0, 20000);
   } else it.status = act === 'approve' ? 'approved' : act === 'reject' ? 'rejected' : 'done';
   const r = await sb(cfg, scoped(`/rest/v1/content_plans?id=eq.${id}`, user.co), { method: 'PATCH', admin: true, body: { items } });
