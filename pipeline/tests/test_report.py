@@ -99,13 +99,13 @@ class OrganicTests(unittest.TestCase):
         for needle in (
             "pages_read_engagement", "pages_read_user_content", "pages_show_list", "read_insights",
             "instagram_manage_insights", "instagram_basic",
-            "Hoven Care.", "hoven.sa",
+            "Hoven", "hoven.gcc",
             "GA4_PROPERTY_ID", "GA4_SERVICE_ACCOUNT_JSON",
         ):
             self.assertIn(needle, blob)
         self.assertNotIn("Hoven Home Care", blob)
         self.assertNotIn("Hoven Women Health", blob)
-        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven Care."])
+        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven"])
         self.assertTrue(all(p["status"] == "pending" for p in org["facebook"]))
         self.assertEqual(org["ga4"]["status"], "pending")
         self.assertEqual(org["tiktok"]["status"], "pending")
@@ -127,8 +127,8 @@ class OrganicTests(unittest.TestCase):
             token = (qs.get("access_token") or [""])[0]
             if path.endswith("/me/accounts"):
                 return {"data": [{
-                    "id": "111", "name": "Hoven Care.", "access_token": "PAGE",
-                    "instagram_business_account": {"id": "17841423912575723", "username": "hoven.sa"},
+                    "id": "111", "name": "Hoven", "access_token": "PAGE",
+                    "instagram_business_account": {"id": "17841423912575723", "username": "hoven.gcc"},
                 }]}
             if path.endswith("/111/insights"):
                 raise RuntimeError(denied)
@@ -136,7 +136,7 @@ class OrganicTests(unittest.TestCase):
                 raise RuntimeError(posts_denied)
             if path.endswith("/111"):
                 self.assertEqual(token, "PAGE")
-                return {"name": "Hoven Care.", "followers_count": 1500, "fan_count": 1500}
+                return {"name": "Hoven", "followers_count": 1500, "fan_count": 1500}
             if path.endswith("/17841423912575723/insights"):
                 raise RuntimeError(denied)
             if path.endswith("/17841423912575723/media"):
@@ -151,11 +151,11 @@ class OrganicTests(unittest.TestCase):
                 }]}
             if path.endswith("/17841423912575723"):
                 self.assertEqual(token, "PAGE")
-                return {"username": "hoven.sa", "followers_count": 334, "media_count": 37}
+                return {"username": "hoven.gcc", "followers_count": 334, "media_count": 37}
             raise RuntimeError("unexpected " + path)
 
         org = collect_organic({"META_ACCESS_TOKEN": "USER"}, "2026-09-14", "2026-10-11", transport=transport)
-        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven Care."])
+        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven"])
         care = org["facebook"][0]
         self.assertEqual(care["followers"], 1500)
         self.assertEqual(care["posts"], [])
@@ -188,23 +188,23 @@ class OrganicTests(unittest.TestCase):
         def transport(url, data=None, headers=None, method=None, timeout=None):
             path = urllib.parse.urlparse(url).path
             if path.endswith("/me/accounts"):
-                return {"data": [{"id": "111", "name": "Hoven Care.", "access_token": "PAGE"}]}
+                return {"data": [{"id": "111", "name": "Hoven", "access_token": "PAGE"}]}
             if path.endswith("/111/insights") or path.endswith("/111/posts") or path.endswith("/111/feed"):
                 return {"data": []}
             if path.endswith("/111"):
-                return {"name": "Hoven Care.", "followers_count": 33, "fan_count": 33}
+                return {"name": "Hoven", "followers_count": 33, "fan_count": 33}
             raise RuntimeError("unexpected " + path)
 
         org = collect_organic({"META_ACCESS_TOKEN": "USER"}, "2026-10-06", "2026-10-13", transport=transport)
         care = org["facebook"][0]
-        self.assertEqual(care["name"], "Hoven Care.")
+        self.assertEqual(care["name"], "Hoven")
         self.assertEqual(care["followers"], 33)
         self.assertEqual(care["posts"], [])
         self.assertEqual(care["days"], [])
         self.assertEqual(care["insights"], "pending")
         self.assertEqual(care["posts_status"], "pending")
         self.assertEqual(care["status"], "partial")
-        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven Care."])
+        self.assertEqual([p["name"] for p in org["facebook"]], ["Hoven"])
 
     def test_thumb_does_not_fetch_without_url(self):
         from organic import _embed_thumb
@@ -287,7 +287,7 @@ class BillingTests(unittest.TestCase):
         self.assertIn("spring rose0406", html)
         self.assertIn("زهرة الربيع", html)
         self.assertIn("function careBlocked", html)
-        self.assertIn("page.name==='Hoven Care.'", html)
+        self.assertIn("page.name==='Hoven'", html)
         self.assertIn("ORG_FB_HIDDEN", html)
         self.assertIn("Hoven Home Care", html)
         self.assertIn("Hoven Women Health", html)
@@ -682,11 +682,11 @@ class DateAccuracyTests(unittest.TestCase):
             path = urllib.parse.urlparse(url).path
             if path.endswith("/me/accounts"):
                 return {"data": [{
-                    "id": "111", "name": "Hoven Care.", "access_token": "PAGE",
-                    "instagram_business_account": {"id": "ig1", "username": "hoven.sa"},
+                    "id": "111", "name": "Hoven", "access_token": "PAGE",
+                    "instagram_business_account": {"id": "ig1", "username": "hoven.gcc"},
                 }]}
             if path.endswith("/111"):
-                return {"name": "Hoven Care.", "followers_count": 10, "fan_count": 10}
+                return {"name": "Hoven", "followers_count": 10, "fan_count": 10}
             if path.endswith("/111/insights") or path.endswith("/ig1/insights"):
                 return {"data": []}
             if path.endswith("/111/posts"):
@@ -699,7 +699,7 @@ class DateAccuracyTests(unittest.TestCase):
             if path.endswith("/111/feed"):
                 return {"data": []}
             if path.endswith("/ig1"):
-                return {"username": "hoven.sa", "followers_count": 10}
+                return {"username": "hoven.gcc", "followers_count": 10}
             if path.endswith("/ig1/media"):
                 return {"data": [{
                     "id": "m1", "caption": "منشور", "media_type": "IMAGE",
