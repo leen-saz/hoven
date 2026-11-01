@@ -53,7 +53,7 @@ export const PLATFORMS: Platform[] = [
     fields: [F('CM360_SERVICE_ACCOUNT_JSON', 'Service account JSON', { type: 'textarea', manual: true }), ID('CM360_PROFILE_ID', 'User profile ID')] },
   { id: 'sa360', name: 'Search Ads 360', group: 'ads', docs: 'https://developers.google.com/search-ads/reporting/overview', help: 'Google Cloud ← OAuth client ← فعّل Search Ads 360 Reporting API.',
     fields: [F('SA360_CLIENT_ID', 'Client ID', { manual: true }), F('SA360_CLIENT_SECRET', 'Client Secret', { manual: true }), F('SA360_REFRESH_TOKEN', 'Refresh Token', { manual: true }), ID('SA360_CUSTOMER_ID', 'Customer ID'), ID('SA360_LOGIN_CUSTOMER_ID', 'Manager ID', { optional: true })] },
-  { id: 'ttd', name: 'The Trade Desk', group: 'ads', docs: 'https://partner.thetradedesk.com/v3/portal/api/doc/Authentication', help: 'اطلب صلاحية API من مدير حسابك ← API token طهوفن المدى.',
+  { id: 'ttd', name: 'The Trade Desk', group: 'ads', docs: 'https://partner.thetradedesk.com/v3/portal/api/doc/Authentication', help: 'اطلب صلاحية API من مدير حسابك ← API token طويل المدى.',
     fields: [F('TTD_API_TOKEN', 'API Token'), ID('TTD_PARTNER_ID', 'Partner ID'), ID('TTD_ADVERTISER_ID', 'Advertiser ID')] },
   { id: 'criteo', name: 'Criteo', group: 'ads', docs: 'https://developers.criteo.com/', help: 'Criteo Developers ← My apps ← تطبيق جديد ← Client credentials.',
     fields: [F('CRITEO_CLIENT_ID', 'Client ID'), F('CRITEO_CLIENT_SECRET', 'Client Secret'), ID('CRITEO_ADVERTISER_ID', 'Advertiser ID')] },
@@ -256,7 +256,7 @@ export async function exchange(p: Platform, { code, redirect, id, secret }: Exch
 async function metaExchange({ code, redirect, id, secret }: ExchangeArgs, env = 'META_ACCESS_TOKEN'): Promise<Exchanged> {
   const q = new URLSearchParams({ client_id: id, client_secret: secret, redirect_uri: redirect, code });
   const short = await getJson(`https://graph.facebook.com/v23.0/oauth/access_token?${q}`);
-  // المفتاح القصير يعيش ساعة: نبدله بطهوفن (60 يوم تقريباً)
+  // المفتاح القصير يعيش ساعة: نبدله بطويل (60 يوم تقريباً)
   const l = new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: id, client_secret: secret, fb_exchange_token: String(short.access_token) });
   const long = await getJson(`https://graph.facebook.com/v23.0/oauth/access_token?${l}`);
   return { values: { [env]: String(long.access_token) }, expiresIn: Number(long.expires_in) || 60 * 86400 };
