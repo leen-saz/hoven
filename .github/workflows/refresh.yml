@@ -114,15 +114,17 @@ jobs:
           fi
           python build.py
 
-      # Hoven CRM (Marketing API v1, read-only): leads, bookings and Moyasar payments per ad, upserted by lead_id
-      - name: CRM leads
+      # Salla orders (read-only): tokens from the Connectors page (V_SALLA_*), single-use refresh token saved back to the Vault.
+      # The seed copies the old dashboard's daily history once (existing days are never overwritten).
+      - name: Salla sales
         continue-on-error: true
-        working-directory: pipeline
         env:
-          CRM_API_KEY: ${{ secrets.CRM_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python -m crm.fetch
+          SALLA_FULL: ${{ inputs.full && '1' || '' }}
+        run: |
+          python supabase/seed_salla_history.py
+          python pipeline/salla.py
 
       - name: Decision board suggestions (read-only on ad accounts)
         continue-on-error: true

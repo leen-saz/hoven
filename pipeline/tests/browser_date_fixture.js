@@ -79,7 +79,7 @@ async function main() {
     let d = await dates(page);
     check(d.from === '2026-10-10' && d.to === '2026-10-16', '7-day preset must end on the last full day', JSON.stringify(d));
     await expectKpi(page, 'الصرف', '185', '7-day spend excludes partial today');
-    await expectKpi(page, 'الليدز', '21.50', '7-day leads');
+    await expectKpi(page, 'الطلبات', '21.50', '7-day leads');
 
     await click(page, '#presets button[data-k="t"]');
     await ready(page);
@@ -103,9 +103,9 @@ async function main() {
     d = await dates(page);
     check(d.from === '2026-10-16' && d.to === '2026-10-16', 'yesterday preset', JSON.stringify(d));
     await expectKpi(page, 'الصرف', '150', 'yesterday excludes today and the 15th');
-    await expectKpi(page, 'الليدز', '14.50', 'yesterday leads keep the half lead');
-    await expectKpi(page, 'تكلفة الليد', '11.11', 'yesterday CPL uses lead-goal leads only');
-    const yLeads = await kpi(page, 'الليدز');
+    await expectKpi(page, 'الطلبات', '14.50', 'yesterday leads keep the half lead');
+    await expectKpi(page, 'تكلفة الطلب', '11.11', 'yesterday CPL uses lead-goal leads only');
+    const yLeads = await kpi(page, 'الطلبات');
     check(yLeads && yLeads.delta.includes('383.3%'), 'yesterday compares with Oct 15 only', yLeads && yLeads.delta);
 
     await setRange(page, '2026-10-15', '2026-10-16');
@@ -113,13 +113,13 @@ async function main() {
     check(label.includes('13 أكتوبر') && label.includes('14 أكتوبر'), 'previous period is the two days before, inclusive', label);
     check(!label.includes('بيانات ناقصة'), 'Oct 15–16 is inside TikTok coverage', label);
     await expectKpi(page, 'الصرف', '165', 'range spend keeps hidden-platform spend');
-    await expectKpi(page, 'الليدز', '17.50', 'range leads');
-    await expectKpi(page, 'تكلفة الليد', '8.67', 'CPL is lead spend over lead-goal leads');
-    await expectKpi(page, 'محادثات واتساب وماسنجر', '3', 'conversations');
+    await expectKpi(page, 'الطلبات', '17.50', 'range leads');
+    await expectKpi(page, 'تكلفة الطلب', '8.67', 'CPL is lead spend over lead-goal leads');
+    await expectKpi(page, 'الإيراد (ر.س)', '3', 'conversations');
     await expectKpi(page, 'الظهور', '390', 'impressions');
     await expectKpi(page, 'نقرات الرابط والسوايب', '32', 'clicks');
     await expectKpi(page, 'نسبة النقر', '8.21%', 'CTR is sum of clicks over sum of impressions');
-    const leads = await kpi(page, 'الليدز');
+    const leads = await kpi(page, 'الطلبات');
     check(leads && leads.delta.includes('337.5%'), 'lead delta versus Oct 13–14', leads && leads.delta);
     const spend = await kpi(page, 'الصرف');
     check(spend && spend.delta.includes('725.0%'), 'spend delta versus the previous 20', spend && spend.delta);
@@ -127,7 +127,7 @@ async function main() {
     check(month.includes('165') && month.includes('17.50') && month.includes('8.67') && !month.includes('185'), 'month table follows the selected days', month);
     const pace = await text(page, '#pace');
     check(pace.includes('2 من 31') && pace.includes('2,558') && pace.includes('20.50'), 'pace uses the selected days inside the month', pace);
-    check(pace.includes('— ليد أو محادثة'), 'previous month before the data start is missing, not zero', pace);
+    check(pace.includes('— طلب أو ريال إيراد'), 'previous month before the data start is missing, not zero', pace);
     const tree = await text(page, '#tTree');
     check(tree.includes('8.67') && !tree.includes('3.71'), 'drill-down CPL uses lead-goal leads', tree);
     const plat = await text(page, '#tPlat');
@@ -144,33 +144,33 @@ async function main() {
 
     await click(page, '#plats button[data-v="google"]');
     await expectKpi(page, 'الصرف', '4.00', 'google filter');
-    await expectKpi(page, 'الليدز', '0.50', 'fractional google leads');
-    await expectKpi(page, 'تكلفة الليد', '8.00', 'google CPL');
+    await expectKpi(page, 'الطلبات', '0.50', 'fractional google leads');
+    await expectKpi(page, 'تكلفة الطلب', '8.00', 'google CPL');
     const cpl = await text(page, '#chCpl');
     check(!cpl.includes('ما فيه ليدز') && cpl.includes('8.00'), 'half a lead still draws the CPL line', cpl);
     await click(page, '#plats button[data-v="all"]');
 
     await click(page, '#stat button[data-v="off"]');
     await expectKpi(page, 'الصرف', '4.00', 'paused filter keeps only the paused ad');
-    await expectKpi(page, 'الليدز', '0.50', 'paused leads');
+    await expectKpi(page, 'الطلبات', '0.50', 'paused leads');
     await click(page, '#stat button[data-v="all"]');
 
     await page.select('#fGoal', 'messages');
     await expectKpi(page, 'الصرف', '100', 'messages objective');
-    await expectKpi(page, 'الليدز', '10', 'message leads still count as leads');
-    await expectKpi(page, 'تكلفة الليد', '—', 'message leads do not dilute CPL');
-    await expectKpi(page, 'محادثات واتساب وماسنجر', '2', 'message conversations');
+    await expectKpi(page, 'الطلبات', '10', 'message leads still count as leads');
+    await expectKpi(page, 'تكلفة الطلب', '—', 'message leads do not dilute CPL');
+    await expectKpi(page, 'الإيراد (ر.س)', '2', 'message conversations');
     await page.select('#fGoal', '');
 
     await page.select('#fCamp', 'facebook|IV Camp');
     await expectKpi(page, 'الصرف', '40.00', 'campaign filter');
-    await expectKpi(page, 'تكلفة الليد', '13.33', 'campaign CPL');
+    await expectKpi(page, 'تكلفة الطلب', '13.33', 'campaign CPL');
     await page.select('#fCamp', '');
 
     await click(page, '#depts button[data-v="iv"]');
     await setRange(page, '2026-10-15', '2026-10-15');
     await expectKpi(page, 'الصرف', '15.00', 'department and one day');
-    await expectKpi(page, 'الليدز', '3', 'department leads');
+    await expectKpi(page, 'الطلبات', '3', 'department leads');
     const card = await page.evaluate(() => {
       const el = [...document.querySelectorAll('#deptCards button')].find(b => b.textContent.includes('المحاليل'));
       return el ? el.textContent.replace(/\s+/g, ' ') : '';

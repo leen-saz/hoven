@@ -3,8 +3,10 @@
 | Phase | Status | Notes |
 |---|---|---|
 | 0 Foundation | done | PRD, plan, RECON. Supabase `hoven-ads` created; repo created; Cloudflare = Leen@brandsforhome.sa |
-| 1 Skeleton + CI | in review | Well codebase ported (all modules), Hoven colours + fonts, names and buckets renamed; build, typecheck, lint, 76 TS + 106 Python tests green |
-| 2–7 | not started | |
+| 1 Skeleton + CI | done | Well codebase ported (all modules), Hoven colours + fonts, names and buckets renamed; build, typecheck, lint, 76 TS + 106 Python tests green |
+| 2 Auth | done | Owner login verified on staging (profile + audit row) |
+| 3 Data | in progress | Sales columns (ADR-0007), Salla pipeline + connector, migration 012 applied, Salla history seed |
+| 4–7 | not started | |
 
 ## Decisions
 - 2026-11-01: Google Ads account `4780406294` counts 100% as Hoven.
