@@ -4,8 +4,8 @@ Ported from leen-saz/hoven-dashboard salla_api.py with the same counting rules (
 Salla's monthly summary). Differences: tokens come from the Connectors page (Supabase Vault, V_SALLA_*)
 instead of Vercel Blob, and the per-order cache lives in Supabase instead of a local JSON file.
 
-Salla refresh tokens are single-use: the new pair is written back to the Vault (connector_put) before
-any API call, so a crash later in the run never loses the token. Never prints token material.
+Salla refresh tokens are single-use: the stored access token is used until Salla rejects it, and only then the
+refresh token is spent and the new pair written back to the Vault (with retries) before any other call. Never prints token material.
 Exit 0 with a message when Salla is not connected yet.
 """
 import datetime as dt
@@ -60,19 +60,41 @@ def http(url, data=None, headers=None):
     raise RuntimeError("HTTP 429 (rate limit)")
 
 
-def access_token(db):
+def refresh_token(db):
+    """Spend the single-use refresh token once and store the new pair before anything else."""
     cid, cs, ref = val("SALLA_CLIENT_ID"), val("SALLA_CLIENT_SECRET"), val("SALLA_REFRESH_TOKEN")
     if not (cid and cs and ref):
         skip("سلة مو مربوطة بعد (صفحة الربط ← سلة)")
     j = http(TOKEN_URL, urllib.parse.urlencode({"grant_type": "refresh_token", "refresh_token": ref,
                                                 "client_id": cid, "client_secret": cs}).encode())
-    tok, new_ref = j["access_token"], j.get("refresh_token")
+    tok, new_ref = j["access_token"], j.get("refresh_token") or ref
     print(f"::add-mask::{tok}")
-    if new_ref:
-        print(f"::add-mask::{new_ref}")
-        if new_ref != ref:   # single-use: store the new one first
-            db.req("/rest/v1/rpc/connector_put", "POST", {"p_name": "SALLA_REFRESH_TOKEN", "p_value": new_ref})
+    print(f"::add-mask::{new_ref}")
+    for name, value in (("SALLA_REFRESH_TOKEN", new_ref), ("SALLA_ACCESS_TOKEN", tok)):
+        for i in range(4):   # losing the new refresh token would disconnect Salla for good
+            try:
+                db.req("/rest/v1/rpc/connector_put", "POST", {"p_name": name, "p_value": value})
+                break
+            except Exception:
+                if i == 3:
+                    raise
+                time.sleep(2 ** i)
     return tok
+
+
+def access_token(db):
+    """Use the stored access token (valid ~14 days); refresh only when it is missing or rejected."""
+    tok = val("SALLA_ACCESS_TOKEN")
+    if tok:
+        print(f"::add-mask::{tok}")
+        try:
+            req = urllib.request.Request(API + "/store/info", headers={"Authorization": "Bearer " + tok, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=30):
+                return tok
+        except urllib.error.HTTPError as ex:
+            if ex.code != 401:
+                raise RuntimeError(f"HTTP {ex.code}") from None
+    return refresh_token(db)
 
 
 def order_day(o):
