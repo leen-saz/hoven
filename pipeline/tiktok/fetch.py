@@ -301,7 +301,7 @@ def pull(env, start, end, transport, audience_due=False):
             except RuntimeError as ex:
                 if metrics == CORE_METRICS or not _optional_metric_error(ex):
                     raise
-                _log("tiktok: مقاييس الاسم أو المحادثات غير متاحة، نعيد الطلب بالصرف والظهور والنقرات والتحهوفن")
+                _log("tiktok: مقاييس الاسم أو المحادثات غير متاحة، نعيد الطلب بالصرف والظهور والنقرات والتحويل")
                 metrics = list(CORE_METRICS)
                 report_params["metrics"] = metrics
                 report_rows = list(_pages(transport, token, "report/integrated/get/", report_params))

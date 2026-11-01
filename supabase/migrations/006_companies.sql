@@ -1,7 +1,7 @@
 -- 006: الشركات (SaaS). كل شركة بياناتها معزولة، وWell هي الشركة الأولى.
 -- اليوزر ينتمي لشركة وحدة. owner = مالكة الشركة (تدير يوزرز شركتها بس).
 -- الجداول الجديدة (السوشال، الرحلات، المحتوى، المهام) كلها فيها company_id من أول يوم.
--- جداول الإعلانات والربط القديمة تاخذ company_id بقيمة Well الافتراضية، وتحهوفن مفاتيحها الأساسية خطوة لاحقة (ADR-0006).
+-- جداول الإعلانات والربط القديمة تاخذ company_id بقيمة Well الافتراضية، وتحويل مفاتيحها الأساسية خطوة لاحقة (ADR-0006).
 
 create table if not exists public.companies (
   id uuid primary key default gen_random_uuid(),
@@ -11,7 +11,7 @@ create table if not exists public.companies (
   active boolean not null default true,
   created_at timestamptz not null default now()
 );
-insert into public.companies (id, slug, name) values ('00000000-0000-0000-0000-000000000001', 'well', 'Well')
+insert into public.companies (id, slug, name) values ('00000000-0000-0000-0000-000000000001', 'hoven', 'Hoven')
   on conflict (id) do nothing;
 
 alter table public.profiles add column if not exists company_id uuid not null default '00000000-0000-0000-0000-000000000001' references public.companies (id);

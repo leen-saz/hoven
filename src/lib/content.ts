@@ -60,7 +60,7 @@ export function audit(pages: PageFacts[]): Item[] {
   const broken = pages.filter(p => p.status >= 400 || p.status === 0);
   if (broken.length) add('fix', `صلّح ${broken.length} صفحة ما تفتح`, broken.map(p => p.url).slice(0, 5).join('، '), 1);
   const noTitle = pages.filter(p => p.status === 200 && (!p.title || p.title.length > 65));
-  if (noTitle.length) add('fix', `عناوين ناقصة أو طهوفنة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتايج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه الخدمة والمدينة.', 1);
+  if (noTitle.length) add('fix', `عناوين ناقصة أو طويلة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتايج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه الخدمة والمدينة.', 1);
   const noDesc = pages.filter(p => p.status === 200 && !p.description);
   if (noDesc.length) add('fix', `وصف (meta description) ناقص في ${noDesc.length} صفحة`, 'بدونه قوقل يختار أي نص من الصفحة.', 2);
   const badH1 = pages.filter(p => p.status === 200 && p.h1.length !== 1);

@@ -61,7 +61,7 @@ export default async function mount() {
       C('headlines', 'العناوين (8 إلى 15)', 'textarea', { hint: 'عنوان في كل سطر، 30 حرف بالكثير.', ai: true }),
       C('descriptions', 'الأوصاف (2 إلى 4)', 'textarea', { ai: true }),
       C('final_url', 'رابط الصفحة', 'url', { value: 'https://hoven.sa/' }),
-      C('bidding', 'المزايدة', 'select', { options: { max_conv: 'أكبر عدد تحهوفنات', tcpa: 'تكلفة تحهوفن مستهدفة' }, value: 'max_conv' }),
+      C('bidding', 'المزايدة', 'select', { options: { max_conv: 'أكبر عدد تحويلات', tcpa: 'تكلفة تحويل مستهدفة' }, value: 'max_conv' }),
     ],
   };
 

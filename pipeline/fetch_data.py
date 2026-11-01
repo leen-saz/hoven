@@ -5,7 +5,7 @@
   python3 fetch_data.py            سحب كامل من بداية الحسابات (أول حملة) إلى اليوم الحالي (جزئي)
   RECENT=8 python3 fetch_data.py   تحديث سريع: يعيد سحب آخر 8 أيام + اليوم، ويحتفظ بالباقي من data.json
   RECENT=3 ...                     مع Supabase: كل ساعة تعيد آخر 3 أيام (الإحالة المتأخرة) وتحدّث القاعدة فقط
-  RECENT=90 ...                    التحديث اليومي: يعيد آخر 90 يوم (التحهوفنات المتأخرة) ويحتفظ بالتاريخ الأقدم
+  RECENT=90 ...                    التحديث اليومي: يعيد آخر 90 يوم (التحويلات المتأخرة) ويحتفظ بالتاريخ الأقدم
   START=2025-01-01 ...             يفرض بداية السحب الكامل بدل الاكتشاف التلقائي
 
 المخرجات: data.json  {ads: {key: meta}, rows: [[key, date, spend, impr, clicks, leads], ...]}
@@ -497,7 +497,7 @@ def snap(P):
         tl = link("thumbnail")
         pv = link("preview") if mt == "VIDEO" else tl
         video = browser_media_url(info.get("download_link")) if mt == "VIDEO" else None
-        # رابط المعاينة على adsapi يرجع 403 في المتصفح. إذا التحهوفن وصل لملف عام نحتفظ به.
+        # رابط المعاينة على adsapi يرجع 403 في المتصفح. إذا التحويل وصل لملف عام نحتفظ به.
         if not video and pv and mt == "VIDEO" and "adsapi.snapchat.com" in pv:
             try:
                 req = urllib.request.Request(pv, headers={"Authorization": H["Authorization"], "User-Agent": "Mozilla/5.0"})

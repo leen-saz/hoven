@@ -3,8 +3,8 @@
 المخرجات:
   well-ads-dashboard.html   نسخة Claude Artifact
   web/public/index.html     اللوحة على / (الإعلانات افتراضياً، العضوي عبر ?mode=organic)
-  web/public/organic/       تحهوفن إلى /?mode=organic
-  /creative                 تحهوفن إلى /?view=creative (الكرييتف فقط)
+  web/public/organic/       تحويل إلى /?mode=organic
+  /creative                 تحويل إلى /?view=creative (الكرييتف فقط)
   web/vercel.json           ترويسات الأمان مع بصمة السكربت (CSP)"""
 import base64, hashlib, json, os, re
 from channels import annotate

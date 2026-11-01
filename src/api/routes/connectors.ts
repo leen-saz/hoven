@@ -86,7 +86,7 @@ export const save = {
       const raw = given[f.env];
       const v = typeof raw === 'string' ? raw.trim() : '';
       if (!v) continue;
-      if (v.length > MAX) return json(400, { error: `${f.label}: القيمة طهوفنة` });
+      if (v.length > MAX) return json(400, { error: `${f.label}: القيمة طويلة` });
       values[f.env] = v;
       if (!f.secret) shown[f.env] = v;
     }

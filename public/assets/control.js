@@ -317,7 +317,7 @@ export default async function mount() {
     const VAL = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل', leads: 'Leads', sales: 'Sales', all: 'الكل', female: 'نساء', male: 'رجال',
       ar: 'عربي', en: 'إنجليزي', whatsapp: 'واتساب', form: 'نموذج فوري', site: 'الموقع', conversations: 'المحادثات', purchase: 'الشراء', abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)',
       single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن', lead_form: 'نموذج ليد داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)', auto: 'تلقائي', target: 'تكلفة مستهدفة',
-      complete_payment: 'Complete Payment', max_conv: 'أكبر عدد تحهوفنات', tcpa: 'تكلفة تحهوفن مستهدفة', book: 'احجز الآن', learn: 'اعرف أكثر', signup: 'سجّل', '65': '65+',
+      complete_payment: 'Complete Payment', max_conv: 'أكبر عدد تحويلات', tcpa: 'تكلفة تحويل مستهدفة', book: 'احجز الآن', learn: 'اعرف أكثر', signup: 'سجّل', '65': '65+',
       fb_feed: 'فيسبوك فيد', ig_feed: 'إنستغرام فيد', ig_stories: 'ستوري', ig_reels: 'ريلز' };
     const lab = v => VAL[v] || v;
     const val = (k, v) => pend.has(k) ? '<span class="chip line">يعبيها كلود</span>' : v === '' || v == null ? '—' : Array.isArray(v) ? esc(v.map(lab).join('، ')) : typeof v === 'string' && VAL[v] && k !== 'creative' ? esc(lab(v)) : Array.isArray(v) ? esc(v.join('، ')) : typeof v === 'boolean' ? (v ? 'نعم' : 'لا')
