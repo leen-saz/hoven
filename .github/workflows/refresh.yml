@@ -76,14 +76,14 @@ jobs:
 
       - name: Fetch ads data
         env:
-          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN }}
-          META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID }}
+          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID || 'act_1138203691250445' }}
           GOOGLE_ADS_CLIENT_ID: ${{ env.V_GOOGLE_ADS_CLIENT_ID || secrets.GOOGLE_ADS_CLIENT_ID }}
           GOOGLE_ADS_CLIENT_SECRET: ${{ env.V_GOOGLE_ADS_CLIENT_SECRET || secrets.GOOGLE_ADS_CLIENT_SECRET }}
           GOOGLE_ADS_REFRESH_TOKEN: ${{ env.V_GOOGLE_ADS_REFRESH_TOKEN || secrets.GOOGLE_ADS_REFRESH_TOKEN }}
           GOOGLE_ADS_LOGIN_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_LOGIN_CUSTOMER_ID || secrets.GOOGLE_ADS_LOGIN_CUSTOMER_ID }}
           GOOGLE_ADS_DEVELOPER_TOKEN: ${{ env.V_GOOGLE_ADS_DEVELOPER_TOKEN || secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
-          GOOGLE_ADS_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_CUSTOMER_ID || secrets.GOOGLE_ADS_CUSTOMER_ID }}
+          GOOGLE_ADS_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_CUSTOMER_ID || secrets.GOOGLE_ADS_CUSTOMER_ID || '4780406294' }}
           SNAP_CLIENT_ID: ${{ env.V_SNAP_CLIENT_ID || secrets.SNAP_CLIENT_ID }}
           SNAP_CLIENT_SECRET: ${{ env.V_SNAP_CLIENT_SECRET || secrets.SNAP_CLIENT_SECRET }}
           SNAP_REFRESH_TOKEN: ${{ env.V_SNAP_REFRESH_TOKEN || secrets.SNAP_REFRESH_TOKEN }}
@@ -123,6 +123,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SALLA_FULL: ${{ inputs.full && '1' || '' }}
+          # Old hoven.env names work too (gh secret set -f hoven.env); the Connectors page (V_SALLA_*) still wins
+          SALLA_CLIENT_ID: ${{ secrets.SALLA_CLIENT_ID }}
+          SALLA_CLIENT_SECRET: ${{ secrets.SALLA_CLIENT_SECRET }}
+          SALLA_REFRESH_TOKEN: ${{ secrets.SALLA_REFRESH_TOKEN }}
         run: |
           python supabase/seed_salla_history.py
           python pipeline/salla.py
@@ -140,12 +144,12 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN }}
-          META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID }}
+          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
+          META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID || 'act_1138203691250445' }}
           GOOGLE_ADS_CLIENT_ID: ${{ env.V_GOOGLE_ADS_CLIENT_ID || secrets.GOOGLE_ADS_CLIENT_ID }}
           GOOGLE_ADS_CLIENT_SECRET: ${{ env.V_GOOGLE_ADS_CLIENT_SECRET || secrets.GOOGLE_ADS_CLIENT_SECRET }}
           GOOGLE_ADS_REFRESH_TOKEN: ${{ env.V_GOOGLE_ADS_REFRESH_TOKEN || secrets.GOOGLE_ADS_REFRESH_TOKEN }}
-          GOOGLE_ADS_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_CUSTOMER_ID || secrets.GOOGLE_ADS_CUSTOMER_ID }}
+          GOOGLE_ADS_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_CUSTOMER_ID || secrets.GOOGLE_ADS_CUSTOMER_ID || '4780406294' }}
           GOOGLE_ADS_LOGIN_CUSTOMER_ID: ${{ env.V_GOOGLE_ADS_LOGIN_CUSTOMER_ID || secrets.GOOGLE_ADS_LOGIN_CUSTOMER_ID }}
           GOOGLE_ADS_DEVELOPER_TOKEN: ${{ env.V_GOOGLE_ADS_DEVELOPER_TOKEN || secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
         working-directory: pipeline
@@ -167,14 +171,14 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN }}
+          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
         working-directory: pipeline
         run: python -m modules.execute.run
 
       - name: Meta key permissions (names only)
         continue-on-error: true
         env:
-          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN }}
+          META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
         working-directory: pipeline
         run: python -m modules.core.meta_scopes
 
