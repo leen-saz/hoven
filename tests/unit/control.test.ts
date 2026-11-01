@@ -105,7 +105,7 @@ describe('/api/control', () => {
 
   it('files a new-campaign request paused, with the health-ministry words flagged', async () => {
     const calls = db(MEMBER, () => [{ id: 9 }]);
-    const fields = { dept: 'iv', start: '2026-11-05', creative: 'https://x/v.mp4', objective: 'leads', age_min: 30, budget: '', primary: 'الأفضل في الرياض' };
+    const fields = { dept: 'hoven', start: '2026-11-05', creative: 'https://x/v.mp4', objective: 'leads', age_min: 30, budget: '', primary: 'الأفضل في الرياض' };
     const res = await call('/api/control/campaigns', MEMBER, { method: 'POST', body: JSON.stringify({ platform: 'meta', fields }) });
     expect(await res.json()).toEqual({ ok: true, id: 9 });
     const saved = calls.find(c => c.url.endsWith('/rest/v1/suggestions') && c.method === 'POST')?.body as Record<string, unknown>;

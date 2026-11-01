@@ -28,6 +28,21 @@ data = without_spring_rose(json.load(open(os.path.join(HERE, "data.json"), encod
 # CRM leads matched to ads (closings, revenue, ROAS on the dashboard). Skipped without Supabase.
 from crm.join import attach_from_db
 attach_from_db(data)
+# Hoven: Salla daily sales for the KPIs (salla_orders_daily). Skipped without Supabase.
+try:
+    from modules.core.supa import Supa
+    _db = Supa.from_env()
+    if _db:
+        _rows, _off = [], 0
+        while True:
+            _part = _db.req(f"/rest/v1/salla_orders_daily?select=day,orders,net_sales_sar&order=day&limit=1000&offset={_off}") or []
+            _rows += _part
+            if len(_part) < 1000:
+                break
+            _off += 1000
+        data["salla"] = [{"day": r["day"], "orders": r["orders"], "net": float(r["net_sales_sar"])} for r in _rows]
+except Exception as _ex:
+    print("build: Salla sales skipped:", str(_ex)[:120])
 for plat in (data.get("platforms") or {}).values():
     if isinstance(plat, dict):
         for k in ("balance", "disable_reason", "account_status", "currency"):

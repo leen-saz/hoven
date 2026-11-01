@@ -5,8 +5,8 @@ import { $, $$, esc, api, icon, shell, toast, busy, say } from './common.js';
 // Runs on every visit of this page (assets/router.js calls it after each ClientRouter navigation).
 export default async function mount() {
 
-  const DEPTS = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل' };
-  const CODE = { iv: 'IV', midwife: 'Midwife', foot: 'Foot', renan: 'Renan' };
+  const DEPTS = { hoven: 'هوفن' };
+  const CODE = { hoven: 'Hoven' };
   const PNAME = { meta: 'Meta', snap: 'Snap', tiktok: 'TikTok', google: 'Google' };
   // كلمات تخالف تعليمات وزارة الصحة في الإعلان الصحي (تطلع تحذير قبل الإرسال)
   const MOH = ['الأفضل', 'الوحيد', 'الأكثر', 'الخبير', 'مضمون', 'مضمونة', 'علاج فوري', 'نتائج مثبتة', 'تجارب المرضى', 'تجربة مريض', 'شفاء تام', '100%'];
