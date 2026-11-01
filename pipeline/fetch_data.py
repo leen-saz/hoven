@@ -346,10 +346,11 @@ def google(P):
     tok = http("https://oauth2.googleapis.com/token", data=urllib.parse.urlencode({
         "client_id": E["GOOGLE_ADS_CLIENT_ID"], "client_secret": E["GOOGLE_ADS_CLIENT_SECRET"],
         "refresh_token": E["GOOGLE_ADS_REFRESH_TOKEN"], "grant_type": "refresh_token"}).encode())["access_token"]
-    q = lambda query: retry(http, f"https://googleads.googleapis.com/v24/customers/{E['GOOGLE_ADS_CUSTOMER_ID']}/googleAds:search",
+    q = lambda query: retry(http, f"https://googleads.googleapis.com/v24/customers/{E['GOOGLE_ADS_CUSTOMER_ID'].replace('-', '')}/googleAds:search",
         data=json.dumps({"query": query}).encode(), method="POST",
-        headers={"Authorization": f"Bearer {tok}", "login-customer-id": E["GOOGLE_ADS_LOGIN_CUSTOMER_ID"],
-                 "Content-Type": "application/json"}).get("results", [])
+        headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json",
+                 **({"login-customer-id": E["GOOGLE_ADS_LOGIN_CUSTOMER_ID"].replace("-", "")} if E.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") else {}),
+                 **({"developer-token": E["GOOGLE_ADS_DEVELOPER_TOKEN"]} if E.get("GOOGLE_ADS_DEVELOPER_TOKEN") else {})}).get("results", [])
     buys = {}
     try:
         for r in q("SELECT ad_group_ad.ad.id, segments.date, metrics.conversions, metrics.conversions_value FROM ad_group_ad "
