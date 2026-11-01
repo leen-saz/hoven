@@ -48,7 +48,16 @@ export async function serveSite(request: Request, bucket: R2Bucket): Promise<Res
   const key = siteKey(url.pathname);
   if (!key) return null;
   const obj = await bucket.get(key, { onlyIf: request.headers });
-  if (!obj) return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  if (!obj) {
+    // Before the first data pull the dashboards do not exist yet: say why and where to go, not a bare 404
+    if (key.endsWith('.html')) return new Response(
+      '<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hoven</title>'
+      + '<body style="font-family:system-ui;background:#F2F0E3;color:#293342;padding:48px 16px;max-width:560px;margin:auto">'
+      + '<h1>اللوحة تنبني بعد أول سحب بيانات</h1><p>اربط المنصات (Meta، سناب، جوجل، سلة) من صفحة الربط، والتحديث يشتغل كل ساعة.</p>'
+      + '<p><a href="/connectors/">افتح صفحة الربط</a> · <a href="/account/">حسابي</a></p></body></html>',
+      { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" } });
+    return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
   const ext = key.slice(key.lastIndexOf('.') + 1);
   const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag: obj.httpEtag });
   // Covers are named by their content hash and sit behind the login: the viewer's browser keeps them.
