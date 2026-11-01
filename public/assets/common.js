@@ -75,7 +75,16 @@ const FULL = h => (h === '/' || h.startsWith('/?')) ? ' data-astro-reload' : '';
 // الهيكل: قائمة جانبية بأيقونات + شريط علوي. tools = HTML لأدوات الشريط.
 export async function shell({ active, title, badge = '', tools = '' }) {
   // The user's name and dashboards, read once and kept 5 minutes while moving between tabs
-  if (!ME || Date.now() - ME.t > 5 * 60 * 1000) ME = { t: Date.now(), v: await api('/api/account/password') };
+  if (!ME || Date.now() - ME.t > 5 * 60 * 1000) {
+    try { ME = { t: Date.now(), v: await api('/api/account/password') }; }
+    catch (err) {
+      // Without this the page stays blank: every page swallows shell() errors
+      const main = $('#content') || $('main');
+      if (main) main.innerHTML = `<div class="card empty">${icon('alert')}<div>${esc(err.message || 'صار خطأ')}</div><button class="btn secondary" style="margin-top:12px" id="shellRetry">${icon('refresh')}حاول مرة ثانية</button></div>`;
+      $('#shellRetry')?.addEventListener('click', () => location.reload());
+      throw err;
+    }
+  }
   const me = ME.v;
   // كل الأقسام تطلع للكل، واللي ما له صلاحية عليه يطلع مقفل
   const owner = me.role === 'owner';
