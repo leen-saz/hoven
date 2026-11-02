@@ -149,6 +149,47 @@ input[type=search]{width:min(240px,100%)}
 .range-label b{color:var(--ink);font-family:var(--f-num);font-weight:600}
 
 /* KPIs */
+.kgroups{display:grid;gap:18px}
+.kgroup{display:grid;gap:8px}
+.khead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.khead h3{margin:0;font-size:.95rem;font-weight:600;color:var(--ink)}
+.seg-sm button{font-size:.78rem;padding:3px 10px}
+.knote{margin:0;font-size:.8rem;color:var(--muted)}
+.tile{position:relative;padding:16px;gap:4px;align-content:start}
+.tile .ic{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:rgba(41,64,54,.12);color:var(--accent);margin-bottom:6px}
+.tile .ic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tile .spark{width:100%;height:32px;margin-top:8px;fill:var(--accent)}
+.kpi.tile.feature{background:linear-gradient(150deg,rgba(41,64,54,.92),rgba(20,20,20,.92));border-color:rgba(255,255,255,.35);color:#fff}
+.tile.feature .l,.tile.feature .v,.tile.feature .v small,.tile.feature .delta,.tile.feature .delta span{color:#fff!important}
+.tile.feature .ic{background:rgba(255,255,255,.18);color:#fff}
+.tile.feature .spark{fill:#fff}
+.kpis.kout{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.kout .kpi.hero .v{font-size:1.6rem}
+.ffun{display:grid;gap:0;background:var(--surface);box-shadow:var(--lift);border-radius:var(--r);padding:16px 14px}
+.flayer{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,2.4fr) minmax(140px,1fr);align-items:center;gap:14px}
+.fname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fname b{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:.78rem}
+.fname span{font-weight:600;color:var(--ink)}
+.fname em{font-style:normal;font-size:.75rem;color:var(--muted);flex-basis:100%}
+.fband-wrap{display:flex;justify-content:center}
+.fband{width:var(--w);min-width:180px;clip-path:polygon(0 0,100% 0,94% 100%,6% 100%);background:color-mix(in srgb,var(--accent) calc(100% - var(--k) * 14%),#1b1240);padding:12px 18px 14px;text-align:center}
+.fband .kpi{background:transparent;box-shadow:none;padding:0;justify-items:center}
+.fband .kpi .l,.fband .kpi .v,.fband .kpi .v small,.fband .delta,.fband .delta span{color:#fff!important}
+.fband .kpi .l{opacity:.85}
+.fband .kpi .v{font-size:1.5rem}
+.fband .delta{opacity:.85;font-size:.75rem}
+.fcost{display:grid;gap:6px}
+.fcost .kpi{background:transparent;box-shadow:none;padding:0;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px}
+.fcost .kpi .l{font-size:.78rem}
+.fcost .kpi .v{font-size:.95rem}
+.fcost .kpi .delta{flex-basis:100%;font-size:.7rem}
+.flink{display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0}
+.flink .farrow{color:var(--accent);font-weight:700}
+.flink .kpi{display:flex;align-items:baseline;gap:6px;background:color-mix(in srgb,var(--accent) 10%,transparent);box-shadow:none;border-radius:999px;padding:3px 12px}
+.flink .kpi .l{font-size:.75rem}
+.flink .kpi .v{font-size:.9rem}
+.flink .kpi .delta{font-size:.68rem}
+@media (max-width:760px){.flayer{grid-template-columns:1fr;gap:6px}.fband{min-width:0}.fname em{flex-basis:auto}.fcost{grid-template-columns:1fr 1fr;gap:4px 12px}.flink .kpi{flex-wrap:wrap;justify-content:center}}
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:10px}
 .kpi{background:var(--surface);border:0;box-shadow:var(--lift);border-radius:var(--r);padding:12px 14px;display:grid;gap:2px;min-width:0}
 .kpi .l{font-size:.82rem;color:var(--muted)}
@@ -333,6 +374,70 @@ section[hidden]{display:none!important}
 td.cap{white-space:normal;min-width:200px;max-width:360px}
 .jdg{color:var(--accent);font-weight:700}
 .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+
+/* ---- Liquid glass, same layer as the app shell (public/assets/app.css). Blur only on large containers. */
+:root{--bg:#F1EEFA;--glass:rgba(255,255,255,.58);--glass-strong:rgba(255,255,255,.78);--glass-edge:rgba(255,255,255,.85);--glass-blur:blur(20px) saturate(160%);
+  --lift:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(41,64,54,.06),0 12px 32px rgba(41,64,54,.12);--r:22px}
+body{background:radial-gradient(1100px 680px at 100% -10%,rgba(41,64,54,.22),transparent 62%),radial-gradient(900px 640px at -10% 35%,rgba(127,181,154,.55),transparent 62%),radial-gradient(760px 560px at 55% 115%,rgba(20,20,20,.12),transparent 60%),linear-gradient(180deg,#F5F3FC,#ECE8F8);background-attachment:fixed}
+.panel,.ffun,.filter-card{background:var(--glass);border:1px solid var(--glass-edge);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+.kpi,.card,.kpi.hero{background:var(--glass-strong);border:1px solid var(--glass-edge)}
+.fband .kpi,.fcost .kpi,.flink .kpi{border:0}
+.fband .kpi{background:transparent}
+.fcost .kpi{background:transparent}
+.seg{background:var(--glass);border-color:var(--glass-edge)}
+.seg button[aria-pressed="true"]{box-shadow:0 4px 14px rgba(41,64,54,.28)}
+@media (prefers-reduced-transparency:reduce){.panel,.ffun,.filter-card,.kpi,.card{background:#FFFFFF;-webkit-backdrop-filter:none;backdrop-filter:none}}
+
+/* ---- Glass v2: closer to ShopWave. Colour behind the glass, gradient glass with a bright edge, glossy funnel layers. Fonts and logo stay Hoven's. */
+:root{--glass-bg:linear-gradient(140deg,rgba(255,255,255,.74),rgba(255,255,255,.34));--glass-blur:blur(26px) saturate(185%);
+  --lift:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(41,64,54,.06),0 2px 6px rgba(76,52,180,.05),0 18px 40px rgba(76,52,180,.13)}
+body{background:
+  radial-gradient(42vw 38vw at 92% 4%,rgba(41,64,54,.42),transparent 70%),
+  radial-gradient(38vw 34vw at 6% 28%,rgba(120,150,255,.38),transparent 70%),
+  radial-gradient(34vw 30vw at 48% 62%,rgba(127,181,154,.55),transparent 70%),
+  radial-gradient(40vw 36vw at 88% 96%,rgba(20,20,20,.20),transparent 70%),
+  linear-gradient(160deg,#EEF0FF,#ECE6FB 55%,#F1EAFB);background-attachment:fixed}
+.panel,.ffun,.filter-card,.kpi,.card,.kpi.hero{background:var(--glass-bg);border:1px solid rgba(255,255,255,.78);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:var(--lift)}
+.fband .kpi,.fcost .kpi,.flink .kpi{background:transparent;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.flink .kpi{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8)}
+.tile .v{font-size:1.75rem}
+.tile .ic{border-radius:14px;background:linear-gradient(140deg,rgba(41,64,54,.22),rgba(127,181,154,.30));box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+.kpis.kout>.tile:nth-child(3) .ic{background:linear-gradient(140deg,rgba(120,150,255,.28),rgba(127,181,154,.28));color:#4A5BD8}
+.kpis.kout>.tile:nth-child(4) .ic{background:linear-gradient(140deg,rgba(20,20,20,.16),rgba(41,64,54,.18));color:var(--ink)}
+.kpi.tile.feature{background:linear-gradient(150deg,#9B7BFF,#6A45F0 55%,#3A22B8);border-color:rgba(255,255,255,.45);box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 18px 40px rgba(106,69,240,.35)}
+.fband{clip-path:none;border-radius:22px 22px 60px 60px/22px 22px 34px 34px;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 48%),var(--fc);box-shadow:inset 0 2px 1px rgba(255,255,255,.55),inset 0 -6px 14px rgba(20,8,90,.18),0 12px 26px rgba(76,52,180,.28)}
+
+/* ---- Bento (Leen's references): a 12-column grid for the sections, filters in one row on top. Phones keep the drawer. */
+@media (min-width:1101px){
+  .dash{grid-template-columns:minmax(0,1fr)}
+  .dash-main{grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}
+  .dash-main>*{grid-column:1/-1}
+  .dash-main>.b-6{grid-column:span 6}
+  .dash-main>.b-4{grid-column:span 4}
+  .dash-main>.b-8{grid-column:span 8}
+  .filter-card{position:sticky;top:8px;max-height:none;overflow:visible;padding:10px 14px;border-radius:20px;display:block}
+  .filter-head{display:none}
+  .filter-card .bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+  .filter-card .row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+  .filter-card .row + .row{padding-top:0;border-top:0}
+  .filter-card .seg{width:auto;border-radius:999px}
+  .filter-card .field{display:flex;gap:6px;align-items:center}
+  .filter-card select,.filter-card input[type=date]{width:auto}
+  .filter-card:not(.show-adv) .adv{display:none}
+  .filter-card .chips,.filter-card .range-label{flex-basis:100%}
+  .filter-card .chips:empty{display:none}
+}
+.more-f{border-radius:999px}
+.filter-card.show-adv .more-f{background:var(--accent);color:#fff}
+@media (max-width:1100px){.more-f{display:none}}
+
+/* Page tabs inside the analytics page: only the chosen page's sections show */
+.ptabs{display:flex;gap:4px;flex-wrap:wrap;padding:5px;border-radius:999px;background:var(--glass-bg,rgba(255,255,255,.6));border:1px solid rgba(255,255,255,.78);box-shadow:var(--lift);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);justify-self:start}
+.ptabs button{border:0;background:transparent;color:var(--muted);font:500 .9rem var(--f-ar);padding:8px 16px;border-radius:999px;cursor:pointer;min-height:40px}
+.ptabs button:hover{background:rgba(255,255,255,.7);color:var(--ink)}
+.ptabs button[aria-current="page"]{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(41,64,54,.3)}
+.ptabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){.ptabs{flex-wrap:nowrap;overflow-x:auto;border-radius:18px;max-width:100%}.ptabs button{white-space:nowrap}}
 </style>
 
 <div class="wrap" dir="rtl" lang="ar">
@@ -374,7 +479,7 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
       <label class="field" for="from">من <input type="date" id="from"></label>
       <label class="field" for="to">إلى <input type="date" id="to"></label>
     </div>
-    <div class="row">
+    <div class="row adv">
       <span class="slc-l">القسم</span>
       <div class="seg" id="depts" role="group" aria-label="القسم"></div>
       <span class="hint" id="deptOrgHint" hidden>يصفّي المنشورات حسب نصها</span>
@@ -382,11 +487,11 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
     <div class="row">
       <div class="seg" id="plats" role="group" aria-label="المنصة"></div>
     </div>
-    <div class="row" id="gRow">
+    <div class="row adv" id="gRow">
       <span class="slc-l">جوجل</span>
       <div class="seg" id="gtypes" role="group" aria-label="نوع حملة جوجل"></div>
     </div>
-    <div class="row" id="adsOnly">
+    <div class="row adv" id="adsOnly">
       <div class="seg" id="stat" role="group" aria-label="حالة الإعلان">
         <button type="button" data-v="all" aria-pressed="true">كل الإعلانات</button>
         <button type="button" data-v="live" aria-pressed="false">النشطة الآن</button>
@@ -396,6 +501,7 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
       <label class="field" for="fGoal">الهدف <select id="fGoal"><option value="">كل الأهداف</option></select></label>
       <label class="field" for="fFmt">الصيغة <select id="fFmt"><option value="">كل الصيغ</option></select></label>
     </div>
+    <button type="button" class="btn more-f" id="moreF" aria-expanded="false" aria-controls="filterCard">فلاتر أكثر</button>
     <div class="chips" id="chips" aria-live="polite"></div>
     <span class="range-label" id="rangeLabel"></span>
       </section>
@@ -404,13 +510,14 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
       <div class="filter-tools">
         <label for="filterOpen" class="filter-fab btn">الفلاتر</label>
       </div>
-  <section data-mode="ads" data-page="overview channels depts creative dept" class="kpis" id="kpis" aria-label="الملخص"></section>
-  <section data-mode="ads" data-page="overview dept" class="panel" aria-labelledby="winsH">
+  <nav class="ptabs" id="tabs" aria-label="صفحات اللوحة"></nav>
+  <section data-mode="ads" data-page="overview channels depts creative dept" class="kgroups" id="kpis" aria-label="الملخص"></section>
+  <section data-mode="ads" data-page="overview dept" class="panel b-6" aria-labelledby="winsH">
     <div class="panel-h"><h2 id="winsH">نجاحات هالأسبوع</h2><span class="sub" id="winsSub"></span></div>
     <div class="wins" id="wins"></div>
   </section>
   <section data-mode="ads" data-page="dept" class="panel" id="deptRoot" aria-label="صفحة القسم"></section>
-  <section data-mode="ads" data-page="overview" class="panel" aria-labelledby="dmH">
+  <section data-mode="ads" data-page="overview" class="panel b-6" aria-labelledby="dmH">
     <div class="panel-h"><h2 id="dmH">الأقسام</h2><span class="sub">اضغط على القسم لفتح صفحته</span></div>
     <div id="deptMini"></div>
   </section>
@@ -1048,6 +1155,7 @@ function syncModeShape(){
     if(!['all','facebook','instagram','tiktok'].includes(S.plat)) S.plat='all';
   }else if(!['overview','depts','dept','channels','creative','notes'].includes(S.page)) S.page='overview';
 }
+{ const q=new URLSearchParams(location.search).get('p'); if(q && !CREATIVE_ONLY) S.page=q; }
 syncModeShape();
 if(S.mode==='organic' && new URLSearchParams(location.search).get('mode')!=='organic'){
   const url=new URL(location.href); url.searchParams.set('mode','organic'); url.hash='';
@@ -1162,6 +1270,12 @@ function agg(from,to){
   }
   const tot = {spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0,leadN:0,crmLeads:0,booked:0,paid:0,value:0};
   for(const p of Object.values(byPlat)){for(const f in tot) tot[f]+=(p[f]||0);}
+  // Every paid lead in the CRM, with or without an ad (crm.paid_all: [lead_day, paid_day, amount, source]); ignores the ad filters
+  tot.allPaidN=0; tot.allPaid=0;
+  for(const [leadDay,paidDay,amount] of ((D.crm&&D.crm.paid_all)||[])){
+    const d = S.crmBy==='paid' ? paidDay : leadDay;
+    if(d && d>=from && d<=to){ tot.allPaidN++; tot.allPaid+=amount; }
+  }
   return {byAd,byDay,byPlat,tot};
 }
 const derive = o => {
@@ -1993,6 +2107,11 @@ $('#dlg').addEventListener('click',e=>{ if(e.target.id==='dlg') e.target.close()
 const PAGES = () => S.mode==='organic'
   ? [['accounts','الحسابات'],['posts','المنشورات'],['notes','طريقة الحساب']]
   : [['overview','نظرة عامة'],['depts','الأقسام'],...DORDER.map(k=>['dept:'+k, DEP[k].ar]),['channels','المنصات والحملات'],['creative','الكرييتف'],['notes','طريقة الحساب']];
+function renderTabs(){
+  const el=$('#tabs'); if(!el) return;
+  el.hidden = CREATIVE_ONLY;
+  el.innerHTML = PAGES().filter(([id])=>!id.startsWith('dept:')).map(([id,l])=>`<button type="button" data-p="${id}" aria-current="${tabOn(id)||(id==='depts'&&S.page==='dept')?'page':'false'}">${tr(l)}</button>`).join('');
+}
 function tabOn(id){ return id.startsWith('dept:') ? S.page==='dept' && S.dept===id.slice(5) : S.page===id; }
 function setDept(k){
   S.dept = S.dept===k ? '' : k;
@@ -2062,9 +2181,10 @@ function renderWins(){
 }
 function renderReport(now,prev){
   document.querySelectorAll('section[data-mode]').forEach(s=>{
-    const modes=(s.dataset.mode||'ads').split(/\s+/);
-    s.hidden = !modes.includes(S.mode) || (CREATIVE_ONLY && (s.id==='kpis' || !(s.dataset.page||'').split(/\s+/).includes('creative')));
+    const modes=(s.dataset.mode||'ads').split(/\s+/), pages=(s.dataset.page||'').split(/\s+/).filter(Boolean);
+    s.hidden = !modes.includes(S.mode) || (pages.length && !pages.includes(S.page)) || (CREATIVE_ONLY && (s.id==='kpis' || !pages.includes('creative')));
   });
+  renderTabs();
   const mr=$('#modeRow'); if(mr) mr.hidden = CREATIVE_ONLY;
   const root=$('#deptRoot');
   if(root && S.mode==='ads') root.hidden = !S.dept || S.page!=='dept' || CREATIVE_ONLY;
@@ -2394,6 +2514,7 @@ function openOrganic(id){
 }
 const tabsEl=$('#tabs'); if(tabsEl) tabsEl.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const p=b.dataset.p;
   if(p.startsWith('dept:')){ S.page='dept'; S.dept=p.slice(5); S.camp=''; } else S.page=p;
+  try{ const u=new URL(location.href); u.searchParams.set('p',S.page); history.replaceState(history.state,'',u.pathname+u.search); }catch(_){}
   save(); render(); window.scrollTo({top:0}); });
 $('#depts').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; S.dept=b.dataset.v; S.camp=''; S.shown=24; S.orgShown=24; if(S.mode==='ads' && S.page==='dept' && !S.dept) S.page='depts'; render(); });
 $('#ocards').addEventListener('click', onCardClick);
