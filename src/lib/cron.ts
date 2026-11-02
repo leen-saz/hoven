@@ -4,11 +4,13 @@
 export interface CronEnv { GH_DISPATCH_TOKEN?: string }
 
 export const DISPATCH_URL = 'https://api.github.com/repos/leen-saz/hoven/actions/workflows/refresh.yml/dispatches';
+// Well's new commits arrive here as a PR (.github/workflows/upstream-well.yml), checked with the same hourly trigger
+export const UPSTREAM_URL = 'https://api.github.com/repos/leen-saz/hoven/actions/workflows/upstream-well.yml/dispatches';
 
-export async function dispatchRefresh(e: CronEnv, f: typeof fetch = fetch): Promise<number> {
+export async function dispatchRefresh(e: CronEnv, f: typeof fetch = fetch, url = DISPATCH_URL): Promise<number> {
   const token = (e.GH_DISPATCH_TOKEN || '').trim();
   if (!token) { console.error('cron: GH_DISPATCH_TOKEN missing, refresh not started'); return 0; }
-  const res = await f(DISPATCH_URL, {
+  const res = await f(url, {
     method: 'POST',
     headers: {
       authorization: `Bearer ${token}`, accept: 'application/vnd.github+json',
@@ -17,6 +19,6 @@ export async function dispatchRefresh(e: CronEnv, f: typeof fetch = fetch): Prom
     body: JSON.stringify({ ref: 'main' }),
   });
   if (res.status !== 204) console.error('cron: dispatch failed', res.status);
-  else console.log('cron: refresh started');
+  else console.log('cron: started', url.split('/').slice(-2, -1)[0]);
   return res.status;
 }
