@@ -1,6 +1,6 @@
 // Social: validation, due rule, publishing to Facebook/Instagram with a stubbed Graph API, and company scoping.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { validate, due, publishPost } from './social';
+import { validate, due, publishPost, canApprove, cleanApprovers } from './social';
 import { runSocial } from './cron';
 import { WELL_COMPANY } from '../../lib/tenant';
 
@@ -9,9 +9,9 @@ const later = '2026-11-02T09:00:00Z';
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('validate', () => {
-  it('accepts a good post and keeps the Riyadh time as ISO', () => {
+  it('accepts a good post, keeps the Riyadh time as ISO, and never takes auto mode', () => {
     const v = validate({ platforms: ['facebook', 'facebook', 'nope'], body: 'جلسة تغذية وريدية', publish_at: later, mode: 'auto' }, NOW);
-    expect(v.draft).toEqual({ platforms: ['facebook'], body: 'جلسة تغذية وريدية', media: [], publish_at: '2026-11-02T09:00:00.000Z', mode: 'auto' });
+    expect(v.draft).toEqual({ platforms: ['facebook'], body: 'جلسة تغذية وريدية', media: [], publish_at: '2026-11-02T09:00:00.000Z', mode: 'manual' });
   });
   it('refuses past times, empty posts, over-long text and Instagram without media', () => {
     expect(validate({ platforms: ['facebook'], body: 'x', publish_at: '2026-10-01T00:00:00Z' }, NOW).error).toBe('وقت النشر راح');
@@ -27,12 +27,29 @@ describe('validate', () => {
 });
 
 describe('due', () => {
-  it('manual waits for approval, auto goes at its time', () => {
+  it('every post waits for approval, and goes at its time', () => {
     const base = { status: 'scheduled', publish_at: '2026-11-01T11:59:00Z' };
-    expect(due({ ...base, mode: 'manual' }, NOW)).toBe(false);
-    expect(due({ ...base, mode: 'manual', approved_at: '2026-11-01T10:00:00Z' }, NOW)).toBe(true);
-    expect(due({ ...base, mode: 'auto' }, NOW)).toBe(true);
-    expect(due({ ...base, mode: 'auto', publish_at: later }, NOW)).toBe(false);
+    expect(due(base, [], NOW)).toBe(false);
+    expect(due({ ...base, approved_at: '2026-11-01T10:00:00Z', approved_by: 'leen@x.co' }, [], NOW)).toBe(true);
+    expect(due({ ...base, approved_at: '2026-11-01T10:00:00Z', publish_at: later }, [], NOW)).toBe(false);
+  });
+  it('with named approvers, only their approval publishes (a removed approver does not)', () => {
+    const ok = { status: 'scheduled', publish_at: '2026-11-01T11:59:00Z', approved_at: '2026-11-01T10:00:00Z' };
+    expect(due({ ...ok, approved_by: 'Sara@x.co' }, ['sara@x.co'], NOW)).toBe(true);
+    expect(due({ ...ok, approved_by: 'fahad@x.co' }, ['sara@x.co'], NOW)).toBe(false);
+  });
+});
+
+describe('approvers', () => {
+  it('named approvers only; none named = the owner only', () => {
+    expect(canApprove('Sara@x.co', ['sara@x.co'], false)).toBe(true);
+    expect(canApprove('leen@x.co', ['sara@x.co'], true)).toBe(false);
+    expect(canApprove('leen@x.co', [], true)).toBe(true);
+    expect(canApprove('sara@x.co', [], false)).toBe(false);
+  });
+  it('cleans the list: emails only, lower case, no repeats', () => {
+    expect(cleanApprovers([' Sara@X.co ', 'sara@x.co', 'nope', 3])).toEqual(['sara@x.co']);
+    expect(cleanApprovers('x')).toEqual([]);
   });
 });
 
@@ -41,13 +58,13 @@ describe('publish', () => {
     const calls: string[] = [];
     const f = vi.fn(async (url: string) => { calls.push(url); return new Response(JSON.stringify({ id: String(calls.length) })); }) as unknown as typeof fetch;
     const t = { META_PAGE_ACCESS_TOKEN: 'tok', META_PAGE_ID: 'p1', IG_USER_ID: 'ig1' };
-    const out = await publishPost({ platforms: ['facebook', 'instagram'], body: 'hi', media: [{ url: 'https://x/a.jpg', type: 'image' }], publish_at: later, mode: 'auto' }, t, f);
+    const out = await publishPost({ platforms: ['facebook', 'instagram'], body: 'hi', media: [{ url: 'https://x/a.jpg', type: 'image' }], publish_at: later, mode: 'manual' }, t, f);
     expect(out.status).toBe('published');
     expect(calls).toEqual(['https://graph.facebook.com/v23.0/p1/photos', 'https://graph.facebook.com/v23.0/ig1/media', 'https://graph.facebook.com/v23.0/ig1/media_publish']);
   });
   it('partial when one platform is not connected or not live yet', async () => {
     const f = vi.fn(async () => new Response(JSON.stringify({ id: '1' }))) as unknown as typeof fetch;
-    const out = await publishPost({ platforms: ['facebook', 'x'], body: 'hi', media: [], publish_at: later, mode: 'auto' }, { META_PAGE_ACCESS_TOKEN: 't', META_PAGE_ID: 'p' }, f);
+    const out = await publishPost({ platforms: ['facebook', 'x'], body: 'hi', media: [], publish_at: later, mode: 'manual' }, { META_PAGE_ACCESS_TOKEN: 't', META_PAGE_ID: 'p' }, f);
     expect(out.status).toBe('partial');
     expect(out.results.x?.ok).toBe(false);
   });

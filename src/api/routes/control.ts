@@ -188,7 +188,8 @@ export const learning = {
 // ---- campaigns: a new-campaign request from the form. Checks Leen's rules and files it on the board
 // (kind = new_campaign). Launches nothing on a platform; a new campaign always needs Leen's approval.
 const MOH = ['الأفضل', 'الوحيد', 'الأكثر', 'الخبير', 'مضمون', 'مضمونة', 'علاج فوري', 'نتائج مثبتة', 'تجارب المرضى', 'تجربة مريض', 'شفاء تام', '100%'];
-const AI_FIELDS = ['budget', 'end', 'wa_message', 'primary', 'headline', 'cta', 'qualify', 'keywords', 'negatives', 'headlines', 'descriptions'];
+// Optional fields of the campaign form: left empty, they show as missing on the decision card
+const OPTIONAL = ['budget', 'end', 'wa_message', 'primary', 'headline', 'cta', 'qualify', 'keywords', 'negatives', 'headlines', 'descriptions'];
 
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 async function digest(o: unknown): Promise<string> {

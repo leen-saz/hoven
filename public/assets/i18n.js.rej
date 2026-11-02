@@ -1,0 +1,10 @@
+diff a/public/assets/i18n.js b/public/assets/i18n.js	(rejected hunks)
+@@ -81,7 +81,7 @@ const EN = {
+   'التعلّم': 'Learning', 'الدروس': 'Lessons', 'موقوفة': 'Blocked', 'ملاحظات الفريق:': 'Team notes:', 'حركات الفريق داخل المنصات · آخر 7 أيام': 'Team moves inside the platforms · last 7 days',
+   'Meta وGoogle. Snap وTikTok ما يعطون سجل نشاط.': 'Meta and Google. Snap and TikTok don\'t expose an activity log.', 'نتيجة القرارات': 'Decision outcomes', 'الحركة': 'Move', 'بعد': 'After',
+   'تكلفة الليد قبل ← بعد': 'CPL before → after', 'التغيّر': 'Change', 'حملة جديدة': 'New campaign', 'تحتاج موافقة لين': 'Needs Leen\'s approval', 'لين بس توافق على الحملات الجديدة': 'Only Leen approves new campaigns',
+-  'تفاصيل الحملة': 'Campaign details', 'يعبيها كلود': 'Claude fills it', 'أرسل للموافقة': 'Send for approval', 'الأساسيات': 'Basics', 'الجمهور': 'Audience', 'الكرييتف والنص': 'Creative & copy',
++  'تفاصيل الحملة': 'Campaign details', 'أرسل للموافقة': 'Send for approval', 'الأساسيات': 'Basics', 'الجمهور': 'Audience', 'الكرييتف والنص': 'Creative & copy',
+   'انرسل الطلب للموافقة': 'Request sent for approval', 'عبّئ الخانات المطلوبة (*)': 'Fill the required fields (*)',
+   'القرارات السابقة': 'Past decisions', 'حدود التنفيذ': 'Execution limits', 'إيقاف طوارئ': 'Emergency stop', 'إيقاف الطوارئ مفعّل': 'Emergency stop on',
+   'تفعيل إيقاف الطوارئ؟': 'Turn on emergency stop?', 'إلغاء إيقاف الطوارئ؟': 'Turn off emergency stop?', 'فعّل الإيقاف': 'Turn on', 'ألغِ الإيقاف': 'Turn off',
