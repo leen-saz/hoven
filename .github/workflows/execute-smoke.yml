@@ -34,14 +34,14 @@ jobs:
       - name: Load connections from the Connectors page
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python3 -m modules.core.connections
       - name: Pause then resume one ad, read back each step
         env:
           CAMPAIGN: ${{ inputs.campaign }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN }}
           META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID }}
         run: python3 -m modules.execute.smoke

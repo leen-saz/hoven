@@ -59,8 +59,8 @@ jobs:
       - name: Load connections from the Connectors page
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         working-directory: pipeline
         run: python -m modules.core.connections
 
@@ -93,8 +93,8 @@ jobs:
           GA4_PROPERTY_ID: ${{ env.V_GA4_PROPERTY_ID || secrets.GA4_PROPERTY_ID }}
           GA4_SERVICE_ACCOUNT_JSON: ${{ env.V_GA4_SERVICE_ACCOUNT_JSON || secrets.GA4_SERVICE_ACCOUNT_JSON }}
           GA4_REFRESH_TOKEN: ${{ env.V_GA4_REFRESH_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FULL: ${{ inputs.full && '1' || '0' }}
         working-directory: pipeline
         run: |
@@ -120,8 +120,8 @@ jobs:
       - name: Salla sales
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SALLA_FULL: ${{ inputs.full && '1' || '' }}
           # Old hoven.env names work too (gh secret set -f hoven.env); the Connectors page (V_SALLA_*) still wins
           SALLA_CLIENT_ID: ${{ secrets.SALLA_CLIENT_ID }}
@@ -134,16 +134,16 @@ jobs:
       - name: Decision board suggestions (read-only on ad accounts)
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         working-directory: pipeline
         run: python suggest.py
 
       - name: Learning loop — platform moves, outcomes, lessons (read-only on ad accounts)
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
           META_AD_ACCOUNT_ID: ${{ env.V_META_AD_ACCOUNT_ID || secrets.META_AD_ACCOUNT_ID || 'act_1138203691250445' }}
           GOOGLE_ADS_CLIENT_ID: ${{ env.V_GOOGLE_ADS_CLIENT_ID || secrets.GOOGLE_ADS_CLIENT_ID }}
@@ -161,16 +161,16 @@ jobs:
       - name: Critic review of open suggestions (read-only on ad accounts)
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         working-directory: pipeline
         run: python -m modules.critic.run
 
       - name: Execute approved decisions (Meta ad pause only, trial campaigns only)
         continue-on-error: true
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           META_ACCESS_TOKEN: ${{ env.V_META_ACCESS_TOKEN || secrets.META_ACCESS_TOKEN || secrets.META_ADS_TOKEN }}
         working-directory: pipeline
         run: python -m modules.execute.run

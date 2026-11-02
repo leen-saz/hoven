@@ -14,7 +14,7 @@ if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then echo
 
 # Well-only files never come over: its PRD/plan/docs, departments, generated pages, CRM, design notes
 EXCLUDE=(':!docs/prd.md' ':!docs/plan.md' ':!docs/plan-progress.md' ':!docs/cutover.md' ':!README.md' ':!pipeline/config/departments.json'
-         ':!pipeline/web/public' ':!pipeline/well-ads-dashboard.html' ':!pipeline/crm' ':!supabase/migrations/011_crm_leads.sql')
+         ':!pipeline/web/public' ':!pipeline/well-ads-dashboard.html' ':!pipeline/crm' ':!supabase/migrations/011_crm_leads.sql' ':!.github/workflows')
 PATCH="$(mktemp)"; BIN="$(mktemp)"
 git diff --no-color "$BASE" "$HEAD" -- . "${EXCLUDE[@]}" | perl .upstream/well-to-hoven.pl > "$PATCH"
 git diff --numstat "$BASE" "$HEAD" -- . "${EXCLUDE[@]}" | awk '$1=="-"{print $3}' > "$BIN"   # binary files: listed, not applied
@@ -35,6 +35,8 @@ git push -q origin "$BRANCH"
   echo "## Needs a look"
   if [ ${#REJ[@]} -gt 0 ]; then echo "Hunks that did not apply (kept as \`.rej\` files in this branch, fix and delete them before merging):"; printf -- '- `%s`\n' "${REJ[@]}"; else echo "- Every hunk applied."; fi
   if [ -s "$BIN" ]; then echo "- Binary files changed in Well, not copied:"; sed 's/^/  - `/; s/$/`/' "$BIN"; fi
+  WF="$(git diff --name-only "$BASE" "$HEAD" -- .github/workflows)"
+  if [ -n "$WF" ]; then echo "- Workflow files changed in Well (GitHub does not let Actions edit them; port by hand):"; echo "$WF" | sed 's/^/  - `/; s/$/`/'; fi
   echo "- Well-only paths are skipped: PRD/plan/cutover docs, departments, CRM, generated pages."
   echo "- Check Hoven-specific behaviour (sales columns, ADR-0007) in touched files."
   echo; echo "## How tested"; echo "CI on this PR."
