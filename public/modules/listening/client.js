@@ -57,7 +57,7 @@ async function organic() {
       $('#demand').innerHTML = (d.sources || []).length ? `<div class="tbl"><table class="dg-plat"><thead><tr><th>المصدر</th><th>هالأسبوع</th><th>الأسبوع اللي قبله</th><th>التغيّر</th></tr></thead><tbody>
           ${d.sources.map(s => { const a = alerts.find(x => x.source === s.source); return `<tr${a ? ' class="ls-alert"' : ''}><td>${esc(SRC[s.source] || s.source)}</td><td class="n">${fmt(s.now)}</td><td class="n">${fmt(s.prev)}</td><td class="n">${s.prev ? pct((s.now - s.prev) / s.prev) : '—'}</td></tr>`; }).join('')}
           </tbody></table></div>${alerts.length ? `<p class="dg-fix" style="margin:10px 0 0"><b>انتبه:</b> ${alerts.map(a => `${esc(SRC[a.source] || a.source)} ${pct(a.change)}`).join('، ')}</p>` : ''}`
-        : '<p class="muted">ما فيه ليدز آخر أسبوعين.</p>';
+        : '<p class="muted">ما فيه طلبات آخر أسبوعين.</p>';
     } catch (err) { $('#demand').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
   }
 
@@ -90,7 +90,7 @@ async function listening() {
       <div class="bar" style="margin-top:8px"><button class="btn secondary" type="button" id="copySql">انسخ الـ SQL</button></div></section>` : '';
     const s = d.sources || {};
     const chip = (on, label, need) => `<span class="${on ? '' : 'off'}" title="${on ? 'شغّال' : esc(need)}">${on ? '✓' : '○'} ${esc(label)}${on ? '' : ` · ${esc(need)}`}</span>`;
-    $('#src').innerHTML = chip(s.news, 'أخبار قوقل', '') + chip(s.reddit, 'ريديت', '') + chip(s.youtube, 'يوتيوب', 'يحتاج YOUTUBE_API_KEY')
+    $('#src').innerHTML = chip(s.news, 'الأخبار (قوقل، وإذا رفض فـ Bing)', '') + chip(s.reddit, 'ريديت', 'يحتاج REDDIT_CLIENT_ID و REDDIT_CLIENT_SECRET') + chip(s.youtube, 'يوتيوب', 'يحتاج YOUTUBE_API_KEY')
       + chip(s.x, 'X عن طريق Grok (مدفوع)', 'يحتاج XAI_API_KEY') + chip(s.sentiment, 'تحليل الشعور', 'يحتاج Workers AI');
     $('#refresh').disabled = !!d.missing; $('#wf button[type=submit]').disabled = !!d.missing;
   }
@@ -178,11 +178,18 @@ async function listening() {
     }
     if (run) { busy(run, true); await refresh(+run.dataset.run); busy(run, false); }
   });
+  // Sources that refused, per watch: "ايفر كير: قوقل رفض (503)"
+  const ASKED = { google: 'قوقل', bing: 'Bing', reddit: 'ريديت', youtube: 'يوتيوب', x: 'X' };
+  function failures(report = {}) {
+    const bad = Object.entries(report).flatMap(([name, by]) => Object.entries(by || {}).filter(([, v]) => typeof v === 'string')
+      .map(([src, v]) => `${name}: ${ASKED[src] || src} رفض (${String(v).replace('error ', '')})`));
+    return bad.length ? ` ما جاوب: ${bad.join('، ')}.` : '';
+  }
   async function refresh(id) {
     say($('#lmsg'), 'يدوّر في المصادر… ياخذ ثواني', true);
     try {
       const r = await api('/api/listening/refresh', { method: 'POST', body: id ? { id } : {} });
-      say($('#lmsg'), r.ran ? `خلص: ${fmt(r.added)} إشارة جديدة، وانصنّف شعور ${fmt(r.scored)}.` : (r.note || 'ما فيه شي يحتاج تحديث.'), true);
+      say($('#lmsg'), r.ran ? `خلص: ${fmt(r.added)} إشارة جديدة، وانصنّف شعور ${fmt(r.scored)}.${failures(r.report)}` : (r.note || 'ما فيه شي يحتاج تحديث.'), true);
       await load();
     } catch (err) { say($('#lmsg'), err.message); }
   }

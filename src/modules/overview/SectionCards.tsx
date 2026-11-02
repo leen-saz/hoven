@@ -17,8 +17,8 @@ export function SectionCards({ data, from, to }: Props) {
   // lowerIsBetter: a drop in cost per result is good news; spend is neither good nor bad (null)
   const cards: { label: string; value: string; d: number | null; lowerIsBetter: boolean | null; note: string }[] = [
     { label: 'الصرف', value: sar(now.spend), d: vs(now.spend, was.spend), lowerIsBetter: null, note: ok ? `قبلها ${sar(was.spend)}` : 'ما فيه مقارنة: الفترة اللي قبلها ناقصة' },
-    { label: 'الطلبات', value: qty(now.results), d: vs(now.results, was.results), lowerIsBetter: false, note: 'الليدز والمحادثات' },
-    { label: 'تكلفة الطلب', value: sar(now.cpr), d: vs(now.cpr, was.cpr), lowerIsBetter: true, note: ok ? `قبلها ${sar(was.cpr)}` : 'الصرف ÷ الليدز والمحادثات' },
+    { label: 'الطلبات', value: qty(now.results), d: vs(now.results, was.results), lowerIsBetter: false, note: 'طلبات الشراء من الإعلانات' },
+    { label: 'تكلفة الطلب', value: sar(now.cpr), d: vs(now.cpr, was.cpr), lowerIsBetter: true, note: ok ? `قبلها ${sar(was.cpr)}` : 'الصرف ÷ الطلبات والمحادثات' },
     { label: 'نسبة النقر', value: pct(now.ctr), d: vs(now.ctr, was.ctr), lowerIsBetter: false, note: `${qty(now.clicks)} نقرة من ${qty(now.impr)} ظهور` },
   ];
   return (
