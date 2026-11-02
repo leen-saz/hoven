@@ -9,14 +9,15 @@ from media import label_unsplit_google, media_kind
 from classify import classify_pair
 from organic import collect_organic, metric_day, pending_shell
 
+# بيانات مصطنعة (أسماء وأرقام وهمية)، مو بيانات إعلانات حقيقية: الريبو عام
 FIXTURE = os.path.join(ROOT, "tests", "fixtures", "prototype_slim.json")
 WIN = ("2026-09-14", "2026-10-11")
 EXPECTED = {
-    "iv": (25863.75, 1945),
-    "midwife": (4387.27, 426),
-    "foot": (2907.88, 339),
-    "renan": (706.01, 0),
-    "brand": (1818.76, 0),
+    "iv": (1492.96, 83),
+    "midwife": (1792.04, 95),
+    "foot": (1177.32, 58),
+    "renan": (645.55, 20),
+    "brand": (2701.62, 114),
 }
 
 
@@ -310,7 +311,11 @@ class BillingTests(unittest.TestCase):
             }
             json.dump(payload, open(data_path, "w", encoding="utf-8"))
             subprocess.check_call([sys.executable, os.path.join(ROOT, "build.py")], cwd=ROOT)
+            # The main dashboard's data lives in dash.json now; check the page and its data together
             page = open(os.path.join(ROOT, "web", "public", "index.html"), encoding="utf-8").read()
+            dash = open(os.path.join(ROOT, "web", "public", "dash.json"), encoding="utf-8").read()
+            self.assertIn('id="data"></script>', page)  # nothing inlined in the main page
+            page += dash
             organic = open(os.path.join(ROOT, "web", "public", "organic", "index.html"), encoding="utf-8").read()
             vercel = json.load(open(os.path.join(ROOT, "web", "vercel.json"), encoding="utf-8"))
             self.assertNotIn("99991.25", page)
