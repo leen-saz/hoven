@@ -8,8 +8,8 @@ export default async function mount() {
   const DEPTS = { hoven: 'هوفن' };
   const CODE = { hoven: 'Hoven' };
   const PNAME = { meta: 'Meta', snap: 'Snap', tiktok: 'TikTok', google: 'Google' };
-  // كلمات تخالف تعليمات وزارة الصحة في الإعلان الصحي (تطلع تحذير قبل الإرسال)
-  const MOH = ['الأفضل', 'الوحيد', 'الأكثر', 'الخبير', 'مضمون', 'مضمونة', 'علاج فوري', 'نتائج مثبتة', 'تجارب المرضى', 'تجربة مريض', 'شفاء تام', '100%'];
+  // كلمات تحتاج دليل أو شروط حسب نظام التجارة الإلكترونية وحماية المستهلك (تطلع تحذير قبل الإرسال)
+  const MOH = ['الأفضل', 'الأرخص', 'الوحيد', 'مضمون', 'مضمونة', 'أصلي 100%', 'آخر قطعة', 'خصم وهمي'];   // consumer-protection words needing proof or terms
 
   const C = (id, label, type, opt = {}) => ({ id, label, type, ...opt });
   const COMMON = [
@@ -39,7 +39,7 @@ export default async function mount() {
       C('budget_type', 'نوع الميزانية', 'seg', { options: { abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)' }, value: 'abo' }),
       C('partnership', 'إعلان شراكة مع حساب المؤثرة', 'toggle'),
       C('radius', 'نصف القطر', 'locked', { value: '10 ميل حول الرياض' }),
-      C('pixel', 'البكسل', 'locked', { value: 'WELL PIXEL' }),
+      C('pixel', 'البكسل', 'locked', { value: 'بكسل هوفن (من صفحة الربط)' }),
     ],
     snap: [
       C('ad_type', 'نوع الإعلان', 'seg', { options: { single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن' }, value: 'single' }),
@@ -52,7 +52,7 @@ export default async function mount() {
       C('spark_code', 'كود تفويض Spark', 'text', { hint: 'من المؤثرة: 7 أو 30 أو 60 أو 365 يوم.' }),
       C('optimization', 'التحسين على', 'select', { options: { leads: 'Lead generation', complete_payment: 'Complete Payment' }, value: 'complete_payment' }),
       C('lead_form', 'نموذج فوري', 'toggle'),
-      C('pixel', 'البكسل', 'locked', { value: 'WELL Pixel (7655684600528846866)' }),
+      C('pixel', 'البكسل', 'locked', { value: 'بكسل هوفن (من صفحة الربط)' }),
     ],
     google: [
       C('type', 'نوع الحملة', 'locked', { value: 'Search' }),
@@ -129,7 +129,7 @@ export default async function mount() {
     const bad = mohCheck(values());
     const m = $('#moh');
     m.className = 'msg' + (bad.length ? ' err' : '');
-    m.innerHTML = bad.length ? icon('alert') + esc(`كلمات تخالف تعليمات وزارة الصحة: ${bad.join('، ')}`) : '';
+    m.innerHTML = bad.length ? icon('alert') + esc(`كلمات تحتاج دليل أو شروط (حماية المستهلك): ${bad.join('، ')}`) : '';
   });
   $('#plat').addEventListener('click', e => {
     const b = e.target.closest('[data-p]'); if (!b || b.dataset.p === platform) return;

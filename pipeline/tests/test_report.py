@@ -75,7 +75,7 @@ class ChannelTests(unittest.TestCase):
         self.assertEqual(meta_key("1", "facebook"), ("m1|facebook", "facebook"))
 
     def test_search_campaign_without_channel_becomes_search(self):
-        ad = {"platform": "google", "campaign": "SRCH | Well Services | KSA", "name": "مغذي"}
+        ad = {"platform": "google", "campaign": "SRCH | Hoven Bedding | KSA", "name": "مغذي"}
         label_unsplit_google(ad)
         self.assertEqual(ad["platform"], "google_search")
         kept = {"platform": "google_pmax", "campaign": "SRCH leftover", "name": "x"}
@@ -257,10 +257,6 @@ class BillingTests(unittest.TestCase):
         self.assertNotIn("`<li>${esc(n)}</li>`", html)
         self.assertIn('id="lang"', html)
         self.assertIn("hoven-lang", html)
-        self.assertIn("IV Drips", html)
-        self.assertIn("Midwifery / Maternity", html)
-        self.assertIn("Foot Alignment", html)
-        self.assertIn("Renan Child Health", html)
         self.assertIn("يحتاج توكن ميتا بصلاحيات المحتوى", html)
         self.assertIn("Needs a Meta token with content permissions", html)
         self.assertNotIn("أبرز الملاحظات", html)
@@ -284,9 +280,6 @@ class BillingTests(unittest.TestCase):
         self.assertIn("metricText", html)
         self.assertIn("بانتظار الصلاحية", html)
         self.assertIn("Awaiting permission", html)
-        self.assertIn("6948010864247046146", html)
-        self.assertIn("spring rose0406", html)
-        self.assertIn("زهرة الربيع", html)
         self.assertIn("function careBlocked", html)
         self.assertIn("page.name==='Hoven'", html)
         self.assertIn("ORG_FB_HIDDEN", html)
@@ -323,7 +316,7 @@ class BillingTests(unittest.TestCase):
             self.assertNotIn("account_status", page)
             self.assertNotIn("PENDING_BILLING", page)
             self.assertNotIn("رصيد الحساب", page)
-            self.assertIn("القبالة", page)
+            self.assertIn("هوفن", page)
             self.assertIn("pages_read_engagement", page)
             self.assertIn('id="ocards"', page)
             self.assertIn('id="mode"', page)
@@ -341,16 +334,17 @@ class BillingTests(unittest.TestCase):
                 open(data_path, "w", encoding="utf-8").write(previous)
 
 
+@unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
 class SpringRoseTests(unittest.TestCase):
     def test_account_and_named_ads_drop_out_of_spend(self):
         from tiktok.merge import is_spring_rose_account, without_spring_rose
         self.assertTrue(is_spring_rose_account("6948010864247046146", "Spring Rose0406"))
         self.assertTrue(is_spring_rose_account("", "شركة زهرة الربيع"))
-        self.assertFalse(is_spring_rose_account("7532842350553514000", "Well"))
+        self.assertFalse(is_spring_rose_account("7532842350553514000", "Hoven"))
         blob = {
             "ads": {
                 "t1": {"platform": "tiktok", "name": "Rose install", "campaign": "SR | iOS14 | AppInstall", "group": "", "text": ""},
-                "t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": r"Tiktok_Leads_WELL_iv_20\8", "group": "", "text": ""},
+                "t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": r"Tiktok_Leads_HOVEN_iv_20\8", "group": "", "text": ""},
                 "m1": {"platform": "facebook", "name": "قابلة", "campaign": "IV", "group": "", "text": ""},
             },
             "rows": [
@@ -384,7 +378,7 @@ class SpringRoseTests(unittest.TestCase):
             "metrics": {"spend": "50.00", "impressions": "100", "clicks": "3", "conversion": "1"},
         }]}}
         prev = {
-            "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Tiktok_Leads_WELL", "group": "", "text": "", "live": False}},
+            "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Tiktok_Leads_HOVEN", "group": "", "text": "", "live": False}},
             "rows": [["t2", "2026-09-01", 10, 5, 1, 0, 0]],
             "objectives": {},
         }

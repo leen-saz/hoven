@@ -44,10 +44,10 @@ describe('tracking health', () => {
   });
 
   it('checks UTM on website links only', () => {
-    expect(hasUtm('https://wellcare.sa/iv?utm_source=google&utm_campaign=iv')).toBe(true);
-    expect(hasUtm('https://wellcare.sa/iv')).toBe(false);
+    expect(hasUtm('https://hoven.sa/iv?utm_source=google&utm_campaign=iv')).toBe(true);
+    expect(hasUtm('https://hoven.sa/iv')).toBe(false);
     expect(hasUtm('https://adsmanager.facebook.com/adsmanager/manage/ads?act=1')).toBe(true);
-    const r = diagnose(base({ ads: [ad('g1', 'google', 'lead', { link: 'https://wellcare.sa/iv' })] }));
+    const r = diagnose(base({ ads: [ad('g1', 'google', 'lead', { link: 'https://hoven.sa/iv' })] }));
     expect(r.findings.find(x => x.id === 'utm')?.count).toBe(1);
   });
 

@@ -9,7 +9,7 @@
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500 600;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:700;font-display:swap}
-/* Hoven brand tokens (من wellcare.sa: خطوط ثمانية، كروت 20px بظل بنفسجي ناعم بدون حدود، البنفسجي للنشط). Ivory page, white cards, indigo ink, purple for active and the wordmark dot. */
+/* Hoven brand tokens (ivory, navy, forest green; Hoven Brand + IBM Plex Sans Arabic). Cards 20px, soft shadow, no bدود، البنفسجي للنشط). Ivory page, white cards, indigo ink, purple for active and the wordmark dot. */
 :root{
   --bg:#F2F0E3;
   --surface:#FFFFFF;
@@ -30,8 +30,7 @@
   --lift:0 1px 2px rgba(41,64,54,.05),0 10px 30px rgba(41,64,54,.14);
   --f-mark:"Hoven Brand",Georgia,serif;
   --r:20px;
-  --d-iv:#294036; --d-midwife:#293342; --d-foot:#7fb59a;
-  --d-renan:#141414; --d-brand:rgba(41,51,66,.35);
+   --d-brand:rgba(41,51,66,.35);
   --s-fb:#294036; --s-ig:#141414; --s-msg:rgba(41,64,54,.55); --s-an:#7fb59a; --s-threads:rgba(41,51,66,.55);
   --s-meta:#293342; --s-snap:#294036; --s-tiktok:#B3261E; --s-google:#7fb59a;
   --s-gs:#294036; --s-gp:#293342; --s-gd:#7fb59a; --s-gv:#141414; --s-gg:rgba(41,64,54,.45);
@@ -659,7 +658,7 @@ body{background:
     <div class="ins">
       <div class="item"><span class="b">مشاهدات ووصول</span><span class="sub">من رؤى الصفحة والمنشور، والمتابعون رقم حالي.</span></div>
       <div class="item"><span class="b">نسبة التفاعل</span><span class="sub">الإعجاب والتعليقات والمشاركات والحفظ ÷ الوصول.</span></div>
-      <div class="item"><span class="b">القسم</span><span class="sub">يُستنتج من نص المنشور، وحيوية الشعر ضمن المحاليل.</span></div>
+      <div class="item"><span class="b">القسم</span><span class="sub">يُستنتج من نص المنشور.</span></div>
       <div class="item"><span class="b">بانتظار</span><span class="sub">إذا نقص المصدر تظهر جملة بما ينقص، ولا يتوقف سحب الإعلانات.</span></div>
     </div>
   </section>
@@ -813,7 +812,7 @@ const EN = {
   'من رؤى الصفحة والمنشور، والمتابعون رقم حالي.':'From page and post insights. Followers are the current count.',
   'نسبة التفاعل':'Engagement rate',
   'الإعجاب والتعليقات والمشاركات والحفظ ÷ الوصول.':'Likes, comments, shares, and saves ÷ reach.',
-  'يُستنتج من نص المنشور، وحيوية الشعر ضمن المحاليل.':'Inferred from the post text. Hair vitality stays with IV drips.',
+  'يُستنتج من نص المنشور.':'Inferred from the post text. Hair vitality stays with IV drips.',
   'بانتظار':'Waiting',
   'إذا نقص المصدر تظهر جملة بما ينقص، ولا يتوقف سحب الإعلانات.':'If a source is missing, a short line says what is missing. The ads fetch keeps going.',
   'اليوم (جزئي)':'Today (partial)',
@@ -1057,7 +1056,7 @@ function syncLangUrl(){
   const next=url.pathname+url.search+url.hash;
   if(location.pathname+location.search+location.hash!==next) history.replaceState({lang:LANG}, '', next);
 }
-const DEP_EN={iv:'IV Drips', midwife:'Midwifery / Maternity', foot:'Foot Alignment', renan:'Renan Child Health'};
+const DEP_EN={hoven:'Hoven'};
 const PL_EN={facebook:'Facebook',instagram:'Instagram',messenger:'Messenger',threads:'Threads',meta:'Meta',snap:'Snapchat',tiktok:'TikTok',google:'Google',google_search:'Google · Search',google_pmax:'Google · Performance Max',google_display:'Google · Display',google_video:'Google · YouTube',google_demand_gen:'Google · Demand Gen',google_shopping:'Google · Shopping',google_app:'Google · App',google_smart:'Google · Smart',google_local:'Google · Local',google_hotel:'Google · Hotel',google_travel:'Google · Travel'};
 const GOAL_EN={lead:'Leads',messages:'Conversations',profile:'Profile visits',traffic:'Website visits',other:'Other'};
 function depName(k){
@@ -1088,19 +1087,9 @@ const D = await (async () => {
   if (!r.ok) { document.getElementById('metaLine').textContent = 'ما قدرت أحمّل البيانات (' + r.status + '). حدّث الصفحة.'; throw new Error('dash.json ' + r.status); }
   return r.json();
 })();
-// Spring Rose0406 (شركة زهرة الربيع) حساب تيك توك منفصل: لا يُحسب في الصرف ولا التاريخ.
-const TT_EXCLUDED_ID = '6948010864247046146';
-function ttExcludedAccount(id, name){
-  const n = String(name||'').replace(/\s+/g,' ').trim().toLowerCase();
-  if(String(id||'')===TT_EXCLUDED_ID) return true;
-  return n.includes('spring rose0406') || n.includes('زهرة الربيع');
-}
-function ttExcludedAd(a){
-  if(!a || (a.platform && a.platform!=='tiktok')) return false;
-  if(ttExcludedAccount(a.advertiser_id, a.advertiser_name||a.account)) return true;
-  const blob = `${a.name||''} ${a.campaign||''} ${a.group||''} ${a.text||''} ${a.ad_name||''} ${a.campaign_name||''} ${a.adgroup_name||''} ${a.ad_text||''}`;
-  return /spring\s*rose/i.test(blob) || blob.includes('زهرة الربيع') || /zr_nd96/i.test(blob) || /sr\s*\|\s*ios14/i.test(blob);
-}
+// Well excluded one TikTok account here; Hoven excludes none.
+function ttExcludedAccount(){ return false; }
+function ttExcludedAd(){ return false; }
 const ORG_FB_HIDDEN = new Set(['Hoven Home Care','Hoven Women Health']);
 if(D.organic && Array.isArray(D.organic.facebook)){
   D.organic.facebook = D.organic.facebook.filter(p=>p && !ORG_FB_HIDDEN.has(p.name));
@@ -1112,9 +1101,7 @@ if(D.organic && Array.isArray(D.organic.facebook)){
   for(const k of gone) delete D.ads[k];
   if(Array.isArray(D.rows)) D.rows = D.rows.filter(r=>!gone.has(r[0]));
 })();
-const DEP_CFG = D.departments || {default:'brand', order:['iv','midwife','foot','renan','brand'], departments:{
-  iv:{ar:'المحاليل الوريدية',color:'--d-iv'}, midwife:{ar:'القبالة / رعاية الحمل',color:'--d-midwife'}, foot:{ar:'تقويم القدم',color:'--d-foot'},
-  renan:{ar:'رينان لصحة الطفل',color:'--d-renan'}, brand:{ar:'العلامة التجارية / الوعي',color:'--d-brand'}}, signals:[]};
+const DEP_CFG = D.departments || {default:'hoven', order:['hoven'], departments:{ hoven:{ar:'هوفن',color:'--d-brand'} }, signals:[]};
 const DEP = DEP_CFG.departments || {};
 // واتساب وشبكة الجمهور يبقيان في الإجمالي بلا شريحة أو صف أو اسم. العلامة التجارية بلا قسم: تظهر كحملات داخل المنصة فقط.
 const HIDDEN_PLAT = new Set(['audience_network','meta_whatsapp']);
@@ -2418,9 +2405,7 @@ function renderDeptPage(now,prev){
 }
 function renderRules(){
   const el=$('#rulesNote'); if(!el) return;
-  const hints=LANG==='en'
-    ? {iv:'IV, drips, and Hair-Vitality', midwife:'Midwife, maternity care', foot:'Foot alignment', renan:'Renan'}
-    : {iv:'IV، محاليل، و Hair-Vitality', midwife:'قابلة، رعاية الحمل، midwife', foot:'Foot Alignment، تقويم القدم', renan:'رينان'};
+  const hints={hoven:''};
   const cards=[
     ['براندينق','هذه حملات براندينق، وتبقى ضمن الحملات والمنصات بدون قسم.'],
     ...DORDER.map(k=>[depName(k), hints[k]||'']),

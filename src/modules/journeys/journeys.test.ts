@@ -60,8 +60,8 @@ describe('start', () => {
     }));
     const created: unknown[] = [];
     const env = { ...E, JOURNEY: { create: async (o: unknown) => { created.push(o); return {}; } } };
-    const req = (id: number) => new Request('https://well.example/api/journeys/start', { method: 'POST',
-      headers: { cookie, origin: 'https://well.example', 'sec-fetch-site': 'same-origin' }, body: JSON.stringify({ id, contact: { phone: '0551234567' } }) });
+    const req = (id: number) => new Request('https://hoven.example/api/journeys/start', { method: 'POST',
+      headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' }, body: JSON.stringify({ id, contact: { phone: '0551234567' } }) });
     expect((await start.POST(req(7), env)).status).toBe(200);
     expect(created).toEqual([{ id: 'run-99', params: { runId: 99, companyId: WELL_COMPANY, steps: [{ type: 'wait', hours: 1 }], contact: { name: '', phone: '966551234567' } } }]);
     expect(urls.find(u => u.includes('journeys?id=eq.7'))).toContain(`company_id=eq.${WELL_COMPANY}`);

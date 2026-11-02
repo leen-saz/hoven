@@ -88,7 +88,7 @@ class Mcp:
         return d.get("result") or {}
 
     def start(self):
-        r = self.call("initialize", {"protocolVersion": PROTOCOL, "capabilities": {}, "clientInfo": {"name": "well-ads-refresh", "version": "1"}})
+        r = self.call("initialize", {"protocolVersion": PROTOCOL, "capabilities": {}, "clientInfo": {"name": "hoven-refresh", "version": "1"}})
         self.call("notifications/initialized", notify=True)
         return r
 

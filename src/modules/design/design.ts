@@ -36,10 +36,10 @@ const flagsOf = (v: { headline: string; sub: string; cta: string }) => check(`${
 
 // No AI: three honest variants from the offer and the audience
 export function templates(offer: string, audience: string): Variant[] {
-  const o = offer.trim() || 'خدمتنا الطبية في البيت', a = audience.trim();
+  const o = offer.trim() || 'مفارش ومنسوجات هوفن', a = audience.trim();
   const base = [
-    { headline: o, sub: a ? `مصممة ${a.startsWith('لل') ? a : 'لـ' + a}، وفريقنا الطبي المرخّص يجيك البيت` : 'فريقنا الطبي المرخّص يجيك البيت', cta: 'احجز موعدك' },
-    { headline: `${o} بدون ما تطلع من البيت`, sub: 'تقييم طبي أول، وبعدها الجلسة في الوقت اللي يناسبك', cta: 'تواصل معنا' },
+    { headline: o, sub: a ? `مصممة ${a.startsWith('لل') ? a : 'لـ' + a}، بجودة تحسّها من أول ليلة` : 'جودة تحسّها من أول ليلة', cta: 'تسوّق الحين' },
+    { headline: `${o} توصلك لين باب بيتك`, sub: 'اطلب الحين، والتوصيل لكل مدن المملكةك', cta: 'تواصل معنا' },
     { headline: 'صحتك تستاهل وقتك', sub: `${o}، بخطوات بسيطة ومتابعة من فريق مختص`, cta: 'اعرف أكثر' },
   ];
   return base.map(v => ({ ...v, flags: flagsOf(v) }));
@@ -80,11 +80,11 @@ export function images(list: unknown, max = 5, maxB64 = 200_000): { kind: 'produ
 }
 
 export function prompt(input: { type: string; offer: string; audience: string; dept: string }, hooks: string[], looks: { product: string[]; refs: string[] } = { product: [], refs: [] }): string {
-  return `أنت كاتب إعلانات لشركة رعاية صحية منزلية في السعودية اسمها Hoven.
+  return `أنت كاتب إعلانات لمتجر سعودي للمفارش والمنسوجات المنزلية اسمه Hoven.
 اكتب 4 خيارات لنص تصميم ${TYPES[input.type] || 'إعلان'} عن: ${input.offer || 'خدماتنا'}${input.dept ? ` (قسم: ${input.dept})` : ''}.
 الفئة: ${input.audience || 'عامة'}.
 عبارات افتتاحية نجحت قبل: ${hooks.join(' | ') || 'ما فيه'}.${looks.product.length ? `\nصورة المنتج: ${looks.product.join(' ')}` : ''}${looks.refs.length ? `\nالمراجع اللي نبي نمشي على أسلوبها: ${looks.refs.join(' | ')}` : ''}
-القواعد: لهجة سعودية واضحة وودودة، مخاطبة المذكر، بدون ضمان نتائج، بدون "علاج نهائي"، بدون "الأفضل"، بدون أرقام وعود.
+القواعد: لهجة سعودية واضحة وودودة، مخاطبة المذكر، بدون خصم وهمي، بدون "الأرخص" أو "الأفضل" بدون دليل، والمواصفات والأسعار حقيقية.
 headline أقل من 6 كلمات، sub جملة وحدة، cta كلمتين.
 رد JSON فقط: [{"headline":"","sub":"","cta":""}]`;
 }

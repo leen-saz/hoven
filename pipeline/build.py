@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """يدمج data.json داخل لوحة واحدة.
 المخرجات:
-  well-ads-dashboard.html   نسخة Claude Artifact
+  hoven-dashboard.html   نسخة Claude Artifact
   web/public/index.html     اللوحة على / (الإعلانات افتراضياً، العضوي عبر ?mode=organic)
   web/public/organic/       تحويل إلى /?mode=organic
   /creative                 تحويل إلى /?view=creative (الكرييتف فقط)
@@ -26,8 +26,6 @@ def scrub_status(status):
 
 data = without_spring_rose(json.load(open(os.path.join(HERE, "data.json"), encoding="utf-8")))
 # CRM leads matched to ads (closings, revenue, ROAS on the dashboard). Skipped without Supabase.
-from crm.join import attach_from_db
-attach_from_db(data)
 # Hoven: Salla daily sales for the KPIs (salla_orders_daily). Skipped without Supabase.
 try:
     from modules.core.supa import Supa
@@ -112,7 +110,7 @@ csp = "; ".join([
     "frame-ancestors 'none'",
     "object-src 'none'",
 ])
-out = os.path.join(HERE, "well-ads-dashboard.html")
+out = os.path.join(HERE, "hoven-dashboard.html")
 open(out, "w", encoding="utf-8").write(page)
 print(out, os.path.getsize(out) // 1024, "KB")
 
@@ -127,7 +125,7 @@ USERBAR = '<script type="module" src="/assets/nav.js"></script>'
 public = os.path.join(HERE, "web", "public")
 os.makedirs(os.path.join(public, "organic"), exist_ok=True)
 # The main dashboard loads its data from /dash.json (cacheable, revalidated); the page itself stays small.
-# The standalone well-ads-dashboard.html above keeps the data inline.
+# The standalone hoven-dashboard.html above keeps the data inline.
 open(os.path.join(public, "index.html"), "w", encoding="utf-8").write(wrap(tpl.replace("/*__DATA__*/", "")))
 open(os.path.join(public, "dash.json"), "w", encoding="utf-8").write(blob)
 open(os.path.join(public, "organic", "index.html"), "w", encoding="utf-8").write(

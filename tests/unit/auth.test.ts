@@ -15,7 +15,7 @@ const cfg = A.env(E);
 const member: A.Profile = { id: '11111111-1111-1111-1111-111111111111', email: 'p@example.com', role: 'member', dashboards: ['creative'], active: true };
 const cookieFor = async (p: A.Profile, now?: number) => `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(p, cfg, now), cfg.secret))}`;
 const req = (path: string, cookie?: string | null, init: RequestInit & { headers?: Record<string, string> } = {}) =>
-  new Request('https://well.example' + path, { ...init, headers: { ...(cookie ? { cookie } : {}), ...(init.headers || {}) } });
+  new Request('https://hoven.example' + path, { ...init, headers: { ...(cookie ? { cookie } : {}), ...(init.headers || {}) } });
 const M = (r: Request) => gate(r, E);
 const status = (d: Decision) => (d instanceof Response ? d.status : 200);
 const location = (d: Decision) => (d instanceof Response ? d.headers.get('location') || '' : '');
@@ -108,7 +108,7 @@ describe('auth', () => {
     r = await M(req('/admin/', c));
     expect(status(r)).toBe(302);
     r = await M(req('/?view=creative', c));
-    expect(rewrite(r)).toBe('https://well.example/c/?view=creative'); // creative without analytics
+    expect(rewrite(r)).toBe('https://hoven.example/c/?view=creative'); // creative without analytics
   });
 
   it('gate: stale session re-checks permissions', async () => {
@@ -139,8 +139,8 @@ describe('auth', () => {
   it('department managers only reach their department copy', async () => {
     const ivMgr = { ...member, dashboards: ['ceo', 'creative'], departments: ['hoven'] };
     const c = await cookieFor(ivMgr);
-    expect(rewrite(await M(req('/', c)))).toBe('https://well.example/dept/hoven/');
-    expect(rewrite(await M(req('/?view=creative', c)))).toBe('https://well.example/dept/hoven/?view=creative');
+    expect(rewrite(await M(req('/', c)))).toBe('https://hoven.example/dept/hoven/');
+    expect(rewrite(await M(req('/?view=creative', c)))).toBe('https://hoven.example/dept/hoven/?view=creative');
     expect(status(await M(req('/dept/foot/', c)))).toBe(403);
     expect(passed(await M(req('/dept/hoven/', c)))).toBe(true);
     // No scope: sees everything and can open any department copy
@@ -163,7 +163,7 @@ describe('auth', () => {
     expect(passed(await M(req('/thumbs/abc.jpg', cr)))).toBe(true);
     expect(status(await M(req('/thumbs/abc.jpg')))).toBe(302);
     expect(status(await M(req('/thumbs/abc.jpg', await cookieFor({ ...member, dashboards: [] }))))).toBe(403);
-    expect(rewrite(await M(req('/?view=creative', cr)))).toBe('https://well.example/c/?view=creative');
+    expect(rewrite(await M(req('/?view=creative', cr)))).toBe('https://hoven.example/c/?view=creative');
     const ceo = await cookieFor({ ...member, dashboards: ['ceo', 'creative'] });
     expect(passed(await M(req('/?view=creative', ceo)))).toBe(true);
     expect(status(await M(req('/c/', await cookieFor({ ...member, dashboards: ['control'] }))))).toBe(302);
@@ -178,7 +178,7 @@ describe('auth', () => {
     expect(get.headers.get('set-cookie')).toBeNull(); // a link from another site logs nobody out
     const cross = await call('/api/auth/logout', { method: 'POST', headers: { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' } });
     expect(cross.status).toBe(403);
-    const out = await authRoutes.logout.POST(req('/api/auth/logout', null, { method: 'POST', headers: { origin: 'https://well.example', 'sec-fetch-site': 'same-origin' } }), E);
+    const out = await authRoutes.logout.POST(req('/api/auth/logout', null, { method: 'POST', headers: { origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' } }), E);
     expect(out.status).toBe(303);
     expect(out.headers.get('set-cookie')).toMatch(/Max-Age=0/i);
   });

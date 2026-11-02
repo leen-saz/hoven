@@ -1,4 +1,3 @@
-// Port of well-ads-dashboard web/lib/auth.js. Same behavior; env comes from Worker bindings instead of process.env.
 // Email + password via Supabase Auth, session in an HMAC-signed cookie. Web Crypto only.
 
 import { companyOf } from './tenant';

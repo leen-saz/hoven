@@ -8,7 +8,7 @@ const NET = { facebook: 'فيسبوك', instagram: 'انستقرام', tiktok: '
 const SRC = { meta_form: 'نموذج ميتا', meta_ctwa: 'واتساب من إعلان', whatsapp_ad_prefill: 'واتساب من إعلان', snapchat_form: 'نموذج سناب', tiktok_form: 'نموذج تيك توك',
   whatsapp_organic: 'واتساب بدون إعلان', manual: 'يدوي', cold_outreach: 'تواصل مباشر', website: 'الموقع', voice: 'اتصال', late_import: 'استيراد متأخر', partner_other: 'شركاء' };
 const KEY = 'hoven-listen-kw';
-const DEFAULT_KW = ['محاليل', 'فيتامين', 'ولادة', 'رعاية منزلية', 'قدم السكري'];
+const DEFAULT_KW = ['هوفن', 'مفارش', 'لحاف', 'منسوجات منزلية', 'جهاز العروس'];
 const pct = x => x == null ? 'جديد' : `${x > 0 ? '+' : ''}${Math.round(x * 100)}%`;
 const lift = x => x == null ? '—' : `${x.toFixed(1)}×`;
 

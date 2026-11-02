@@ -24,9 +24,10 @@ from datetime import datetime, timedelta, timezone
 GOAL = {"LEAD_GENERATION": "lead", "WEB_CONVERSIONS": "lead", "ENGAGEMENT": "profile", "VIDEO_VIEWS": "other", "TRAFFIC": "traffic"}
 STATUS = {"AD_STATUS_DELIVERY_OK": "نشط", "AD_STATUS_CAMPAIGN_EXCEED": "حد صرف الحملة خلص", "AD_STATUS_BUDGET_EXCEED": "حد صرف المجموعة خلص", "AD_STATUS_CAMPAIGN_DISABLE": "الحملة متوقفة", "AD_STATUS_ADGROUP_DISABLE": "المجموعة متوقفة",
           "AD_STATUS_DISABLE": "متوقف", "AD_STATUS_DELETE": "محذوف", "AD_STATUS_CAMPAIGN_DELETE": "محذوف", "AD_STATUS_ADGROUP_DELETE": "محذوف"}
-# Spring Rose0406 (شركة زهرة الربيع) حساب منفصل ولا يدخل اللوحة.
-EXCLUDED_ADVERTISER_IDS = {"6948010864247046146"}
-SPRING_MARKERS = ("spring rose", "زهرة الربيع", "zr_nd96", "sr | ios14")
+# TikTok accounts kept out of the dashboard. Well excluded one (a separate company); Hoven excludes none.
+# The is_spring_rose_* names stay so Well's upstream changes keep applying.
+EXCLUDED_ADVERTISER_IDS = set()
+SPRING_MARKERS = ()
 
 
 def tiktok_live(x):
@@ -52,8 +53,7 @@ def _flat(value):
 def is_spring_rose_account(advertiser_id="", advertiser_name=""):
     if str(advertiser_id or "") in EXCLUDED_ADVERTISER_IDS:
         return True
-    name = _flat(advertiser_name)
-    return "spring rose0406" in name or "زهرة الربيع" in name
+    return False
 
 
 def is_spring_rose_ad(ad):

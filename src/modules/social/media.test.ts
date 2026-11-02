@@ -32,13 +32,13 @@ describe('post media', () => {
     const put = vi.fn(async () => ({}));
     const env = { ...E, FILES: { put } } as unknown as A.AuthEnv;
     const cookie = `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(leen, cfg), cfg.secret))}`;
-    const req = (type: string) => new Request('https://well.example/api/social/upload', { method: 'POST',
-      headers: { cookie, origin: 'https://well.example', 'sec-fetch-site': 'same-origin', 'content-type': type }, body: new Uint8Array([1, 2, 3]) });
+    const req = (type: string) => new Request('https://hoven.example/api/social/upload', { method: 'POST',
+      headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin', 'content-type': type }, body: new Uint8Array([1, 2, 3]) });
     const ok = await upload.POST(req('image/png'), env);
     const j = (await ok.json()) as { url: string; type: string };
     expect(ok.status).toBe(200);
     expect(j.type).toBe('image');
-    expect(j.url).toMatch(new RegExp(`^https://well.example/m/${CO}/[0-9a-f]{32}\\.png$`));
+    expect(j.url).toMatch(new RegExp(`^https://hoven.example/m/${CO}/[0-9a-f]{32}\\.png$`));
     expect((put.mock.calls[0] as unknown[])[0]).toBe('social/' + j.url.split('/m/')[1]);
     expect((await upload.POST(req('text/html'), env)).status).toBe(415);
   });
@@ -46,7 +46,7 @@ describe('post media', () => {
   it('serves the file publicly with its type', async () => {
     const key = `social/${CO}/${'c'.repeat(32)}.jpg`;
     const bucket = { get: async (k: string) => (k === key ? { body: 'IMG', httpEtag: '"e"', httpMetadata: { contentType: 'image/jpeg' } } : null) } as unknown as R2Bucket;
-    const res = await serveSite(new Request(`https://well.example/m/${CO}/${'c'.repeat(32)}.jpg`), bucket);
+    const res = await serveSite(new Request(`https://hoven.example/m/${CO}/${'c'.repeat(32)}.jpg`), bucket);
     expect(res?.status).toBe(200);
     expect(res?.headers.get('content-type')).toBe('image/jpeg');
     expect(await res?.text()).toBe('IMG');

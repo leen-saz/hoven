@@ -427,7 +427,7 @@ const EN = {
   'كلمات البحث': 'Search words',
   '(افصل بفاصلة)': '(separate with commas)',
   'مثال: Hoven أو اسم المنافس': 'Example: Hoven or the competitor name',
-  'مثال: هوفن للرعاية المنزلية، well care': 'Example: Hoven home care, well care',
+  'مثال: هوفن، hoven، مفارش هوفن': 'Example: Hoven, hoven, Hoven bedding',
   'تيك توك': 'TikTok',
   'المنافسين': 'Competitors',
   'كلمات التنبيه': 'Alert keywords',
@@ -487,7 +487,7 @@ const EN = {
   // الصوت (voice)
   'الصوت': 'Voice', 'الصوت · Hoven': 'Voice · Hoven',
   'يفحص النص على صوت علامة Hoven، ويحسب مدته كفويس أوفر، ويعيد كتابته بصوت العلامة، وتسمعه بصوت عربي من جهازك.': "Checks copy against Hoven's brand voice, times it as a voice-over, rewrites it in the brand voice, and plays it in an Arabic voice from your device.",
-  'النص أو سكربت الفويس أوفر': 'Text or voice-over script', 'مثال: تعبان من الدوام؟ فريقنا الطبي يجيك البيت. احجز جلستك': 'Example: Tired after work? Our medical team comes to your home. Book your session',
+  'النص أو سكربت الفويس أوفر': 'Text or voice-over script', 'مثال: نومك يستاهل أنعم مفرش. قطن 100% يوصلك لين بيتك. اطلب الحين': 'Example: Tired after work? Our medical team comes to your home. Book your session',
   'مدة الإعلان': 'Ad length', '15 ثانية': '15 seconds', '30 ثانية': '30 seconds', '60 ثانية': '60 seconds', 'اكتبه بصوت العلامة': 'Write it in the brand voice',
   'اسمعه': 'Listen', 'السرعة': 'Speed', 'شغّل': 'Play', 'وقّف': 'Stop', 'النتيجة': 'Result',
   'الاستماع من أصوات جهازك ومجاني. تنزيل ملف صوت بالعربي يحتاج خدمة صوت إضافية.': 'Listening uses your device voices and is free. Downloading an Arabic audio file needs an extra voice service.',

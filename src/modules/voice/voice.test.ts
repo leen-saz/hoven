@@ -25,7 +25,7 @@ describe('voice', () => {
   it('asks the model for the brand voice within the voice-over length', () => {
     const p = rewritePrompt('نص', 15);
     expect(p).toContain('35 كلمة');
-    expect(p).toContain('بدون ضمان نتائج');
+    expect(p).toContain('بدون خصم وهمي');
     expect(GUIDE.length).toBeGreaterThanOrEqual(5);
   });
 });

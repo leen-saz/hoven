@@ -24,7 +24,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 // The sidebar needs the user's name and dashboards on every page. Kept for 5 minutes in this tab, so moving
 // between tabs does not wait on the database each time (the server still checks every request).
-const ME_KEY = 'well-me-2'; // v2: carries the modules list
+const ME_KEY = 'hoven-me-2'; // v2: carries the modules list
 let me = null;
 try { const c = JSON.parse(sessionStorage.getItem(ME_KEY) || 'null'); if (c && Date.now() - c.t < 5 * 60 * 1000) me = c.v; } catch { /* storage blocked */ }
 if (!me) {

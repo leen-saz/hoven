@@ -70,7 +70,7 @@ export default async function mount() {
       if (!part.inlineData) throw new Error('ما رجع صوت، جرّب مرة ثانية');
       if (url) URL.revokeObjectURL(url);
       url = URL.createObjectURL(wav(part.inlineData.data, part.inlineData.mimeType));
-      $('#out').innerHTML = `<div class="vc-audio"><audio controls src="${url}"></audio><a class="btn sm secondary" href="${url}" download="well-voice.wav">نزّل WAV</a></div>`;
+      $('#out').innerHTML = `<div class="vc-audio"><audio controls src="${url}"></audio><a class="btn sm secondary" href="${url}" download="hoven-voice.wav">نزّل WAV</a></div>`;
       say($('#msg'), 'جاهز. اسمعه قبل ما تستخدمه.', true);
     } catch (err) { say($('#msg'), err.message); }
     busy(btn, false);

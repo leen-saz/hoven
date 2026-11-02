@@ -1,7 +1,7 @@
 // Listening analysis that runs in the browser (free-tier Workers have 10 ms of CPU, too little for big JSON).
 // Input: organic posts (facebook, instagram, tiktok) from the dashboard data, plus watched keywords.
 
-const STOP_WORDS = ['من', 'في', 'على', 'الى', 'إلى', 'عن', 'مع', 'هذا', 'هذه', 'اللي', 'التي', 'الذي', 'كل', 'او', 'أو', 'ثم', 'لكن', 'عند', 'بعد', 'قبل', 'لين', 'حتى', 'انت', 'أنت', 'انتي', 'احنا', 'نحن', 'هو', 'هي', 'ما', 'لا', 'لم', 'لن', 'قد', 'كان', 'تكون', 'يكون', 'and', 'the', 'for', 'with', 'you', 'your', 'our', 'are', 'this', 'that', 'from', 'well', 'هوفن'];
+const STOP_WORDS = ['من', 'في', 'على', 'الى', 'إلى', 'عن', 'مع', 'هذا', 'هذه', 'اللي', 'التي', 'الذي', 'كل', 'او', 'أو', 'ثم', 'لكن', 'عند', 'بعد', 'قبل', 'لين', 'حتى', 'انت', 'أنت', 'انتي', 'احنا', 'نحن', 'هو', 'هي', 'ما', 'لا', 'لم', 'لن', 'قد', 'كان', 'تكون', 'يكون', 'and', 'the', 'for', 'with', 'you', 'your', 'our', 'are', 'this', 'that', 'from', 'هوفن'];
 
 export function norm(s) {
   return String(s || '').toLowerCase()

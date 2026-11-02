@@ -14,7 +14,7 @@ export default async function mount() {
     busy(e.target, true);
     try {
       await api('/api/admin/modules', { method: 'PATCH', body: { off: $$('input[name="mod"]').filter(x => !x.checked).map(x => x.value) } });
-      try { sessionStorage.removeItem('well-me-2'); } catch { /* storage blocked */ }
+      try { sessionStorage.removeItem('hoven-me-2'); } catch { /* storage blocked */ }
       say($('#msg'), L('انحفظ. القائمة تتحدث خلال دقايق.', 'Saved. The sidebar updates within minutes.'), true);
     } catch (err) { say($('#msg'), err.message); }
     busy(e.target, false);

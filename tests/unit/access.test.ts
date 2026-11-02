@@ -8,8 +8,8 @@ const E: A.AuthEnv = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE
 const cfg = A.env(E);
 const member = (access: Record<string, string>): A.Profile => ({ id: '22222222-2222-2222-2222-222222222222', email: 'm@example.com', role: 'member', active: true, access });
 const cookieFor = async (p: A.Profile) => `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(p, cfg), cfg.secret))}`;
-const req = (path: string, cookie: string, method = 'GET', body?: unknown) => new Request('https://well.example' + path,
-  { method, headers: { cookie, origin: 'https://well.example', 'sec-fetch-site': 'same-origin' }, ...(body ? { body: JSON.stringify(body) } : {}) });
+const req = (path: string, cookie: string, method = 'GET', body?: unknown) => new Request('https://hoven.example' + path,
+  { method, headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' }, ...(body ? { body: JSON.stringify(body) } : {}) });
 const stub = (p: A.Profile, rest: (url: string, init: RequestInit) => unknown = () => []) => {
   const calls: { url: string; body?: unknown }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {

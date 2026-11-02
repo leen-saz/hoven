@@ -8,9 +8,9 @@ const PAGE = `<html lang="ar"><head><title>رعاية منزلية في الري
 
 describe('content agent', () => {
   it('only allows public https sites', () => {
-    expect(normalizeSite('wellcare.sa')).toBe('https://wellcare.sa');
-    expect(normalizeSite('https://wellcare.sa/ar/page')).toBe('https://wellcare.sa');
-    expect(normalizeSite('http://wellcare.sa')).toBeNull();
+    expect(normalizeSite('hoven.sa')).toBe('https://hoven.sa');
+    expect(normalizeSite('https://hoven.sa/ar/page')).toBe('https://hoven.sa');
+    expect(normalizeSite('http://hoven.sa')).toBeNull();
     expect(normalizeSite('https://localhost')).toBeNull();
     expect(normalizeSite('https://192.168.1.2')).toBeNull();
   });

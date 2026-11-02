@@ -19,8 +19,8 @@ describe('validate', () => {
     expect(validate({ platforms: ['x'], body: 'ا'.repeat(281), publish_at: later }, NOW).error).toContain('X');
     expect(validate({ platforms: ['instagram'], body: 'x', publish_at: later }, NOW).error).toContain('انستقرام');
   });
-  it('warns on MOH claims without blocking, and defaults to manual', () => {
-    const v = validate({ platforms: ['facebook'], body: 'علاج نهائي ومضمون', publish_at: later }, NOW);
+  it('warns on consumer-protection claims without blocking, and defaults to manual', () => {
+    const v = validate({ platforms: ['facebook'], body: 'الأرخص ومضمون', publish_at: later }, NOW);
     expect(v.draft?.mode).toBe('manual');
     expect(v.notices.length).toBe(2);
   });
@@ -54,7 +54,7 @@ describe('publish', () => {
 });
 
 describe('runSocial', () => {
-  it('claims each due post once and never uses Well tokens for another company', async () => {
+  it('claims each due post once and never uses Hoven tokens for another company', async () => {
     const OTHER = '22222222-2222-2222-2222-222222222222';
     const posts = [
       { id: 1, company_id: WELL_COMPANY, platforms: ['facebook'], body: 'a', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'auto', status: 'scheduled' },
@@ -74,7 +74,7 @@ describe('runSocial', () => {
     const n = await runSocial({ SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'l@x' }, NOW, graph);
     expect(n).toBe(2);                         // the manual post waits for approval
     expect(saved[1]?.status).toBe('published');
-    expect(saved[2]?.status).toBe('failed');   // other company: no Well tokens
+    expect(saved[2]?.status).toBe('failed');   // other company: no Hoven tokens
     expect(graph).toHaveBeenCalledTimes(1);
   });
 });
