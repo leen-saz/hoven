@@ -1,5 +1,6 @@
-// Compliance (الامتثال): checks ad copy against Saudi health-advertising rules (MOH / SFDA principles) and the
-// platforms' health-ad policies. A notice only: it never blocks publishing. Rules are plain data, easy to extend.
+// Compliance (الامتثال) for Hoven, a Saudi online home-goods store: checks ad copy against the e-commerce and
+// consumer-protection rules (Ministry of Commerce, e-commerce law, Saudi Advertising Code principles) and the
+// platforms' ad policies. A notice only: it never blocks publishing. Rules are plain data, easy to extend.
 
 export type Level = 'critical' | 'warn' | 'info';
 export interface Rule { id: string; level: Level; title: string; why: string; fix: string; re: RegExp }
@@ -7,39 +8,27 @@ export interface Hit { rule: string; level: Level; title: string; why: string; f
 
 // Arabic letters vary (ة/ه, أ/ا, ى/ي): patterns allow both where it matters.
 export const RULES: Rule[] = [
-  { id: 'guarantee', level: 'critical', title: 'وعد بنتيجة مضمونة',
-    why: 'وزارة الصحة تمنع ضمان نتائج العلاج، وميتا وتيك توك يرفضون ادعاءات النتائج المضمونة.',
-    fix: 'قل "النتائج تختلف من شخص لآخر" بدل الضمان.', re: /(مضمون[هة]?|نتائج مؤكد[هة]|100\s?%|١٠٠\s?٪|guarantee[ds]?)/i },
-  { id: 'cure', level: 'critical', title: 'ادعاء شفاء أو علاج نهائي',
-    why: 'ادعاء الشفاء أو العلاج النهائي ممنوع في الإعلان الصحي.',
-    fix: 'اكتب الفائدة بدون ادعاء: "يساعد على…" أو "جلسات لدعم…".', re: /(علاجا? نهائيا?|يشفي|شفاء (تام|نهائي)|يقضي على|تخلص (نهائي|للأبد)|\bcures?\b)/i },
-  { id: 'before_after', level: 'critical', title: 'قبل وبعد',
-    why: 'صور أو عبارات "قبل وبعد" ممنوعة في إعلانات الصحة والتجميل عند ميتا وتيك توك.',
-    fix: 'اعرض تجربة الخدمة نفسها بدل المقارنة.', re: /(قبل\s*و\s*بعد|before\s*(and|&|\/)\s*after)/i },
-  { id: 'no_rx', level: 'critical', title: 'دواء بدون وصفة',
-    why: 'الإعلان عن أدوية بوصفة أو صرفها بدون وصفة مخالف لأنظمة هيئة الغذاء والدواء.',
-    fix: 'اذكر إن الخدمة بعد تقييم طبي.', re: /(بدون وصف[هة]|without (a )?prescription)/i },
-  { id: 'weight', level: 'critical', title: 'وعد بنزول وزن محدد',
-    why: 'الوعد بعدد كيلوات أو مدة محددة لنزول الوزن مرفوض في سياسات المنصات.',
-    fix: 'تكلم عن البرنامج والمتابعة بدون أرقام وعود.', re: /(\d+|[٠-٩]+)\s*(كيلو|كجم|kg)/i },
+  { id: 'fake_discount', level: 'critical', title: 'خصم بدون السعر قبل الخصم',
+    why: 'نظام التجارة الإلكترونية يطلب السعر قبل وبعد الخصم ومدة العرض، والخصم الوهمي مخالفة.',
+    fix: 'اكتب "كان 299 ر.س، الحين 199 ر.س، لين نهاية الشهر".', re: /(خصم|تخفيض|تخفيضات|عرض خاص|\d+\s?%\s?off|discount|sale)/i },
+  { id: 'free', level: 'warn', title: '"مجاني" بدون شروط',
+    why: 'كلمة مجاني لازم تكون مجانية فعلاً أو الشرط واضح جنبها (مثل حد أدنى للطلب).',
+    fix: 'اكتب الشرط: "شحن مجاني للطلبات فوق 200 ر.س".', re: /(مجان[يا]|ببلاش|free\b)/i },
+  { id: 'guarantee', level: 'warn', title: 'ضمان بدون تفاصيل',
+    why: 'الضمان لازم تكون مدته وشروطه واضحة ومكتوبة في المتجر.',
+    fix: 'اكتب المدة والشروط: "ضمان سنة ضد عيوب الصناعة".', re: /(مضمون[هة]?|ضمان|guarantee[ds]?)/i },
   { id: 'superlative', level: 'warn', title: 'تفضيل مطلق بدون دليل',
-    why: 'عبارات مثل "الأفضل" أو "رقم 1" تحتاج دليل موثق، وإلا تعتبر تضليل.',
-    fix: 'اكتب ميزة محددة: "فريق طبي مرخّص يجيك البيت".', re: /(الأفضل|الأول في|رقم\s?(1|١|واحد)|أقوى|\bbest\b|#\s?1\b|number one)/i },
-  { id: 'personal', level: 'warn', title: 'مخاطبة حالة صحية شخصية',
-    why: 'ميتا تمنع الإعلان اللي يلمّح إنه يعرف حالة الشخص الصحية ("هل تعاني من…").',
-    fix: 'خاطب الفئة بشكل عام: "للي يبون…" أو "إذا كنت تبحث عن…".', re: /(هل تعاني|تعاني من|عندك (تساقط|سكر|ضغط|سمن[هة])|are you suffering|do you have)/i },
-  { id: 'speed', level: 'warn', title: 'وعد بنتيجة سريعة',
-    why: 'مدة محددة للنتيجة ("خلال أسبوع") تعتبر ادعاء غير مثبت.',
-    fix: 'احذف المدة أو اكتب "مع الجلسات المنتظمة".', re: /(خلال (يوم|يومين|أسبوع|اسبوع|ساع[هة]|أيام)|from the first session|in (one|1) week|overnight)/i },
-  { id: 'refund', level: 'warn', title: 'ضمان استرجاع المبلغ',
-    why: 'ضمان الاسترجاع على خدمة طبية يلمّح لنتيجة مضمونة.',
-    fix: 'اكتب سياسة الإلغاء بدل ضمان النتيجة.', re: /(ضمان استرجاع|استرجاع (المبلغ|فلوسك)|money[- ]back)/i },
-  { id: 'discount', level: 'info', title: 'خصم بدون شروط',
-    why: 'نظام التجارة يطلب توضيح مدة العرض وشروطه.',
-    fix: 'أضف المدة: "العرض لين نهاية الشهر" أو "لأول حجز".', re: /(خصم|تخفيض|عرض خاص|\d+\s?%\s?off|discount)/i },
-  { id: 'fear', level: 'info', title: 'تخويف أو إحراج',
-    why: 'أسلوب التخويف أو الإحراج يضعف الثقة وتعاقب عليه خوارزميات المنصات.',
-    fix: 'ركز على الفائدة بدل الخوف.', re: /(محرج|لا تخلي .{0,20} يفضحك|خطر على حياتك|قبل لا يفوت الأوان)/i },
+    why: 'عبارات مثل "الأفضل" أو "الأرخص" أو "رقم 1" تحتاج دليل موثق، وإلا تعتبر تضليل للمستهلك.',
+    fix: 'اكتب ميزة محددة: "قطن 100% بكثافة 400 خيط".', re: /(الأفضل|الأرخص|الأول في|رقم\s?(1|١|واحد)|أقوى|\bbest\b|cheapest|#\s?1\b|number one)/i },
+  { id: 'original', level: 'warn', title: '"أصلي" أو "ماركة" بدون إثبات',
+    why: 'ادعاء الأصالة أو الوكالة لازم يكون صحيح ويقدر المتجر يثبته.',
+    fix: 'اذكر المصدر أو الوكالة إذا موجودة، أو احذف الادعاء.', re: /(أصلي 100|اصلي 100|وكيل معتمد|original 100)/i },
+  { id: 'scarcity', level: 'info', title: 'استعجال أو ندرة',
+    why: '"آخر قطعة" أو "الكمية محدودة" لازم تكون صحيحة وقت الإعلان.',
+    fix: 'استخدمها بس إذا المخزون فعلاً قليل.', re: /(آخر (قطع[هة]|حب[هة])|الكمي[هة] محدود[هة]|ينتهي اليوم|limited stock|last (one|piece))/i },
+  { id: 'returns', level: 'info', title: 'سياسة الاسترجاع',
+    why: 'نظام حماية المستهلك يعطي حق الاسترجاع، وأي وعد بالاسترجاع لازم يطابق سياسة المتجر.',
+    fix: 'اكتب نفس مدة الاسترجاع اللي في المتجر.', re: /(استرجاع|استبدال|return|refund|money[- ]back)/i },
 ];
 
 const SHOUT = /[!؟?]{3,}/;
@@ -49,7 +38,7 @@ export function check(text: string): Hit[] {
   const t = String(text || '').slice(0, 5000).replace(/[\u064B-\u0652\u0640]/g, '');
   const out: Hit[] = [];
   for (const r of RULES) {
-    if (r.id === 'discount' && /(لين|حتى|ينتهي|لأول|لفترة|until|ends)/i.test(t)) continue; // the offer already has terms
+    if (r.id === 'fake_discount' && /(كان|بدل|السعر الأصلي|قبل الخصم|was)/i.test(t) && /(لين|حتى|ينتهي|لفترة|until|ends)/i.test(t)) continue; // price and dates already given
     const m = t.match(r.re);
     if (m) out.push({ rule: r.id, level: r.level, title: r.title, why: r.why, fix: r.fix, match: m[0] });
   }

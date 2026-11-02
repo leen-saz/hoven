@@ -12,8 +12,8 @@ const E: A.AuthEnv = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE
 const cfg = A.env(E);
 const leen: A.Profile = { id: '11111111-1111-1111-1111-111111111111', email: 'leen@example.com', active: true, company: { disabled_modules: ['journeys'] } };
 const cookieFor = async (p: A.Profile) => `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(p, cfg), cfg.secret))}`;
-const req = (path: string, cookie: string, init: RequestInit = {}) => new Request('https://well.example' + path,
-  { ...init, headers: { cookie, origin: 'https://well.example', 'sec-fetch-site': 'same-origin' } });
+const req = (path: string, cookie: string, init: RequestInit = {}) => new Request('https://hoven.example' + path,
+  { ...init, headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' } });
 const stubProfile = (p: A.Profile, extra: (url: string, init: RequestInit) => Response | null = () => null) =>
   vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => extra(url, init) ?? new Response(JSON.stringify(url.includes('/profiles?id=eq.') ? [p] : []))));
 

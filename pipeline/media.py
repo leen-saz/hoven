@@ -67,7 +67,7 @@ def _tiktok_blob():
 def _oembed(video_id):
     """صورة الغلاف ورابط المشاهدة العام. رابط التضمين يبقى للتشغيل داخل النافذة."""
     url = "https://www.tiktok.com/oembed?url=" + urllib.parse.quote(
-        f"https://www.tiktok.com/@well/video/{video_id}", safe="")
+        f"https://www.tiktok.com/@hoven.gcc/video/{video_id}", safe="")
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=20) as r:

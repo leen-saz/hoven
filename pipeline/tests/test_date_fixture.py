@@ -18,6 +18,11 @@ def main_data():
         "schema": 3,
         "range": {"start": "2026-10-01", "end": "2026-10-16", "today": "2026-10-17"},
         "currency": "SAR",
+        # Synthetic departments for this test only (Hoven's own config has one department)
+        "departments": {"default": "brand", "order": ["iv", "midwife", "foot", "renan", "brand"], "departments": {
+            "iv": {"ar": "المحاليل الوريدية", "color": "--d-brand"}, "midwife": {"ar": "القبالة / رعاية الحمل", "color": "--d-brand"},
+            "foot": {"ar": "تقويم القدم", "color": "--d-brand"}, "renan": {"ar": "رينان لصحة الطفل", "color": "--d-brand"},
+            "brand": {"ar": "العلامة التجارية / الوعي", "color": "--d-brand"}}},
         "goals": {"lead": "ليدز", "messages": "محادثات"},
         "platforms": {
             "meta": {"ok": True, "coverage_end": "2026-10-17"},

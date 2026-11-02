@@ -9,13 +9,13 @@ const cfg = A.env(E);
 const ACME = '22222222-2222-2222-2222-222222222222';
 const acmeOwner: A.Profile = { id: '33333333-3333-3333-3333-333333333333', email: 'boss@acme.example', role: 'owner', active: true, company_id: ACME };
 const cookieFor = async (p: A.Profile) => `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(p, cfg), cfg.secret))}`;
-const req = (path: string, cookie: string, init: RequestInit = {}) => new Request('https://well.example' + path,
-  { ...init, headers: { cookie, origin: 'https://well.example', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' } });
+const req = (path: string, cookie: string, init: RequestInit = {}) => new Request('https://hoven.example' + path,
+  { ...init, headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' } });
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('tenant', () => {
-  it('defaults to Well and rejects junk company ids', () => {
+  it('defaults to Hoven and rejects junk company ids', () => {
     expect(companyOf(undefined)).toBe(WELL_COMPANY);
     expect(companyOf('x; drop table')).toBe(WELL_COMPANY);
     expect(companyOf(ACME.toUpperCase())).toBe(ACME);

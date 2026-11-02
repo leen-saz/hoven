@@ -4,7 +4,7 @@ import { check } from '../../src/lib/rules';
 import { sign, SESSION, type AuthEnv } from '../../src/lib/auth';
 
 const ENV: AuthEnv = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_x', SESSION_SECRET: 's'.repeat(32), OWNER_EMAIL: 'leen@x.co' };
-const ORIGIN = 'https://well.test';
+const ORIGIN = 'https://hoven.test';
 
 type Profile = { id: string; email: string; role: string; dashboards: string[]; active: boolean };
 const MEMBER: Profile = { id: 'u1', email: 'm@x.co', role: 'member', dashboards: ['control'], active: true };

@@ -15,8 +15,8 @@ export interface Media { url: string; type: 'image' | 'video' }
 export interface Draft { platforms: SocialPlatform[]; body: string; media: Media[]; publish_at: string; mode: 'auto' | 'manual' }
 
 const GRAPH = 'https://graph.facebook.com/v23.0';
-// Saudi MOH advertising: a reminder, never a block (Leen's rule: compliance is a notice)
-const MOH_WORDS = ['علاج نهائي', 'مضمون', 'شفاء تام', '100%', 'بدون أضرار', 'أفضل طبيب', 'الأرخص'];
+// Saudi consumer-protection wording: a reminder, never a block (Leen's rule: compliance is a notice)
+const MOH_WORDS = ['مضمون', 'الأرخص', 'الأفضل', 'أصلي 100%', 'آخر قطعة', 'مجاني'];
 
 export function validate(input: Record<string, unknown>, now = Date.now()): { draft?: Draft; error?: string; notices: string[] } {
   const platforms = [...new Set(Array.isArray(input.platforms) ? input.platforms : [])].filter((p): p is SocialPlatform => typeof p === 'string' && p in SOCIAL);
@@ -27,7 +27,7 @@ export function validate(input: Record<string, unknown>, now = Date.now()): { dr
   }).slice(0, 10);
   const at = Date.parse(String(input.publish_at || ''));
   const mode = input.mode === 'auto' ? 'auto' : 'manual';
-  const notices = MOH_WORDS.filter(w => body.includes(w)).map(w => `تنبيه امتثال (وزارة الصحة): "${w}" ممكن تعتبر ادعاء. راجعها قبل النشر.`);
+  const notices = MOH_WORDS.filter(w => body.includes(w)).map(w => `تنبيه امتثال (حماية المستهلك): "${w}" ممكن تعتبر ادعاء. راجعها قبل النشر.`);
   if (!platforms.length) return { error: 'اختر منصة وحدة على الأقل', notices };
   if (!body && !media.length) return { error: 'اكتب نص أو أضف صورة/فيديو', notices };
   if (!Number.isFinite(at)) return { error: 'حدد وقت النشر', notices };

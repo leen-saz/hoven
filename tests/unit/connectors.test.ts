@@ -4,7 +4,7 @@ import { PLATFORMS, oauth1 } from '../../src/lib/connectors';
 import { sign, SESSION, type AuthEnv } from '../../src/lib/auth';
 
 const ENV: AuthEnv = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_x', SESSION_SECRET: 's'.repeat(32), OWNER_EMAIL: 'leen@x.co' };
-const ORIGIN = 'https://well.test';
+const ORIGIN = 'https://hoven.test';
 const USER = { id: 'u1', email: 'm@x.co', role: 'member', dashboards: ['connectors'], active: true };
 
 async function cookie() {
@@ -168,7 +168,7 @@ describe('meta_pages exchange', () => {
       urls.push(url);
       if (url.includes('/oauth/access_token') && url.includes('code=')) return new Response(JSON.stringify({ access_token: 'short' }));
       if (url.includes('fb_exchange_token')) return new Response(JSON.stringify({ access_token: 'long', expires_in: 5184000 }));
-      if (url.includes('/me/accounts')) return new Response(JSON.stringify({ data: [{ id: '111', name: 'Well', access_token: 'page-tok', instagram_business_account: { id: '222' } }] }));
+      if (url.includes('/me/accounts')) return new Response(JSON.stringify({ data: [{ id: '111', name: 'Hoven', access_token: 'page-tok', instagram_business_account: { id: '222' } }] }));
       return new Response('{}', { status: 404 });
     }));
     const p = byId('meta_pages');

@@ -323,7 +323,7 @@ export default async function mount() {
     const val = (k, v) => pend.has(k) ? '<span class="chip line">يعبيها كلود</span>' : v === '' || v == null ? '—' : Array.isArray(v) ? esc(v.map(lab).join('، ')) : typeof v === 'string' && VAL[v] && k !== 'creative' ? esc(lab(v)) : Array.isArray(v) ? esc(v.join('، ')) : typeof v === 'boolean' ? (v ? 'نعم' : 'لا')
       : k === 'creative' || k === 'final_url' ? `<a href="${/^https?:/i.test(v) ? esc(v) : '#'}" target="_blank" rel="noopener">${esc(v)}</a>` : esc(v);
     const rows = Object.keys(FIELD).filter(k => k in p && k !== 'name').map(k => `<dt>${FIELD[k]}</dt><dd>${val(k, p[k])}</dd>`).join('');
-    return `<div><h3>تفاصيل الحملة</h3>${(e.moh || []).length ? `<p class="msg err">${icon('alert')}كلمات تخالف تعليمات وزارة الصحة: ${esc(e.moh.join('، '))}</p>` : ''}<dl class="kv">${rows}</dl></div>`;
+    return `<div><h3>تفاصيل الحملة</h3>${(e.moh || []).length ? `<p class="msg err">${icon('alert')}كلمات تحتاج دليل أو شروط (حماية المستهلك): ${esc(e.moh.join('، '))}</p>` : ''}<dl class="kv">${rows}</dl></div>`;
   }
   function planHTML(s) {
     if (!s.before && !s.after && !s.measure_plan && !(s.risk || []).length) return '';

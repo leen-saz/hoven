@@ -1,4 +1,3 @@
-// Port of well-ads-dashboard web/middleware.js: nothing opens without login, and each user sees
 // only the dashboards Leen picked. Returns a Response (redirect / refusal) or a pass decision.
 import { env, verify, readCookie, SESSION, can, home, html, json, type AuthEnv, type Cfg, type Need, locked, LOCKED } from './auth';
 import { LIVE } from '../modules/registry';
