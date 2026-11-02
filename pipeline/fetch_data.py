@@ -359,11 +359,22 @@ def google(P):
             b = buys.setdefault(k, [0.0, 0.0]); m = r.get("metrics", {})
             b[0] += float(m.get("conversions", 0)); b[1] += float(m.get("conversionsValue", 0))
     except Exception as ex:
-        print("جوجل: تعذر سحب المشتريات", str(ex)[:160], file=sys.stderr)
+        print("جوجل: مشتريات الإعلانات ما انسحبت، نستخدم مستوى الحملة", str(ex)[:120], file=sys.stderr)
+    camp_buys = {}
+    if not buys:   # the per-campaign query is the one the old Hoven dashboard used (google_ads.py)
+        try:
+            for r in q("SELECT campaign.id, segments.date, metrics.conversions, metrics.conversions_value FROM campaign "
+                       f"WHERE segments.date BETWEEN '{ds(FROM)}' AND '{ds(TO)}' AND segments.conversion_action_category = 'PURCHASE'"):
+                k = (str(r["campaign"]["id"]), r["segments"]["date"])
+                b = camp_buys.setdefault(k, [0.0, 0.0]); m = r.get("metrics", {})
+                b[0] += float(m.get("conversions", 0)); b[1] += float(m.get("conversionsValue", 0))
+        except Exception as ex:
+            print("جوجل: تعذر سحب المشتريات", str(ex)[:160], file=sys.stderr)
+    pending = []
     for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.responsive_search_ad.headlines, "
                "ad_group_ad.ad.responsive_search_ad.descriptions, ad_group_ad.ad.final_urls, ad_group_ad.status, "
                "ad_group.status, campaign.status, campaign.advertising_channel_type, campaign.advertising_channel_sub_type, "
-               "ad_group.name, campaign.name, segments.date, metrics.cost_micros, "
+               "ad_group.name, campaign.id, campaign.name, segments.date, metrics.cost_micros, "
                "metrics.impressions, metrics.clicks, metrics.conversions FROM ad_group_ad "
                f"WHERE segments.date BETWEEN '{ds(FROM)}' AND '{ds(TO)}'"):
         ad, m, camp = r["adGroupAd"]["ad"], r.get("metrics", {}), r["campaign"]
@@ -384,9 +395,20 @@ def google(P):
             word, live = google_delivery(r["adGroupAd"]["status"], r["adGroup"]["status"], r["campaign"]["status"])
             P.ads[key]["status"] = word
             P.ads[key]["live"] = live
-        b = buys.get((key, r["segments"]["date"]), (0, 0))
-        P.row(key, r["segments"]["date"], int(m.get("costMicros", 0)) / 1e6, m.get("impressions", 0),
-              m.get("clicks", 0), b[0], b[1])
+        pending.append((key, str(camp.get("id", "")), r["segments"]["date"], int(m.get("costMicros", 0)) / 1e6,
+                        m.get("impressions", 0), m.get("clicks", 0)))
+    # Purchases per ad; with only campaign totals, each ad gets its share of the campaign's spend that day
+    camp_spend = {}
+    for key, cid, day, sp, im, cl in pending:
+        camp_spend[(cid, day)] = camp_spend.get((cid, day), 0) + sp
+    for key, cid, day, sp, im, cl in pending:
+        if buys:
+            b = buys.get((key, day), (0, 0))
+        else:
+            cb, tot = camp_buys.get((cid, day), (0, 0)), camp_spend.get((cid, day), 0)
+            share = sp / tot if tot else 0
+            b = (cb[0] * share, cb[1] * share)
+        P.row(key, day, sp, im, cl, b[0], b[1])
     # حالة كل إعلان حتى الذي بلا صرف في النافذة. بدونها يُعلَّم النشط خطأً كمتوقف.
     try:
         for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.final_urls, ad_group_ad.status, "
@@ -415,7 +437,18 @@ def google(P):
             print("جوجل: تفاصيل المشاهدين ما انسحبت —", str(ex)[:160], file=sys.stderr)
 
 # ---------------- Snapchat ----------------
+HOVEN_SNAP_ACCOUNTS = ("1669d1d8-825d-4c9e-90cb-4eca5a4632d7", "72f0b85a-9ef2-4c11-8396-ccb23115f86a", "aa65612c-c322-46b8-9e6a-5b6ad34e16a9")
+
+
 def snap(P):
+    """Hoven runs three Snap ad accounts (old hoven-dashboard SNAP_ACCTS). SNAP_AD_ACCOUNT_ID may list several, comma-separated."""
+    ids = [x.strip() for x in str(E.get("SNAP_AD_ACCOUNT_ID") or "").replace("[", "").replace("]", "").replace("'", "").replace('"', "").split(",") if x.strip()]
+    for acc in ids or HOVEN_SNAP_ACCOUNTS:
+        E["SNAP_AD_ACCOUNT_ID"] = acc
+        snap_one(P)
+
+
+def snap_one(P):
     tok = http("https://accounts.snapchat.com/login/oauth2/access_token", data=urllib.parse.urlencode({
         "grant_type": "refresh_token", "client_id": E["SNAP_CLIENT_ID"], "client_secret": E["SNAP_CLIENT_SECRET"],
         "refresh_token": E["SNAP_REFRESH_TOKEN"]}).encode())["access_token"]

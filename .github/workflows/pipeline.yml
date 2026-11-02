@@ -40,8 +40,8 @@ jobs:
       - name: Export data.json from Supabase (read-only)
         working-directory: pipeline
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: ${{ secrets.HOVEN_SUPABASE_URL || secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.HOVEN_SUPABASE_SERVICE_ROLE_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python export_data.py
       # Phase 4.1: the same pages the live site serves (build.py), so staging shows identical numbers
       - name: Build the dashboards (build.py)
