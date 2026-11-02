@@ -1,0 +1,57 @@
+diff a/src/modules/listening/Page.astro b/src/modules/listening/Page.astro	(rejected hunks)
+@@ -57,7 +106,54 @@ import { ClientRouter } from 'astro:transitions';
+   <div class="main">
+     <header class="topbar" id="top"></header>
+     <main class="content" id="content">
+-      <p class="muted" style="margin:0 0 14px">وش يشد الناس في منشوراتنا على فيسبوك وانستقرام وتيك توك، والكلمات اللي تتابعها، وتغيّر الطلب من مصادر الليدز. قراءة بس.</p>
++      <div class="seg lx-tabs" role="tablist" aria-label="أقسام الرصد">
++        <button type="button" role="tab" id="tabL" data-tab="listen" aria-selected="true" aria-pressed="true">وش ينقال عننا وعن المنافسين</button>
++        <button type="button" role="tab" id="tabO" data-tab="organic" aria-selected="false" aria-pressed="false">تفاعل منشوراتنا</button>
++      </div>
++
++      <section id="paneListen" role="tabpanel" aria-labelledby="tabL">
++        <div id="setup"></div>
++        <div class="lx-head">
++          <div class="lx-src" id="src" aria-label="المصادر"></div>
++          <div class="bar">
++            <div class="seg" role="group" aria-label="الفترة"><button type="button" data-ld="7" aria-pressed="false">7 أيام</button><button type="button" data-ld="30" aria-pressed="true">30 يوم</button><button type="button" data-ld="90" aria-pressed="false">90 يوم</button></div>
++            <button class="btn primary" type="button" id="refresh">حدّث الحين</button>
++          </div>
++        </div>
++        <div class="msg" id="lmsg" role="status"></div>
++        <div class="lx-alerts" id="alerts"></div>
++        <section class="card lx-voice" aria-labelledby="voiceH"><h2 id="voiceH" style="margin:0">حصة الصوت</h2>
++          <p class="muted" style="margin:4px 0 0">كم مرة انذكرنا مقارنة بكل منافس، والشريط الرفيع تحت كل اسم يوضح شعور الناس.</p>
++          <div id="voice"></div></section>
++        <div class="lx-grid" style="margin-top:16px">
++          <section class="card pad" aria-labelledby="mH"><h2 id="mH" style="margin:0 0 10px">آخر الإشارات</h2>
++            <div class="lx-filters">
++              <label class="muted" for="fW">الجهة</label><select id="fW"><option value="">الكل</option></select>
++              <label class="muted" for="fS">الشعور</label><select id="fS"><option value="">الكل</option><option value="negative">سلبي</option><option value="positive">إيجابي</option><option value="neutral">محايد</option></select>
++              <label class="muted" for="fSrc">المصدر</label><select id="fSrc"><option value="">الكل</option><option value="news">أخبار</option><option value="reddit">ريديت</option><option value="youtube">يوتيوب</option><option value="x">X</option></select>
++            </div>
++            <div id="ments"></div>
++            <div class="bar" style="margin-top:10px"><button class="btn secondary" type="button" id="more" hidden>اعرض أكثر</button></div>
++          </section>
++          <div class="ls-out">
++            <section class="card pad" aria-labelledby="tH"><h2 id="tH" style="margin:0">شعور الناس عننا آخر 8 أسابيع</h2><div id="trend"></div></section>
++            <section class="card pad" aria-labelledby="wH"><h2 id="wH" style="margin:0 0 6px">اللي نراقبه</h2><div class="lx-w" id="watch"></div>
++              <form class="lx-form" id="wf" novalidate>
++                <label for="wk">النوع</label><select id="wk"><option value="brand">علامتنا</option><option value="competitor">منافس</option><option value="alert">كلمة تنبيه</option></select>
++                <label for="wn">الاسم</label><input id="wn" type="text" placeholder="مثال: Hoven أو اسم المنافس">
++                <label for="wkw">كلمات البحث <span class="muted">(افصل بفاصلة)</span></label><input id="wkw" type="text" placeholder="مثال: هوفن للرعاية المنزلية، well care">
++                <div id="wl" hidden><div class="row2"><div><label for="wig">انستقرام</label><input id="wig" type="text" placeholder="@handle"></div><div><label for="wtt">تيك توك</label><input id="wtt" type="text" placeholder="@handle"></div></div>
++                  <div class="row2"><div><label for="wx">X</label><input id="wx" type="text" placeholder="@handle"></div><div><label for="wweb">الموقع</label><input id="wweb" type="url" placeholder="https://"></div></div></div>
++                <div class="bar" style="margin-top:8px"><button class="btn primary" type="submit">أضف</button></div>
++                <div class="msg" id="wmsg" role="status"></div>
++              </form></section>
++          </div>
++        </div>
++      </section>
++
++      <section id="paneOrganic" role="tabpanel" aria-labelledby="tabO" hidden>
++
++        <p class="muted" style="margin:0 0 14px">وش يشد الناس في منشوراتنا على فيسبوك وانستقرام وتيك توك، والكلمات اللي تتابعها، وتغيّر الطلب من مصادر الليدز. قراءة بس.</p>
+       <div class="bar" style="justify-content:space-between;margin:0 0 12px">
+         <form id="addKw" class="bar" novalidate><label for="kwIn" class="muted">تابع كلمة</label><input id="kwIn" type="text" placeholder="مثال: فيتامين سي"><button class="btn sm secondary" type="submit">أضف</button></form>
+         <div class="seg" role="group" aria-label="الفترة"><button type="button" data-days="30" aria-pressed="false">30 يوم</button><button type="button" data-days="90" aria-pressed="true">90 يوم</button></div>

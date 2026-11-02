@@ -1,6 +1,6 @@
 ---
 import { ClientRouter } from 'astro:transitions';
-// الرصد: وش يتفاعل معه الناس في منشوراتنا، والكلمات اللي نتابعها، والطلب من الـ CRM.
+// الرصد: وش ينقال عننا وعن منافسينا (بالكلمات) من مصادر عامة، مع شعور كل إشارة، وتبويب ثاني لتفاعل منشوراتنا.
 ---
 <!doctype html>
 <html lang="ar" dir="rtl">
@@ -47,6 +47,55 @@ import { ClientRouter } from 'astro:transitions';
 .ls-post{padding:12px 14px;display:grid;gap:8px}
 .ls-alert td{font-weight:700}
 .cp-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+
+/* Social listening */
+.lx-tabs{margin:0 0 16px}
+.lx-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 14px}
+.lx-src{display:flex;flex-wrap:wrap;gap:6px}
+.lx-src span{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--tint)}
+.lx-src span.off{background:transparent;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted)}
+.lx-alerts{display:grid;gap:8px;margin:0 0 16px}
+.lx-alert{padding:12px 14px;border-inline-start:4px solid var(--accent)}
+.lx-alert.critical{border-inline-start-color:var(--pulse)}
+.lx-voice{padding:18px}
+.lx-bar{display:flex;height:56px;border-radius:16px;overflow:hidden;margin:12px 0 6px;background:var(--tint)}
+.lx-seg{display:flex;flex-direction:column;justify-content:flex-end;min-width:3px;border-inline-end:2px solid var(--surface);color:#fff;font:600 13px var(--f-ar)}
+.lx-seg:last-child{border-inline-end:0}
+.lx-seg .nm{padding:6px 10px;flex:1;display:flex;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lx-seg .mood{display:flex;height:8px}
+.lx-seg .mood i{display:block;height:100%}
+.lx-legend{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+.lx-legend th,.lx-legend td{padding:8px 10px;text-align:start;border-bottom:1px solid var(--line)}
+.lx-legend td.n{font-family:var(--f-num)}
+.lx-legend td:first-child{white-space:nowrap}
+.lx-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:middle}
+.lx-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.lx-grid{grid-template-columns:1fr}}
+.lx-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+.lx-filters select{width:auto;min-height:40px;margin:0}
+.lx-m{padding:12px 0;border-top:1px solid var(--line);display:grid;gap:4px}
+.lx-m:first-child{border-top:0}
+.lx-m a{color:var(--ink);font-weight:600;text-decoration:none}
+.lx-m a:hover,.lx-m a:focus-visible{text-decoration:underline}
+.lx-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.lx-s{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:600}
+.lx-s.positive{background:color-mix(in srgb,var(--deep) 12%,transparent);color:var(--deep)}
+.lx-s.negative{background:color-mix(in srgb,var(--pulse) 18%,transparent);color:#9B1C35}
+.lx-s.neutral,.lx-s.unscored{background:var(--tint);color:var(--muted)}
+.lx-trend{display:flex;align-items:flex-end;gap:6px;height:120px;margin:12px 0 4px}
+.lx-trend .col{flex:1;display:flex;flex-direction:column-reverse;border-radius:8px;overflow:hidden;background:var(--tint);min-height:4px}
+.lx-trend .col i{display:block}
+.lx-trend-l{display:flex;gap:6px;font-size:12px;color:var(--muted)}.lx-trend-l span{flex:1;text-align:center}
+.lx-w{display:grid;gap:10px}
+.lx-grp h3{margin:0 0 6px;font-size:15px}
+.lx-item{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+.lx-item:first-of-type{border-top:0}
+.lx-item .kw{font-size:12px;color:var(--muted)}
+.lx-links{display:flex;flex-wrap:wrap;gap:6px}
+.lx-form{display:grid;gap:4px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.lx-form .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lx-sql pre{white-space:pre-wrap;font-size:12px;max-height:220px;overflow:auto;background:var(--tint);padding:10px;border-radius:12px;direction:ltr;text-align:left}
+.lx-empty{padding:18px;text-align:center}
 </style>
 </head>
 <body data-page="listening" data-module>
@@ -66,6 +115,7 @@ import { ClientRouter } from 'astro:transitions';
       <section class="card pad" style="margin:0 0 16px"><h2>الطلب من الـ CRM</h2><div id="demand"><p class="muted">يحسب…</p></div></section>
       <div class="ls-out" id="out"><p class="muted">يقرأ المنشورات…</p></div>
       <div class="msg" id="msg" role="status"></div>
+      </section>
     </main>
   </div>
 </div>
