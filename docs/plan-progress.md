@@ -10,6 +10,7 @@
 | 5 Control + Connectors | done | Ported from Well; Salla added; Google developer token sent |
 | 5b Well modules | done | journeys, maestro, social, content ported |
 | 6 Cutover | ready | docs/cutover.md; needs Leen (secrets, "انشر الإنتاج", connect platforms) |
+| Upstream | done | Well synced to e272810 (47 commits): modules, access levels, TikTok MCP, design; migrations 013-014 applied |
 | 7 Tighten | not started | 7 days after cutover |
 
 ## Decisions

@@ -46,7 +46,7 @@ def main_data():
         ],
         "organic": {
             "facebook": [{
-                "status": "ok", "name": "Well Care.", "followers": 42421, "insights": "ok", "posts_status": "ok",
+                "status": "ok", "name": "Hoven", "followers": 42421, "insights": "ok", "posts_status": "ok",
                 "days": [
                     {"date": "2026-10-15", "views": 10, "reach": 8, "engagement": 3},
                     {"date": "2026-10-16", "views": 20, "reach": 7, "engagement": 4},
