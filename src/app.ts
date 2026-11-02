@@ -6,7 +6,7 @@ import { gate } from './lib/gate';
 import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
-import { dispatchRefresh, type CronEnv } from './lib/cron';
+import { dispatchRefresh, UPSTREAM_URL, type CronEnv } from './lib/cron';
 import { runSocial } from './lib/social-cron';
 // Cloudflare Workflows: the class must be exported from the Worker entry
 export { JourneyRun } from './lib/journey-workflow';
@@ -49,6 +49,6 @@ export default {
   fetch: app.fetch,
   // Cloudflare Cron Triggers (production only): the hourly data refresh on GitHub Actions, and every 5 minutes the due social posts
   scheduled(event: ScheduledController, env: CronEnv & AuthEnv, ctx: ExecutionContext) {
-    ctx.waitUntil(event.cron === SOCIAL_CRON ? runSocial(env) : dispatchRefresh(env));
+    ctx.waitUntil(event.cron === SOCIAL_CRON ? runSocial(env) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)]));
   },
 };
