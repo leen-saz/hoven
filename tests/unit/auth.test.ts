@@ -5,6 +5,7 @@ import * as A from '../../src/lib/auth';
 import { gate, need, type Decision } from '../../src/lib/gate';
 import * as authRoutes from '../../src/api/routes/auth';
 import { api } from '../../src/api/index';
+import { LIVE } from '../../src/modules/registry';
 
 const E: A.AuthEnv = {
   SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 'service',
@@ -24,6 +25,22 @@ const rewrite = (d: Decision) => (d instanceof Response ? null : d.rewrite ?? nu
 afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('auth', () => {
+  it('a missing column (migration not applied) does not lock the user out: the profile is read alone', async () => {
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => {
+      seen.push(String(u));
+      if (String(u).includes('companies(')) return new Response(JSON.stringify({ code: '42703', message: 'column companies.disabled_modules does not exist' }), { status: 400 });
+      return new Response(JSON.stringify([member]), { status: 200 });
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const p = await A.loadProfile(cfg, member.id);
+    expect(p && p.email).toBe(member.email);
+    expect(seen.length).toBe(2);
+    expect(seen[1]).toMatch(/select=\*$/);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it('signature: tampered or expired cookies are rejected', async () => {
     const t = await A.sign(A.sessionFor(member, cfg), cfg.secret);
     expect(await A.verify(t, cfg.secret)).toBeTruthy();
@@ -35,7 +52,8 @@ describe('auth', () => {
 
   it('owner gets every dashboard, members only what Leen picked', () => {
     const owner = A.sessionFor({ id: member.id, email: 'LEEN@example.com', dashboards: [] }, cfg);
-    expect([...owner.dash].sort()).toEqual(['ceo', 'connectors', 'content', 'control', 'creative', 'journeys', 'maestro', 'social']);
+    // core dashboards plus every live module (a module that goes live joins this list by itself)
+    expect([...owner.dash].sort()).toEqual(['ceo', 'connectors', 'control', 'creative', ...LIVE].sort());
     const s = A.sessionFor({ ...member, dashboards: ['creative', 'bogus'] }, cfg);
     expect(s.dash).toEqual(['creative']);
     expect(A.can(s, 'creative', cfg)).toBe(true);

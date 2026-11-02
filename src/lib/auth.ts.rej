@@ -1,0 +1,30 @@
+diff a/src/lib/auth.ts b/src/lib/auth.ts	(rejected hunks)
+@@ -2,16 +2,26 @@
+ // Email + password via Supabase Auth, session in an HMAC-signed cookie. Web Crypto only.
+ 
+ import { companyOf } from './tenant';
++import { MODULES, LIVE, isModule } from '../modules/registry';
+ 
+ export const SESSION = '__Host-hoven_session';
+ export const SESSION_HOURS = 12;
+ export const RECHECK_MS = 10 * 60 * 1000; // pages re-read the user's permissions every 10 minutes
+-export const DASHBOARDS = { ceo: 'التحليلات', creative: 'الكرييتف', control: 'لوحة القرارات', connectors: 'الربط', social: 'السوشال', journeys: 'الرحلات', content: 'المحتوى و SEO', maestro: 'المايسترو' } as const;
++// Core dashboards, then one per live module (src/modules/registry.ts)
++const CORE = { ceo: 'التحليلات', creative: 'الكرييتف', control: 'لوحة القرارات', connectors: 'الربط' };
++export const DASHBOARDS: Record<string, string> = { ...CORE, ...Object.fromEntries(MODULES.filter(m => LIVE.includes(m.key)).map(m => [m.key, m.ar])) };
+ // Department scope: empty = all departments. A department manager sees only their department.
+ export const DEPTS = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل' } as const;
+ export const PASSWORD_MIN = 10;
++export const LOCKED = 'هالموديول مقفل لشركتك';
++export const VIEW_ONLY = 'صلاحيتك هنا مشاهدة بس';
++export const NO_APPROVE = 'الموافقة تحتاج صلاحية موافقة';
+ 
+-export type Dashboard = keyof typeof DASHBOARDS;
++export type Dashboard = string;
++// Per dashboard/module: view < edit < approve. Owners have approve everywhere.
++export const LEVELS = ['view', 'edit', 'approve'] as const;
++export type Level = typeof LEVELS[number];
++const rank = (l: string | undefined) => (l ? LEVELS.indexOf(l as Level) : -1);
+ export type Dept = keyof typeof DEPTS;
+ export type Need = Dashboard | 'any' | 'owner' | 'media';
+ 

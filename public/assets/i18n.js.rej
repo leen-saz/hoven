@@ -1,0 +1,10 @@
+diff a/public/assets/i18n.js b/public/assets/i18n.js	(rejected hunks)
+@@ -56,7 +56,7 @@ const EN = {
+   'ما فيه قرارات تنتظرك': 'Nothing waiting for you', 'ما فيه قرارات سابقة': 'No past decisions',
+   'إيقاف': 'Pause', 'إيقاف الحملة': 'Pause campaign', 'رفع الميزانية': 'Raise budget', 'تنزيل الميزانية': 'Lower budget', 'كرييتف جديد': 'New creative',
+   'صرف ضعف الهدف بدون ليد': 'Spent 2× target with no lead', 'حملة هدفها Traffic': 'Traffic-objective campaign',
+-  'ليدز أرخص من الهدف بـ 20% أو أكثر': 'Leads 20%+ cheaper than target', 'نسبة النقر نزلت 30% أو أكثر': 'CTR down 30% or more',
++  'ليدز أرخص من الهدف بـ 20% أو أكثر': 'Leads 20%+ cheaper than target', 'محادثات أرخص من الهدف بـ 20% أو أكثر': 'Chats 20%+ cheaper than target', 'محادثات': 'Chats', 'نسبة النقر نزلت 30% أو أكثر': 'CTR down 30% or more',
+   'اقتراح كلود': 'Claude suggestion', 'قاعدة': 'Rule', 'حملة': 'Campaign', 'مجموعة': 'Ad set', 'إعلان': 'Ad',
+   'وافق': 'Approve', 'رفض': 'Rejected', 'وافق بتعديل': 'Approve with change', 'تنفّذ': 'Executed', 'فشل': 'Failed', 'انتهى': 'Expired', 'ارفض': 'Reject',
+   'وافق (a)': 'Approve (a)', 'ارفض (r)': 'Reject (r)', 'مختارة': 'selected', 'إلغاء التحديد': 'Clear selection', 'إلغاء': 'Cancel',

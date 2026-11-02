@@ -10,7 +10,7 @@ export default async function mount() {
   const GROUP = { ads: 'منصات الإعلانات', analytics: 'التحليلات والقياس' };
   const STATUS = {
     ok: ['ok', 'check', 'مربوط'], partial: ['warn', 'alert', 'ناقص'], expired: ['warn', 'alert', 'انتهى الربط'],
-    none: ['line', 'plug', 'مو مربوط'], mcp: ['ok', 'check', 'مربوط عن طريق MCP'],
+    none: ['line', 'plug', 'مو مربوط'], mcp: ['ok', 'check', 'مربوط عن طريق MCP'], pull: ['ok', 'check', 'مربوط · السحب الساعي شغال'],
   };
   const ERR = { state: 'انتهت مهلة الربط، جرّب مرة ثانية.', denied: 'انلغى الربط من صفحة المنصة.', access: 'ما عندك صلاحية الربط أو بيانات التطبيق ناقصة.', exchange: 'المنصة ما رجّعت مفتاح صالح. تأكد إن رابط الرجوع مضاف في إعدادات التطبيق.' };
 
@@ -38,7 +38,7 @@ export default async function mount() {
     return `<form data-save="${p.id}" novalidate>
       <p class="muted cx-meta">${note}${esc(p.help)} <a href="${esc(p.docs)}" target="_blank" rel="noopener">${icon('ext')}جيب المفاتيح</a></p>${fields}
       <div class="bar" style="margin-top:16px"><button class="btn primary" type="submit">احفظ</button><button class="btn ghost" type="button" data-close>إلغاء</button>
-        ${!p.mcp && p.status !== 'none' ? `<button class="btn ghost" type="button" data-drop="${p.id}">${icon('x')}فك الربط</button>` : ''}</div>
+        ${!p.mcp && !['none', 'pull'].includes(p.status) ? `<button class="btn ghost" type="button" data-drop="${p.id}">${icon('x')}فك الربط</button>` : ''}</div>
       <div class="msg" role="status"></div></form>`;
   }
   function card(p) {
@@ -55,20 +55,25 @@ export default async function mount() {
     if (p.at) meta.push(`آخر ربط ${when(p.at)}${p.by ? ` · ${esc(p.by)}` : ''}`);
     if (p.expires) meta.push(`ينتهي ${when(p.expires)}`);
     if (p.checked) meta.push(esc(p.checked));
-    const drop = p.status !== 'none' && p.status !== 'mcp' && !p.fields.length
+    const drop = !['none', 'mcp', 'pull'].includes(p.status) && !p.fields.length
       ? `<button class="btn sm ghost" type="button" data-drop="${p.id}">${icon('x')}فك الربط</button>` : '';
     const note = p.mcp && S.open !== p.id ? `<p class="muted cx-meta">${esc(p.help)}</p>` : '';
-    return `<article class="card cx" id="cx_${p.id}"><div class="cx-top">${logo(p)}<h3>${esc(p.name)}</h3>${chip(p)}<div class="cx-acts">${btn}
+    const core = p.core ? `<span class="chip solid" title="${esc('يحتاجه: ' + p.core)}">${icon('alert')}أساسي</span>` : '';
+    if (p.core) meta.unshift(`يحتاجه: ${esc(p.core)}`);
+    return `<article class="card cx${p.core ? ' cx-core' : ''}" id="cx_${p.id}"><div class="cx-top">${logo(p)}<h3>${esc(p.name)}</h3>${core}${chip(p)}<div class="cx-acts">${btn}
       ${needIds ? `<button class="btn sm secondary" data-key="${p.id}">${icon('pen')}أضف رقم الحساب</button>` : ''}${drop}</div></div>
       <p class="muted cx-meta">${meta.join(' · ')}</p>${note}${S.open === p.id ? form(p) : ''}</article>`;
   }
   function render() {
     const q = S.q.trim().toLowerCase();
     const list = S.list.filter(p => !q || p.name.toLowerCase().includes(q) || p.id.includes(q));
-    const ok = S.list.filter(p => p.status === 'ok' || p.status === 'mcp').length;
-    $('#sum').textContent = `${ok} مربوطة من ${S.list.length}`;
-    $('#list').innerHTML = Object.entries(GROUP).map(([g, t]) => {
-      const items = list.filter(p => p.group === g);
+    const isOn = p => ['ok', 'mcp', 'pull'].includes(p.status);
+    const ok = S.list.filter(isOn).length;
+    const core = S.list.filter(p => p.core), coreOk = core.filter(isOn).length;
+    $('#sum').textContent = `الأساسية ${coreOk} من ${core.length} · الكل ${ok} من ${S.list.length}`;
+    const coreList = list.filter(p => p.core);
+    $('#list').innerHTML = (coreList.length ? `<h2 class="cx-h">أساسية لتشغيل النظام <span class="muted">(${coreOk} من ${core.length} مربوطة)</span></h2><div class="cx-list">${coreList.map(card).join('')}</div>` : '') + Object.entries(GROUP).map(([g, t]) => {
+      const items = list.filter(p => p.group === g && !p.core);
       return items.length ? `<h2 class="cx-h">${t} <span class="muted">(${items.length})</span></h2><div class="cx-list">${items.map(card).join('')}</div>` : '';
     }).join('') || `<div class="card empty">${icon('search')}<div>ما فيه منصة بهالاسم</div></div>`;
   }

@@ -27,6 +27,8 @@ export interface Session {
   role: 'owner' | 'member';
   dash: Dashboard[]; depts: Dept[];
   co: string; // company id (SaaS); owner = owner of this company only
+  off?: string[]; // modules locked for this company (companies.disabled_modules)
+  lvl?: Record<string, Level>; // level per dashboard (profiles.access)
   exp: number; chk: number;
   stale?: boolean;
 }
@@ -34,6 +36,8 @@ export interface Profile {
   id: string; email?: string | null; name?: string | null; role?: string | null;
   dashboards?: string[] | null; departments?: string[] | null; active?: boolean | null;
   company_id?: string | null;
+  company?: { disabled_modules?: string[] | null } | null;
+  access?: Record<string, string> | null;
 }
 
 export function env(e: AuthEnv): Cfg {
@@ -109,9 +113,12 @@ export const clearCookie = (): string => `${SESSION}=; Path=/; HttpOnly; Secure;
 
 export const isOwner = (s: Session | null | undefined, cfg?: Cfg): boolean =>
   !!s && (s.role === 'owner' || (!!cfg && s.email === cfg.owner));
+// A module the company switched off: locked for everyone in it, the owner included
+export const locked = (s: Session, need: Need): boolean => isModule(need) && !!s.off?.includes(need);
 export function can(s: Session | null | undefined, need: Need, cfg?: Cfg): boolean {
   if (!s) return false;
   if (need === 'any') return true;
+  if (locked(s, need)) return false;
   if (isOwner(s, cfg)) return true;
   if (need === 'owner') return false;
   return Array.isArray(s.dash) && (s.dash as string[]).includes(need);
@@ -131,15 +138,25 @@ export function home(s: Session, cfg?: Cfg): string {
 export const safePath = (p: unknown): string =>
   typeof p === 'string' && /^\/(?!\/)[^\s\\]*$/.test(p) ? p : '';
 
+export function levelsOf(p: Profile): Record<string, Level> {
+  const src = p.access && Object.keys(p.access).length ? p.access : Object.fromEntries((p.dashboards || []).map(d => [d, 'approve']));
+  return Object.fromEntries(Object.entries(src).filter(([k, l]) => k in DASHBOARDS && rank(l) >= 0)) as Record<string, Level>;
+}
+// The user's level on a dashboard/module is at least `min`
+export const atLeast = (s: Session, key: string, min: Level, cfg?: Cfg): boolean => isOwner(s, cfg) || rank(s.lvl?.[key]) >= rank(min);
 export function sessionFor(profile: Profile, cfg: Cfg, now = Date.now()): Session {
   const email = String(profile.email || '').toLowerCase();
   const owner = email === cfg.owner || profile.role === 'owner';
+  // access wins; profiles without it (before migration 012) keep full use of their dashboards, as before
+  const lvl = owner ? Object.fromEntries(Object.keys(DASHBOARDS).map(k => [k, 'approve' as Level])) : levelsOf(profile);
   return {
     uid: profile.id, email, name: profile.name || '',
     role: owner ? 'owner' : 'member',
-    dash: owner ? (Object.keys(DASHBOARDS) as Dashboard[]) : ((profile.dashboards || []).filter(d => d in DASHBOARDS) as Dashboard[]),
+    dash: Object.keys(lvl),
+    lvl,
     depts: owner ? [] : ((profile.departments || []).filter(d => d in DEPTS) as Dept[]),
     co: companyOf(profile.company_id),
+    off: (profile.company?.disabled_modules || []).filter(isModule),
     exp: now + SESSION_HOURS * 3600 * 1000, chk: now,
   };
 }
@@ -171,8 +188,14 @@ export function keyKind(k: string): string {
 }
 
 export async function loadProfile(cfg: Cfg, uid: string): Promise<Profile | null> {
-  const r = await sb<Profile[]>(cfg, `/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}&select=*`, { admin: true });
-  return r.ok && Array.isArray(r.data) ? r.data[0] || null : null;
+  const q = `/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}&select=`;
+  const r = await sb<Profile[]>(cfg, q + '*,company:companies(disabled_modules)', { admin: true });
+  if (r.ok && Array.isArray(r.data)) return r.data[0] || null;
+  // A column from a migration that is not applied yet must not lock everyone out: read the profile alone and log why.
+  const d = (r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {}) as Record<string, unknown>;
+  console.warn('profile_read_degraded', JSON.stringify({ status: r.status, code: d.code ?? null, msg: String(d.message ?? '').slice(0, 160) }));
+  const plain = await sb<Profile[]>(cfg, q + '*', { admin: true });
+  return plain.ok && Array.isArray(plain.data) ? plain.data[0] || null : null;
 }
 
 type Who = { uid?: string; id?: string | undefined; email?: string | undefined; co?: string } | null;
@@ -211,7 +234,7 @@ export async function readJson(request: Request, limit = 20000): Promise<Record<
 }
 
 // For the API: cookie + permissions re-read from the DB every time (the source of truth). Throws a Response on refusal.
-export async function requireUser(request: Request, e: AuthEnv, need: Need, { write = false } = {}): Promise<{ cfg: Cfg; user: Session }> {
+export async function requireUser(request: Request, e: AuthEnv, need: Need, { write = false, approve = false } = {}): Promise<{ cfg: Cfg; user: Session }> {
   let cfg: Cfg;
   try { cfg = env(e); } catch { throw json(503, { error: 'الإعداد غير مكتمل' }); }
   if (write && !sameOrigin(request)) throw json(403, { error: 'طلب مرفوض' });
@@ -220,7 +243,11 @@ export async function requireUser(request: Request, e: AuthEnv, need: Need, { wr
   const profile = await loadProfile(cfg, s.uid);
   if (!profile || profile.active === false) throw json(401, { error: 'الحساب موقوف' }, { 'set-cookie': clearCookie() });
   const user = sessionFor(profile, cfg);
+  if (locked(user, need)) throw json(403, { error: LOCKED });
   if (!can(user, need, cfg)) throw json(403, { error: 'ما عندك صلاحية' });
+  // Writes need edit and approvals need approve on that dashboard (owner/any/media checks stay as they are)
+  if (need in DASHBOARDS && approve && !atLeast(user, need, 'approve', cfg)) throw json(403, { error: NO_APPROVE });
+  if (need in DASHBOARDS && write && !atLeast(user, need, 'edit', cfg)) throw json(403, { error: VIEW_ONLY });
   return { cfg, user };
 }
 
