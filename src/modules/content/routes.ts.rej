@@ -1,0 +1,13 @@
+diff a/src/modules/content/routes.ts b/src/modules/content/routes.ts	(rejected hunks)
+@@ -54,9 +55,9 @@ export const item = { PATCH: handle(async (request, e: AiEnv) => {
+     if (it.status !== 'approved') return json(409, { error: 'وافق على البند أول' });
+     const ai = aiOf(e);
+     if (!ai) return json(503, { error: 'الكتابة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
+-    const out = await ai(AI_MODEL, { max_tokens: 2500, messages: [{ role: 'user', content:
++    const out = await ai(AI_MODEL, { max_tokens: 2500, messages: withKnowledge([{ role: 'user', content:
+       `اكتب ${it.kind === 'faq' ? 'أسئلة وأجوبة شائعة (8 أسئلة)' : it.kind === 'page' ? 'نص صفحة خدمة' : 'مقال'} بالعربي السعودي الواضح لموقع ${p.site} بعنوان: "${it.title}". السبب: ${it.why}.
+-النبرة مثل: ${(p.competitors as string[]).join('، ') || 'ودودة ومهنية'}. بدون ادعاءات طبية مضمونة (وزارة الصحة). استخدم عناوين فرعية، واختم بدعوة للحجز. Markdown فقط.` }] });
++النبرة مثل: ${(p.competitors as string[]).join('، ') || 'ودودة ومهنية'}. بدون ادعاءات طبية مضمونة (وزارة الصحة). استخدم عناوين فرعية، واختم بدعوة للحجز. Markdown فقط.` }], await knowledgeFor(cfg, user.co, 'content')) });
+     it.draft = String((out as { response?: unknown })?.response ?? '').slice(0, 20000);
+   } else it.status = act === 'approve' ? 'approved' : act === 'reject' ? 'rejected' : 'done';
+   const r = await sb(cfg, scoped(`/rest/v1/content_plans?id=eq.${id}`, user.co), { method: 'PATCH', admin: true, body: { items } });
