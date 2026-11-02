@@ -106,7 +106,7 @@ async function main() {
     await expectKpi(page, 'الطلبات', '14.50', 'yesterday leads keep the half lead');
     await expectKpi(page, 'تكلفة الطلب', '11.11', 'yesterday CPL uses lead-goal leads only');
     const yLeads = await kpi(page, 'الطلبات');
-    check(yLeads && yLeads.delta.includes('383.3%'), 'yesterday compares with Oct 15 only', yLeads && yLeads.delta);
+    check(yLeads && yLeads.delta.includes('×4.8'), 'yesterday compares with Oct 15 only', yLeads && yLeads.delta);
 
     await setRange(page, '2026-10-15', '2026-10-16');
     const label = await text(page, '#rangeLabel');
@@ -115,18 +115,19 @@ async function main() {
     await expectKpi(page, 'الصرف', '165', 'range spend keeps hidden-platform spend');
     await expectKpi(page, 'الطلبات', '17.50', 'range leads');
     await expectKpi(page, 'تكلفة الطلب', '8.67', 'CPL is lead spend over lead-goal leads');
-    await expectKpi(page, 'الإيراد (ر.س)', '3', 'conversations');
+    await expectKpi(page, 'الإيراد (ر.س)', '3.00', 'revenue');
     await expectKpi(page, 'الظهور', '390', 'impressions');
     await expectKpi(page, 'نقرات الرابط والسوايب', '32', 'clicks');
     await expectKpi(page, 'نسبة النقر', '8.21%', 'CTR is sum of clicks over sum of impressions');
     const leads = await kpi(page, 'الطلبات');
-    check(leads && leads.delta.includes('337.5%'), 'lead delta versus Oct 13–14', leads && leads.delta);
+    check(leads && leads.delta.includes('×4.4'), 'lead delta versus Oct 13–14', leads && leads.delta);
     const spend = await kpi(page, 'الصرف');
-    check(spend && spend.delta.includes('725.0%'), 'spend delta versus the previous 20', spend && spend.delta);
+    check(spend && spend.delta.includes('×8.3'), 'spend delta versus the previous 20', spend && spend.delta);
     const month = await text(page, '#tMonth');
     check(month.includes('165') && month.includes('17.50') && month.includes('8.67') && !month.includes('185'), 'month table follows the selected days', month);
     const pace = await text(page, '#pace');
-    check(pace.includes('2 من 31') && pace.includes('2,558') && pace.includes('20.50'), 'pace uses the selected days inside the month', pace);
+    // Two complete days: no month-end forecast yet (it needs 3), the spend so far still follows the selection
+    check(pace.includes('2 من 31') && pace.includes('20.50') && pace.includes('يطلع بعد 3 أيام') && !pace.includes('2,558'), 'pace uses the selected days inside the month', pace);
     check(pace.includes('— طلب أو ريال إيراد'), 'previous month before the data start is missing, not zero', pace);
     const tree = await text(page, '#tTree');
     check(tree.includes('8.67') && !tree.includes('3.71'), 'drill-down CPL uses lead-goal leads', tree);
@@ -150,6 +151,7 @@ async function main() {
     check(!cpl.includes('ما فيه ليدز') && cpl.includes('8.00'), 'half a lead still draws the CPL line', cpl);
     await click(page, '#plats button[data-v="all"]');
 
+    await click(page, '#moreF'); // status, campaign, goal and format sit behind "more filters" on wide screens
     await click(page, '#stat button[data-v="off"]');
     await expectKpi(page, 'الصرف', '4.00', 'paused filter keeps only the paused ad');
     await expectKpi(page, 'الطلبات', '0.50', 'paused leads');
@@ -159,7 +161,7 @@ async function main() {
     await expectKpi(page, 'الصرف', '100', 'messages objective');
     await expectKpi(page, 'الطلبات', '10', 'message leads still count as leads');
     await expectKpi(page, 'تكلفة الطلب', '—', 'message leads do not dilute CPL');
-    await expectKpi(page, 'الإيراد (ر.س)', '2', 'message conversations');
+    await expectKpi(page, 'الإيراد (ر.س)', '2.00', 'message revenue');
     await page.select('#fGoal', '');
 
     await page.select('#fCamp', 'facebook|IV Camp');
@@ -197,7 +199,7 @@ async function main() {
     const body = await text(page, '#acctPage');
     check(!body.includes('999') && !body.includes('111') && !body.includes('91'), 'Instagram window total is not reused for another range', body);
     const fb = await page.evaluate(() => {
-      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Well Care.'));
+      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Hoven'));
       const sec = h.closest('section');
       return Object.fromEntries([...sec.querySelectorAll('.kpi')].map(k => [k.querySelector('.l').textContent.trim(), k.querySelector('.v').textContent.replace(/\s+/g, ' ').trim()]));
     });
@@ -222,7 +224,7 @@ async function main() {
     const postsIv = await text(page, '#orgCount');
     check(postsIv.includes('1'), 'post count follows the department', postsIv);
     const fbIv = await page.evaluate(() => {
-      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Well Care.'));
+      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Hoven'));
       const sec = h.closest('section');
       const k = [...sec.querySelectorAll('.kpi')].find(el => el.querySelector('.l').textContent.includes('المنشورات'));
       return k.querySelector('.v').textContent.trim();
@@ -232,7 +234,7 @@ async function main() {
     await setRange(page, '2026-10-16', '2026-10-16');
     await click(page, '#depts button[data-v=""]');
     const one = await page.evaluate(() => {
-      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Well Care.'));
+      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Hoven'));
       const sec = h.closest('section');
       return Object.fromEntries([...sec.querySelectorAll('.kpi')].map(k => [k.querySelector('.l').textContent.trim(), k.querySelector('.v').textContent.replace(/\s+/g, ' ').trim()]));
     });
@@ -261,7 +263,7 @@ async function main() {
     });
     check(gaWindow.includes('4,242') && gaWindow.includes('Organic Search'), 'channel mix shows only for its own window', gaWindow);
     const fbWide = await page.evaluate(() => {
-      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Well Care.'));
+      const h = [...document.querySelectorAll('#acctPage h2')].find(el => el.textContent.includes('Hoven'));
       const sec = h.closest('section');
       const k = [...sec.querySelectorAll('.kpi')].find(el => el.querySelector('.l').textContent.includes('المشاهدات'));
       return k.querySelector('.v').textContent.trim();
