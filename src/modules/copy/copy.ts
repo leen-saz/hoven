@@ -3,12 +3,16 @@
 import { analyze } from '../voice/voice';
 import { check, type Rule } from '../compliance/compliance';
 
-export const KINDS: Record<string, { ar: string; max: number }> = {
-  ad: { ar: 'إعلان (نص أساسي)', max: 600 },
-  post: { ar: 'بوست عضوي', max: 1200 },
-  caption: { ar: 'كابشن قصير', max: 220 },
-  story: { ar: 'ستوري / سناب', max: 120 },
+// Ad copy per platform, with each placement's fields and lengths (characters; 0 = the platform has no such field).
+// max = primary text, head = headline, desc = description. Lengths from the platforms' ad specs (what shows uncut).
+export const KINDS: Record<string, { ar: string; max: number; head: number; desc: number; hint: string }> = {
+  meta: { ar: 'إعلان ميتا (فيسبوك وانستقرام)', max: 500, head: 40, desc: 30, hint: 'أول 125 حرف من النص الأساسي هي اللي تبان قبل «المزيد»' },
+  snap: { ar: 'إعلان سناب شات', max: 0, head: 34, desc: 0, hint: 'عنوان واحد فوق الإعلان، والباقي في التصميم' },
+  tiktok: { ar: 'إعلان تيك توك', max: 100, head: 0, desc: 0, hint: 'نص قصير تحت الفيديو' },
+  google: { ar: 'إعلان قوقل (بحث)', max: 0, head: 30, desc: 90, hint: 'عنوان ووصف لكل نسخة، وقوقل يركّبها' },
+  reel: { ar: 'نص على فيديو (ريلز وستوري)', max: 120, head: 0, desc: 0, hint: 'كلام يظهر على الفيديو، سطرين بالكثير' },
 };
+export const DEFAULT_KIND = 'meta';
 
 export interface Competitor { id: string; name: string; url: string; platform: string; samples: string[] }
 export interface Project {

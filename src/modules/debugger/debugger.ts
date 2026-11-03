@@ -12,6 +12,11 @@ export interface Input { today: string; ads: AdRow[]; metrics: MetricRow[]; lead
 export const PLATFORM_AR: Record<string, string> = { meta: 'ميتا', snapchat: 'سناب شات', tiktok: 'تيك توك', google: 'جوجل' };
 // CRM sources that come from an ad, and the platform each belongs to
 export const AD_SOURCES: Record<string, string> = { meta_form: 'meta', meta_ctwa: 'meta', whatsapp_ad_prefill: 'meta', snapchat_form: 'snapchat', tiktok_form: 'tiktok' };
+// The ads carry the placement (facebook, instagram, snap, google_search…); the CRM and the connectors name the company
+// (meta, snapchat, google). Both sides are compared under the company name, or the same leads look lost.
+const META = new Set(['facebook', 'instagram', 'messenger', 'audience_network', 'threads', 'whatsapp']);
+export const platformOf = (p: string): string =>
+  p.startsWith('google') ? 'google' : p.startsWith('meta') || META.has(p) ? 'meta' : p === 'snap' ? 'snapchat' : p || '?';
 // Server-side conversion connectors per platform (Connectors page keys)
 export const CAPI: Record<string, string> = { meta: 'meta_capi', snapchat: 'snap_capi', tiktok: 'tiktok_events' };
 
@@ -39,7 +44,7 @@ export function diagnose(x: Input): { findings: Finding[]; summary: Record<strin
 
   for (const m of x.metrics) {
     const a = byKey.get(m.ad_key); if (!a) continue;
-    const p = P(a.platform || '?');
+    const p = P(platformOf(a.platform || ''));
     if (!p.lastDay || m.day > p.lastDay) p.lastDay = m.day;
     if (m.day >= since7) {
       p.spend7 += Number(m.spend) || 0; p.leads7 += Number(m.leads) || 0;
@@ -61,7 +66,7 @@ export function diagnose(x: Input): { findings: Finding[]; summary: Record<strin
   // 2) Lead campaigns spending with no leads: the conversion event is likely not firing
   const silent = [...perAd.entries()].filter(([k, v]) => byKey.get(k)?.goal === 'lead' && v.spend >= 100 && v.leads === 0);
   const silentBy: Record<string, { n: number; spend: number; names: string[] }> = {};
-  for (const [k, v] of silent) { const a = byKey.get(k)!; const s = (silentBy[a.platform] ||= { n: 0, spend: 0, names: [] }); s.n++; s.spend += v.spend; if (s.names.length < 3) s.names.push(a.name || k); }
+  for (const [k, v] of silent) { const a = byKey.get(k)!; const s = (silentBy[platformOf(a.platform || '')] ||= { n: 0, spend: 0, names: [] }); s.n++; s.spend += v.spend; if (s.names.length < 3) s.names.push(a.name || k); }
   for (const [p, s] of Object.entries(silentBy)) {
     const all = plat[p];
     const whole = all && all.leadSpend7 > 0 && all.leads7 === 0;

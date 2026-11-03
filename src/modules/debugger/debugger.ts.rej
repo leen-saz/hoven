@@ -1,0 +1,15 @@
+diff a/src/modules/debugger/debugger.ts b/src/modules/debugger/debugger.ts	(rejected hunks)
+@@ -85,7 +90,12 @@ export function diagnose(x: Input): { findings: Finding[]; summary: Record<strin
+   for (const [p, v] of Object.entries(plat)) {
+     if (!x.tables.leads || v.leads7 < 10) continue;
+     const gap = Math.abs(v.leads7 - v.crm7) / Math.max(v.leads7, 1);
+-    if (gap >= 0.3) out.push({ id: `gap:${p}`, level: 'warn', platform: p,
++    // Not one CRM lead under this platform's sources: the match itself failed (a source named differently, or the
++    // connection is off). That is said as such, not as leads lost.
++    if (gap >= 0.3 && !v.crm7) out.push({ id: `gap:${p}`, level: 'warn', platform: p,
++      title: `${PLATFORM_AR[p] || p}: تعذّر مطابقة الليدز مع الـ CRM`, detail: `المنصة سجلت ${fmt(v.leads7)} ليد آخر 7 أيام، وما لقينا ولا ليد في الـ CRM بمصدر من مصادر ${PLATFORM_AR[p] || p}.`,
++      fix: 'تأكد من اسم المصدر في الـ CRM لهالمنصة (مثل snapchat_form)، ومن إن ربط النماذج بالـ CRM شغال. لين نتأكد، ما نقدر نقول إن الليدز ضاعت.' });
++    else if (gap >= 0.3) out.push({ id: `gap:${p}`, level: 'warn', platform: p,
+       title: `${PLATFORM_AR[p] || p}: الليدز في المنصة ${fmt(v.leads7)} وفي الـ CRM ${fmt(v.crm7)}`, detail: `فرق ${pct(Math.abs(v.leads7 - v.crm7), v.leads7)}% آخر 7 أيام.`,
+       fix: v.crm7 < v.leads7 ? 'ليدز تضيع بين المنصة والـ CRM: تأكد إن ربط النماذج (Lead forms) بالـ CRM شغال لكل حملة.' : 'الـ CRM يستقبل أكثر من المنصة: غالباً ليدز داخلة بمصدر إعلان وهي من مصدر ثاني، أو المنصة ما تحسب كل التحويلات.' });
+   }

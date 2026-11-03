@@ -1,0 +1,10 @@
+diff a/public/assets/control.js b/public/assets/control.js	(rejected hunks)
+@@ -294,7 +309,7 @@ export default async function mount() {
+         <div><h3>الصرف مقابل الليدز · آخر 14 يوم</h3>${spark(a)}</div>
+         <div><h3>سجل هذا الإعلان</h3><div id="phist" class="muted">يحمّل…</div></div>
+       </div>
+-      <footer><button class="btn primary" data-a="approve"${blocked(s) ? ' disabled' : ''}>${icon('check')}وافق</button><button class="btn secondary" data-a="modify"${blocked(s) ? ' disabled' : ''}>${icon('pen')}وافق بتعديل</button><button class="btn secondary" data-a="reject">${icon('x')}ارفض</button></footer>`;
++      <footer><p class="muted" style="flex-basis:100%;margin:0 0 6px">لو وافقت: <b>${esc(outcome(s).t)}</b>. ${esc(outcome(s).tip)}${siblings(s) ? ' · فيه اقتراحات ثانية لنفس الإعلان.' : ''}</p><button class="btn primary" data-a="approve"${blocked(s) ? ' disabled' : ''}>${icon('check')}وافق</button><button class="btn secondary" data-a="modify"${blocked(s) ? ' disabled' : ''}>${icon('pen')}وافق بتعديل</button><button class="btn secondary" data-a="reject">${icon('x')}ارفض</button></footer>`;
+     p.dataset.id = s.id; p.classList.add('open'); p.setAttribute('aria-hidden', 'false'); $('#veil').classList.add('open');
+     $('[data-close]', p).focus();
+     try {
