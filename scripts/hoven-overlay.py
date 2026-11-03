@@ -299,7 +299,23 @@ def dedupe_dict(s):
     return s
 
 
+def overview_labels(s):
+    """Overview cards and charts: Hoven counts purchases only (no chats), so 'results' read as orders."""
+    s = s.replace("note: 'الطلبات والمحادثات'", "note: 'طلبات الشراء من الإعلانات'")
+    s = s.replace("الصرف ÷ الطلبات والمحادثات", "الصرف ÷ الطلبات").replace("الطلبات والمحادثات", "الطلبات")
+    s = re.sub(r"'النتائج'", "'الطلبات'", s)
+    s = s.replace("تكلفة النتيجة", "تكلفة الطلب")
+    return lead_to_order(s)
+
+
+def probe_sample(s):
+    """Listening sources check: the sample watch is Hoven's brand, not Well's."""
+    return re.sub(r"name: '[^']*', keywords: \['ايفر كير', 'wellunion'\]", "name: 'هوفن', keywords: ['هوفن', 'hoven']", s)
+
+
 RULES = {
+    "src/modules/listening/probe.ts": [probe_sample, lead_to_order],
+    **{f: [overview_labels] for f in glob.glob("src/modules/overview/*.tsx") if ".test." not in f},
     "src/modules/overview/analytics.ts": [overview_results],
     "src/modules/overview/numbers.ts": [overview_results],
     "src/lib/site.ts": [site],

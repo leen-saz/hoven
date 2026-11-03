@@ -1,6 +1,6 @@
-// المايسترو: تبويبات (لوحة، الوارد، المهام، الإيجنتس) بالرابط، قائمة أو لوحة، فلاتر، بحث، ومهمة جديدة في نافذة.
+// المدير: تبويبات (لوحة، الوارد، المهام، الإيجنتس) بالرابط، قائمة أو لوحة، فلاتر، بحث، ومهمة جديدة في نافذة.
 // اختصارات: C مهمة جديدة، / بحث، 1-4 التبويبات.
-import { $, $$, api, say, esc, shell, busy, pageSignal } from '/assets/common.js';
+import { $, $$, api, say, esc, fmt, shell, busy, pageSignal } from '/assets/common.js';
 
 // Runs on every visit of this page (assets/router.js calls it after each ClientRouter navigation).
 export default async function mount() {
@@ -27,6 +27,10 @@ export default async function mount() {
   const names = () => Object.fromEntries((S.agents || []).map(a => [a.id, a.name]));
   const svg = d => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
   const empty = (kind, text, cta) => `<div class="mx-empty">${svg(ICON[kind])}<p>${text}</p>${cta ? `<button class="btn sm secondary" data-new>${cta}</button>` : ''}</div>`;
+  // Paperclip budgets are monthly, in US cents; 0 means no cap
+  const usd = c => '$' + fmt((Number(c) || 0) / 100, 2);
+  const spend = b => `<span class="mx-bud" title="صرف هالشهر">${usd(b.spentMonthlyCents)} من ${Number(b.budgetMonthlyCents) > 0 ? usd(b.budgetMonthlyCents) : 'بدون سقف'}${Number(b.budgetMonthlyCents) > 0 ? `<i style="--p:${Math.min(100, Math.round(100 * (Number(b.spentMonthlyCents) || 0) / Number(b.budgetMonthlyCents)))}%"></i>` : ''}</span>`;
+  const working = id => (S.issues || []).find(i => i.assigneeAgentId === id && i.status === 'in_progress');
   const matches = (...xs) => { const q = $('#q').value.trim().toLowerCase(); return !q || xs.some(x => String(x || '').toLowerCase().includes(q)); };
 
   // ---- the views
@@ -39,7 +43,8 @@ export default async function mount() {
     const is = S.issues || [];
     const week = Date.now() - 7 * 864e5;
     const k = [[is.filter(i => i.status === 'in_progress').length, 'مهام شغالة'], [(S.approvals || []).length, 'تنتظر موافقة'],
-      [is.filter(i => i.status === 'done' && Date.parse(i.updatedAt || i.completedAt || 0) > week).length, 'خلصت هالأسبوع'], [(S.agents || []).filter(a => a.status === 'running').length, 'إيجنتس يشتغلون الحين']];
+      [is.filter(i => i.status === 'done' && Date.parse(i.updatedAt || i.completedAt || 0) > week).length, 'خلصت هالأسبوع'], [(S.agents || []).filter(a => a.status === 'running').length, 'إيجنتس يشتغلون الحين'],
+      [S.budget ? usd(S.budget.spent) : '—', S.budget?.cap ? `صرف الإيجنتس هالشهر من ${usd(S.budget.cap)}` : 'صرف الإيجنتس هالشهر']];
     return `<div class="mx-kpis">${k.map(([n, t]) => `<div class="card mx-kpi"><b>${n}</b><span>${t}</span></div>`).join('')}</div>
       <h3 style="margin:0 0 8px">آخر المهام</h3>${is.length ? `<div class="mx-list">${is.slice(0, 8).map(taskRow).join('')}</div>` : empty('tasks', 'ما فيه مهام للحين.', 'أنشئ مهمة')}`;
   }
@@ -60,7 +65,8 @@ export default async function mount() {
     const as = (S.agents || []).filter(ok);
     if (!as.length) return empty('agents', 'ما فيه إيجنتس للحين.');
     const card = a => `<article class="card mx-item"><span class="mx-dot ${a.status === 'running' ? 'in_progress' : a.status === 'error' ? 'blocked' : a.status === 'paused' ? 'cancelled' : 'done'}"></span>
-      <b>${esc(a.name)}</b><span class="muted">${esc(a.title || a.role || '')}</span><span class="so-chip">${AG[a.status] || esc(a.status)}</span></article>`;
+      <b>${esc(a.name)}</b><span class="muted">${esc(a.title || a.role || '')}</span><span class="so-chip">${AG[a.status] || esc(a.status)}</span>
+      ${spend(a)}${working(a.id) ? `<span class="mx-now">يشتغل على: ${esc(working(a.id).identifier || '')} ${esc(working(a.id).title || '')}</span>` : ''}</article>`;
     if (layout === 'list') return `<div class="mx-list">${as.map(card).join('')}</div>`;
     // Org chart: who reports to whom
     const ids = new Set(as.map(a => a.id));
@@ -89,9 +95,9 @@ export default async function mount() {
 
   async function load() {
     try { S = await api('/api/maestro/state'); }
-    catch (err) { $('#setup').innerHTML = `<section class="card pad" style="max-width:640px"><h2>المايسترو</h2><p class="muted">${esc(err.message)}</p><p class="so-note">الإعداد مرة وحدة من مسؤولة النظام.</p></section>`; return; }
+    catch (err) { $('#setup').innerHTML = `<section class="card pad" style="max-width:640px"><h2>المدير</h2><p class="muted">${esc(err.message)}</p><p class="so-note">الإعداد مرة وحدة من مسؤولة النظام.</p></section>`; return; }
     if (!S.connected) {
-      $('#setup').innerHTML = `<section class="card pad" style="max-width:640px"><h2>اربط شركتك بالمايسترو</h2><p class="muted">يجهز لشركتك مساحة فيها إيجنتس، ومهام، وميزانية، وموافقات.</p>
+      $('#setup').innerHTML = `<section class="card pad" style="max-width:640px"><h2>اربط شركتك بالمدير</h2><p class="muted">يجهز لشركتك مساحة فيها إيجنتس، ومهام، وميزانية، وموافقات.</p>
         ${S.owner ? '<button class="btn primary" id="connect">اربط</button>' : '<p class="muted">الربط من المالكة.</p>'}<div class="msg" id="cmsg" role="status"></div></section>`;
       $('#connect')?.addEventListener('click', async e => { busy(e.target, true); try { await api('/api/maestro/connect', { method: 'POST', body: {} }); await load(); } catch (err) { say($('#cmsg'), err.message); busy(e.target, false); } });
       return;
@@ -121,7 +127,7 @@ export default async function mount() {
     const btn = e.submitter; busy(btn, true);
     try {
       await api('/api/maestro/task', { method: 'POST', body: { title: $('#title').value, description: $('#desc').value, assigneeAgentId: $('#agent').value, priority: $('#prio').value } });
-      e.target.reset(); $('#dlg').close(); say($('#msg'), 'وصلت للمايسترو.', true); view = 'tasks'; await load();
+      e.target.reset(); $('#dlg').close(); say($('#msg'), 'وصلت للمدير.', true); view = 'tasks'; await load();
     } catch (err) { say($('#dmsg'), err.message); }
     busy(btn, false);
   });
@@ -133,5 +139,5 @@ export default async function mount() {
     else if (/^[1-4]$/.test(e.key) && !$('#board').hidden) { view = VIEWS[Number(e.key) - 1]; filter = 'all'; draw(); }
   }, { signal: pageSignal() });
 
-  shell({ active: 'maestro', title: 'المايسترو', tools: '<a class="btn sm secondary" href="/maestro/video/">فيديو الموشن</a>' }).then(load).catch(err => say($('#msg'), err.message));
+  shell({ active: 'maestro', title: 'المدير' }).then(load).catch(err => say($('#msg'), err.message));
 }
