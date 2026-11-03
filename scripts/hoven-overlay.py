@@ -250,12 +250,34 @@ def overview_results(s):
     return lead_to_order(s)
 
 
+def copy_store(s):
+    """Copywriter: an online store selling home textiles, not home-visit health services."""
+    pairs = [("هدف الإعلان: طلب أو حجز.", "هدف الإعلان: طلب شراء من المتجر."), ("هدف الإعلان: ليد أو حجز.", "هدف الإعلان: طلب شراء من المتجر."),
+             ("(المشكلة، الراحة، العرض، سؤال)", "(الراحة، الجودة، العرض، سؤال)"), (", وشهادات مرضى", ", وتقييمات عملاء ما لها مصدر"),
+             ("، وشهادات مرضى", "، وتقييمات عملاء ما لها مصدر"), ("p.cta || 'اطلب الحين'", "p.cta || 'اطلب الحين'"),
+             ("{ hook: `تبي ${what} بدون مشوار؟`, body: `فريقنا يجيك لين بيتك.${offer}`, headline: `${what} في بيتك`, description: 'احجز بخطوات بسيطة', cta }",
+              "{ hook: `تبي ${what} تريحك كل ليلة؟`, body: `اطلبها من المتجر وتوصلك لين بيتك.${offer}`, headline: `${what} لبيتك`, description: 'اطلب بخطوات بسيطة', cta }"),
+             ("{ hook: `${what}، بالطريقة اللي تريحك`, body: `فريقنا معك من أول خطوة.${offer}`, headline: `${what} بدون انتظار`, description: 'فريق مرخّص يجيك', cta }",
+              "{ hook: `${what}، بالجودة اللي تستاهلها`, body: `خامات مختارة وتوصيل سريع.${offer}`, headline: `${what} بتوصيل سريع`, description: 'توصيل لكل مدن المملكة', cta }"),
+             ("{ hook: `وش تحتاج تعرف عن ${what}؟`, body: `نجاوبك على كل سؤال قبل ما تقرر.${offer}`, headline: `اسألنا عن ${what}`, description: 'نرد عليك اليوم', cta }",
+              "{ hook: `وش تحتاج تعرف عن ${what}؟`, body: `المقاسات والخامات والعناية كلها في صفحة المنتج.${offer}`, headline: `اكتشف ${what}`, description: 'شوف التفاصيل واطلب', cta }")]
+    for a, b in pairs:
+        s = s.replace(a, b)
+    return lead_to_order(s)
+
+
+def content_store(s):
+    s = s.replace("بالسعودي لخدماتنا في الرياض، بدون ادعاءات طبية (حماية المستهلك).", "بالسعودي عن منتجات النيش في السعودية، بدون ادعاءات مبالغ فيها (حماية المستهلك).")
+    return s.replace("(الفئة العمرية، الخدمة، المكان)، ومن خدماتنا فعلاً", "(المنتج، الفئة، المكان)، ومن منتجاتنا فعلاً")
+
+
 RULES = {
     "src/modules/overview/analytics.ts": [overview_results],
     "src/modules/overview/numbers.ts": [overview_results],
     "src/lib/site.ts": [site],
     "src/modules/content/routes.ts": [content_prompts],
-    "src/modules/content/content.ts": [content_prompts],
+    "src/modules/content/content.ts": [content_prompts, content_store],
+    "src/modules/copy/copy.ts": [copy_store],
     "src/modules/voice/voice.ts": [voice],
     "src/modules/compliance/compliance.ts": [compliance],
     "public/assets/common.js": [common, lead_to_order],
