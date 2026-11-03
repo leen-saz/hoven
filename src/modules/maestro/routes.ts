@@ -82,7 +82,7 @@ type VEnv = Env & LlmEnv & { FILES?: R2Bucket };
 interface Project { id: number; title: string; headline: string; script: string; ratio: string; design_key: string; design_mime: string; voice_key: string; voice_mime: string;
   voice_seconds: number; status: 'draft' | 'approved'; approved_version: number | null; approved_by: string | null; approved_at: string | null; pc_issue: string | null; created_by: string | null; created_at: string }
 interface Version { id: number; project_id: number; version: number; parent_version: number | null; change_request: string | null; spec: Spec; engine: string; model: string | null; created_by: string | null; created_at: string }
-const MIG = '018_motion_videos.sql';
+const MIG = '022_motion_videos.sql';
 const P_COLS = 'id,title,headline,script,ratio,design_key,design_mime,voice_key,voice_mime,voice_seconds,status,approved_version,approved_by,approved_at,pc_issue,created_by,created_at';
 const V_COLS = 'id,project_id,version,parent_version,change_request,spec,engine,model,created_by,created_at';
 const rows = <T>(d: unknown): T[] => (Array.isArray(d) ? d : []) as T[];

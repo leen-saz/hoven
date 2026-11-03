@@ -19,7 +19,7 @@ import { longDay, pct, qty, sar } from './format';
 
 const RANGES = [['7', '7 أيام'], ['30', '30 يوم'], ['90', '90 يوم'], ['all', 'كل البيانات']] as const;
 type Range = (typeof RANGES)[number][0];
-const SORTS: [Sort, string][] = [['spend', 'الأعلى صرف'], ['results', 'الأكثر نتائج'], ['cpl', 'الأرخص تكلفة ليد'], ['ctr', 'الأعلى نسبة نقر'], ['hook', 'الأعلى وقفوا يشوفون']];
+const SORTS: [Sort, string][] = [['spend', 'الأعلى صرف'], ['results', 'الأكثر نتائج'], ['cpl', 'الأرخص تكلفة طلب'], ['ctr', 'الأعلى نسبة نقر'], ['hook', 'الأعلى وقفوا يشوفون']];
 const PAGE = 24;
 
 const goalName = (g: string) => GOAL[g] ?? 'غيرها';
@@ -129,7 +129,7 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
   );
 }
 
-const cplNote = (m: Metrics) => (cplDiffers(m) ? `${sar(m.leadSpend)} ÷ ${qty(m.leadN)} ليد` : undefined);
+const cplNote = (m: Metrics) => (cplDiffers(m) ? `${sar(m.leadSpend)} ÷ ${qty(m.leadN)} طلب` : undefined);
 const hookValue = (m: Metrics) => (m.hook == null ? 'صورة أو بدون بيانات' : pct(m.hook));
 
 function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
@@ -147,8 +147,8 @@ function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
         {idea.ad.text && <p className="line-clamp-2 text-sm text-muted-foreground">{idea.ad.text}</p>}
         <div className="grid grid-cols-3 gap-2 text-sm">
           <Stat label="الصرف" value={sar(idea.spend)} />
-          <Stat label="النتائج" value={qty(idea.results)} note={idea.conv ? `${qty(idea.leads)} ليد · ${qty(idea.conv)} محادثة` : undefined} />
-          <Stat label="تكلفة الليد" value={sar(idea.cpl)} note={cplNote(idea)} />
+          <Stat label="النتائج" value={qty(idea.results)} note={idea.conv ? `${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة` : undefined} />
+          <Stat label="تكلفة الطلب" value={sar(idea.cpl)} note={cplNote(idea)} />
           <Stat label="نسبة النقر" value={pct(idea.ctr)} />
           <Stat label="وقفوا يشوفون" value={idea.hook == null ? '—' : pct(idea.hook)} />
           <Stat label="الظهور" value={qty(idea.impr)} />
@@ -162,8 +162,8 @@ function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
 const ROWS: [string, (m: Metrics) => number | null, Dir, (v: number | null) => string][] = [
   ['الصرف', m => m.spend, 0, sar],
   ['النتائج', m => m.results, 1, v => (v == null ? '—' : qty(v))],
-  ['الليدز', m => m.leads, 1, v => (v == null ? '—' : qty(v))],
-  ['تكلفة الليد', m => m.cpl, -1, sar],
+  ['الطلبات', m => m.leads, 1, v => (v == null ? '—' : qty(v))],
+  ['تكلفة الطلب', m => m.cpl, -1, sar],
   ['نسبة النقر', m => m.ctr, 1, pct],
   ['وقفوا يشوفون', m => m.hook, 1, pct],
   ['كمّلوا للنهاية', m => m.hold, 1, pct],
@@ -189,8 +189,8 @@ function IdeaDetail({ data, idea }: { data: Dash; idea: Idea }) {
             {m.open && <Button asChild variant="outline" size="sm" className="justify-self-start"><a href={m.open} target="_blank" rel="noopener"><ExternalLink />افتح المادة الإعلانية</a></Button>}
             <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
               <Stat label="الصرف" value={sar(idea.spend)} />
-              <Stat label="النتائج" value={qty(idea.results)} note={`${qty(idea.leads)} ليد · ${qty(idea.conv)} محادثة`} />
-              <Stat label="تكلفة الليد" value={sar(idea.cpl)} note={cplNote(idea) ?? 'إعلانات الليدز بس'} />
+              <Stat label="النتائج" value={qty(idea.results)} note={`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`} />
+              <Stat label="تكلفة الطلب" value={sar(idea.cpl)} note={cplNote(idea) ?? 'إعلانات الطلبات بس'} />
               <Stat label="نسبة النقر" value={pct(idea.ctr)} note={`${qty(idea.clicks)} نقرة`} />
               <Stat label="وقفوا يشوفون" value={hookValue(idea)} note="مدى الحياة" />
               <Stat label="كمّلوا للنهاية" value={idea.hold == null ? '—' : pct(idea.hold)} note="من اللي وقفوا" />
@@ -239,7 +239,7 @@ function IdeaDetail({ data, idea }: { data: Dash; idea: Idea }) {
               <TableHeader className="bg-muted">
                 <TableRow>
                   <TableHead>الإعلان</TableHead><TableHead>المنصة</TableHead><TableHead>الحالة</TableHead>
-                  <TableHead>الصرف</TableHead><TableHead>النتائج</TableHead><TableHead>تكلفة الليد</TableHead><TableHead>نسبة النقر</TableHead>
+                  <TableHead>الصرف</TableHead><TableHead>النتائج</TableHead><TableHead>تكلفة الطلب</TableHead><TableHead>نسبة النقر</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -52,7 +52,7 @@
 يحتاج مزوّد فيديو ثاني غير OpenAI (مثل Google Veo عن طريق Gemini API، اللي نستخدم مفتاحه للصوت). ما تحققت من أسعاره وحدوده هنا؛ لو تبيه، بحث وPR لحاله. الجدول والصفحة مبنية بحيث النسخة تقدر تحمل فيديو مولّد بعدين بدون ما تتغير صفحة النسخ.
 
 ## 4. الملفات
-- `supabase/migrations/018_motion_videos.sql`: `motion_projects` و`motion_versions`
+- `supabase/migrations/022_motion_videos.sql`: `motion_projects` و`motion_versions`
 - `src/modules/maestro/motion.ts`: الخطة، تنظيفها، القالب، البرومبتات، فحص الملفات
 - `src/modules/maestro/routes.ts`: `/api/maestro/videos|videofile|video|videoedit|videoapprove`
 - `src/modules/maestro/VideoPage.astro` + `src/pages/maestro/video/index.astro` + `public/modules/motion/`

@@ -38,7 +38,7 @@ function renderPersonas(c){
       <dl><dt>${ui('من الظهور','Share of impressions')}</dt><dd>${pct(100*T[0]/((G.female?.tot[0]||0)+(G.male?.tot[0]||0)||1))}</dd>
       <dt>${ui('نسبة النقر','CTR')}</dt><dd>${pct(100*ctr(T))}</dd><dt>${ui('الصرف','Spend')}</dt><dd>${sar(T[2])} ${money()}</dd>
       <dt>${ui('الطلبات','Orders')}</dt><dd>${T[3]==null?ui('المنصة ما تقسمها','not split by the platform'):qty(T[3])}</dd><dt>${ui('تكلفة الطلب','Cost per order')}</dt><dd>${cpr==null?'—':sar(cpr)}</dd></dl>
-      ${best.length?`<div><div class="sub">${ui('أكثر كرييتف يشدّه','Creatives that pull them most')}</div><ol>${best.map(b=>`<li>${esc(b.a.name)} <span class="sub">${pct(b.ctr)}</span></li>`).join('')}</ol></div>`:''}
+      ${best.length?`<div><div class="sub">${ui('أكثر مواد إعلانية تشدّه','Creatives that pull them most')}</div><ol>${best.map(b=>`<li>${esc(b.a.name)} <span class="sub">${pct(b.ctr)}</span></li>`).join('')}</ol></div>`:''}
     </article>`};
   });
   const win=cards.filter(x=>x.cpr!=null).sort((x,y)=>x.cpr-y.cpr)[0];
