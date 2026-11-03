@@ -136,7 +136,7 @@ function openAd(k){
     <div class="panel-h"><h2 id="dlgTitle">${esc(a.name)}</h2><button type="button" class="btn" id="dlgClose">إغلاق</button></div>
     <div class="dlg-top">
       ${(()=>{ const m=mediaHTML(a, true), still=!/^<(video|iframe)/.test(m)&&creativeAction(a);
-        return still ? `<div class="thumb zoom" data-view="1" role="button" tabindex="0" title="${ui('عرض الكرييتف','View creative')}">${m}</div>` : `<div class="thumb">${m}</div>`; })()}
+        return still ? `<div class="thumb zoom" data-view="1" role="button" tabindex="0" title="${ui('عرض المادة الإعلانية','View creative')}">${m}</div>` : `<div class="thumb">${m}</div>`; })()}
       <div style="display:grid;gap:8px;min-width:0">
         <div class="row">${platCell(a.platform)}${depCell(a.dept)}${goalPill(a.goal)}${liveBadge(a)}${winBadge(k)}${campTag(a)}${tiredTag(k)}${a.format?`<span class="pill">${esc(a.format)}</span>`:''}</div>
         <div class="sub">${tr('الحملة')}: ${esc(a.campaign)}<br>${tr('المجموعة')}: ${esc(a.group)}${(DEP[a.dept]&&!HIDDEN_DEPT.has(a.dept))?`<br>${tr('القسم')}: ${esc(depName(a.dept))} · ${a.dsrc==='ad'?tr('من اسم الإعلان'):a.dsrc==='campaign'?tr('من اسم الحملة'):tr('افتراضي')}`:''}</div>
