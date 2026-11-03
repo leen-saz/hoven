@@ -9,9 +9,12 @@
     "typecheck": "astro check && tsc --noEmit",
     "lint": "eslint .",
     "test:unit": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests"
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test:parity": "playwright test",
+    "test:parity:update": "UPDATE_GOLDEN=1 playwright test --workers=1"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.2.0",
     "@astrojs/cloudflare": "^14.4.3",
     "@astrojs/react": "^7.1.2",
     "@tanstack/react-table": "^8.21.3",
@@ -38,6 +41,7 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
     "vitest": "^5.0.5",
-    "wrangler": "^4.156.0"
+    "wrangler": "^4.156.0",
+    "@playwright/test": "^1.56.1"
   }
 }
