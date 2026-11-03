@@ -1,5 +1,5 @@
-// A new sign-in starts with fresh sidebar info (nav.js keeps it 5 minutes per tab)
-try { sessionStorage.removeItem('hoven-me'); } catch { /* storage blocked */ }
+// A new sign-in starts with fresh sidebar info (common.js and nav.js keep the user's last copy in this browser)
+try { localStorage.removeItem('hoven-me-2'); sessionStorage.removeItem('hoven-me-2'); } catch { /* storage blocked */ }
 import { $, api, say, busy } from './common.js';
 import { langSwitch } from './i18n.js';
 document.getElementById('lang').innerHTML = langSwitch();
