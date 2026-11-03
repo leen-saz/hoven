@@ -7,7 +7,7 @@ export const SESSION = '__Host-hoven_session';
 export const SESSION_HOURS = 12;
 export const RECHECK_MS = 10 * 60 * 1000; // pages re-read the user's permissions every 10 minutes
 // Core dashboards, then one per live module (src/modules/registry.ts)
-const CORE = { ceo: 'التحليلات', creative: 'الكرييتف', control: 'لوحة القرارات', connectors: 'الربط' };
+const CORE = { ceo: 'الحملات والمنصات', creative: 'المواد الإعلانية', control: 'لوحة القرارات', connectors: 'الربط' };
 export const DASHBOARDS: Record<string, string> = { ...CORE, ...Object.fromEntries(MODULES.filter(m => LIVE.includes(m.key)).map(m => [m.key, m.ar])) };
 // Department scope: empty = all departments. A department manager sees only their department.
 export const DEPTS = { hoven: 'هوفن' } as const;

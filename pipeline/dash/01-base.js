@@ -243,7 +243,7 @@ const EN = {
   'لا توجد بيانات.':'No data.',
   'لا توجد بيانات في هذه الفترة.':'No data in this range.',
   'ما فيه طلبات في هذي الفترة.':'No orders in this range.',
-  'لا يوجد كرييتف يطابق الفلاتر في هذه الفترة.':'No creative matches the filters in this range.',
+  'لا توجد مادة إعلانية تطابق الفلاتر في هذه الفترة.':'No creative matches the filters in this range.',
   'لا يوجد منشور يطابق البحث أو الفلاتر في هذه الفترة.':'No post matches the search or filters in this range.',
   'لا توجد حملات.':'No campaigns.',
   'لا توجد إعلانات صرفت.':'No ads with spend.',

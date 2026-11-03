@@ -5,6 +5,7 @@ use strict; use warnings; use utf8;
 binmode STDIN, ':encoding(UTF-8)'; binmode STDOUT, ':encoding(UTF-8)';
 my $A = '\x{0600}-\x{06FF}';
 my @plain = (
+  ['018_motion_videos','022_motion_videos'], ['014_lessons_by_tab','018_lessons_by_tab'], ['015_copy.sql','019_copy.sql'],   # Well migration numbers -> Hoven's
   ['leen.sulaiman@wellunion.co','leen@brandsforhome.sa'], ['leen-saz/well-ads-dashboard','leen-saz/hoven-dashboard'],
   ['leen-saz/well-ads','leen-saz/hoven'], ['well-ads-files','hoven-files'], ['well-ads-staging','hoven-staging'],
   ['well-ads.pages.dev','hoven.pages.dev'], ['projects/well-ads','projects/hoven'], ['pages project create well-ads','pages project create hoven'],
