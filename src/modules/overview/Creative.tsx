@@ -161,7 +161,7 @@ function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
 // Rows of the side-by-side comparison: [label, value, direction (1 higher is better, -1 lower is better, 0 neither), shown as]
 const ROWS: [string, (m: Metrics) => number | null, Dir, (v: number | null) => string][] = [
   ['الصرف', m => m.spend, 0, sar],
-  ['النتائج', m => m.results, 1, v => (v == null ? '—' : qty(v))],
+  ['الطلبات', m => m.results, 1, v => (v == null ? '—' : qty(v))],
   ['الطلبات', m => m.leads, 1, v => (v == null ? '—' : qty(v))],
   ['تكلفة الطلب', m => m.cpl, -1, sar],
   ['نسبة النقر', m => m.ctr, 1, pct],

@@ -1,16 +1,16 @@
-// الاتجاه: الصرف أو النتائج أو الليدز، يومي أو أسبوعي أو شهري (تلقائي حسب طول الفترة مثل التحليلات)، وتكلفة الطلب لكل منصة
+// الاتجاه: الصرف أو النتائج أو الليدز، يومي أو أسبوعي أو شهري (تلقائي حسب طول الفترة مثل التحليلات)، مجموع أو أعمدة حسب المنصة، وتكلفة الطلب لكل منصة
 import * as React from 'react';
-import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { type ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { type Dash, type Day, platformName } from './numbers';
-import { type Gran, buckets, granOf, order } from './analytics';
+import { type Bucket, type Gran, buckets, granOf, order } from './analytics';
 import { shortDay } from './format';
 
 const config = {
   spend: { label: 'الصرف (ر.س)', color: 'var(--ui-chart-1)' },
-  results: { label: 'النتائج', color: 'var(--ui-chart-2)' },
+  results: { label: 'الطلبات', color: 'var(--ui-chart-2)' },
   leads: { label: 'الطلبات', color: 'var(--ui-chart-2)' },
 } satisfies ChartConfig;
 type Metric = keyof typeof config;
@@ -40,24 +40,50 @@ export function DayChart({ days, metric, height = 250, gran = 'day' }: { days: (
   );
 }
 
+// Each platform's part of every bar, stacked like the main dashboard's daily charts (template.html stacked())
+function PlatBars({ all, plats, metric, gran, config: cfg }: { all: Bucket[]; plats: string[]; metric: Metric; gran: string; config: ChartConfig }) {
+  const rows = all.map(b => ({ day: b.day, ...Object.fromEntries(plats.map(p => [p, b.plat[p]?.[metric] ?? 0])) }));
+  return (
+    <ChartContainer config={cfg} className="aspect-auto w-full" style={{ height: 250 }} dir="ltr">
+      <BarChart data={rows}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} tickFormatter={tickOf(gran)} />
+        <YAxis orientation="right" tickLine={false} axisLine={false} width={48} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent labelFormatter={v => labelOf(gran)(String(v))} indicator="dot" />} />
+        <ChartLegend content={<ChartLegendContent />} />
+        {plats.map((p, i) => <Bar key={p} dataKey={p} stackId="a" fill={`var(--color-${p})`} radius={i === plats.length - 1 ? [3, 3, 0, 0] : 0} />)}
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
 export function TrendChart({ data, from, to }: { data: Dash; from: string; to: string }) {
   const [metric, setMetric] = React.useState<Metric>('spend');
   const [gran, setGran] = React.useState<Gran>('auto');
+  const [split, setSplit] = React.useState<'total' | 'plat'>('total');
   const g = granOf(from, to, gran);
   const all = buckets(data, from, to, gran);
   const plats = order(data).filter(p => all.some(b => b.cpl[p] != null));
   const cplRows = all.map(b => ({ day: b.day, ...Object.fromEntries(plats.map(p => [p, b.cpl[p] ?? null])) }));
-  const cplConfig = Object.fromEntries(plats.map((p, i) => [p, { label: platformName(p), color: COLORS[i % COLORS.length]! }])) satisfies ChartConfig;
+  // One colour per platform, from its place in the dashboard order, so it is the same in both charts
+  const platOrder = order(data), colorOf = (p: string) => COLORS[Math.max(0, platOrder.indexOf(p)) % COLORS.length]!;
+  const cplConfig = Object.fromEntries(plats.map(p => [p, { label: platformName(p), color: colorOf(p) }])) satisfies ChartConfig;
+  const shown = platOrder.filter(p => all.some(b => (b.plat[p]?.spend ?? 0) > 0 || (b.plat[p]?.results ?? 0) > 0));
+  const platConfig = Object.fromEntries(shown.map(p => [p, { label: platformName(p), color: colorOf(p) }])) satisfies ChartConfig;
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>الاتجاه</CardTitle>
-        <CardDescription>{metric === 'spend' ? 'الصرف لكل المنصات' : metric === 'results' ? 'الطلبات والمحادثات' : 'الطلبات بس'} · {g === 'day' ? 'يومي' : g === 'week' ? 'أسبوعي (من الأحد)' : 'شهري'}</CardDescription>
+        <CardDescription>{metric === 'spend' ? 'الصرف لكل المنصات' : metric === 'results' ? 'الطلبات' : 'الطلبات بس'} · {g === 'day' ? 'يومي' : g === 'week' ? 'أسبوعي (من الأحد)' : 'شهري'}</CardDescription>
         <CardAction className="flex flex-wrap gap-2">
           <ToggleGroup type="single" variant="outline" value={metric} onValueChange={v => v && setMetric(v as Metric)} aria-label="الرقم">
             <ToggleGroupItem value="spend" className="px-3">الصرف</ToggleGroupItem>
             <ToggleGroupItem value="results" className="px-3">النتائج</ToggleGroupItem>
             <ToggleGroupItem value="leads" className="px-3">الطلبات</ToggleGroupItem>
+          </ToggleGroup>
+          <ToggleGroup type="single" variant="outline" value={split} onValueChange={v => v && setSplit(v as 'total' | 'plat')} aria-label="العرض">
+            <ToggleGroupItem value="total" className="px-3">المجموع</ToggleGroupItem>
+            <ToggleGroupItem value="plat" className="px-3">حسب المنصة</ToggleGroupItem>
           </ToggleGroup>
           <ToggleGroup type="single" variant="outline" value={gran} onValueChange={v => v && setGran(v as Gran)} aria-label="التجميع">
             <ToggleGroupItem value="auto" className="px-3">تلقائي</ToggleGroupItem>
@@ -68,7 +94,9 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
         </CardAction>
       </CardHeader>
       <CardContent className="grid gap-6 px-2 pt-4 sm:px-6 sm:pt-6">
-        <DayChart days={all} metric={metric} gran={g} />
+        {split === 'plat' && shown.length
+          ? <PlatBars all={all} plats={shown} metric={metric} gran={g} config={platConfig} />
+          : <DayChart days={all} metric={metric} gran={g} />}
         <div>
           <p className="mb-2 text-sm text-muted-foreground">تكلفة الطلب حسب المنصة (ر.س، إعلانات الطلبات)</p>
           {plats.length ? (

@@ -50,7 +50,7 @@ export function PaceCard({ data, from, to }: Props) {
     ['توقع النتايج لنهاية الشهر', p.forecast ? qty(p.forecast.results) : wait],
     [`مقارنة بنفس الأيام من ${month(p.prevMonth)}`, p.vs ? `صرف ${ch(p.vs.spend)} · نتايج ${ch(p.vs.results)}` : '—'],
     [p.prev?.full ? `${month(p.prevMonth)} كامل` : `نفس الأيام من ${month(p.prevMonth)}`, p.prev ? `${qty(p.prev.results)} نتيجة` : '—',
-      p.prev ? `${sar(p.prev.spend)} · تكلفة النتيجة ${p.prev.results ? sar(p.prev.spend / p.prev.results) : '—'}` : undefined],
+      p.prev ? `${sar(p.prev.spend)} · تكلفة الطلب ${p.prev.results ? sar(p.prev.spend / p.prev.results) : '—'}` : undefined],
   ];
   return (
     <Card>
