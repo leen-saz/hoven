@@ -42,6 +42,40 @@ export function metaCsp(csp: string): string {
   return framable(csp).split(';').map(d => d.trim()).filter(d => d && !d.startsWith('frame-ancestors')).join('; ');
 }
 
+// The dashboard pages, dash.json and csp.txt, kept in this isolate for up to a minute: an R2 read costs ~300 ms and
+// every visit needed two in a row. After a minute the copy is revalidated by etag (no body is read if unchanged).
+// A pipeline upload therefore shows up within a minute. Covers stay on R2 (immutable; browsers keep them).
+type Kept = { etag: string; bytes: ArrayBuffer; at: number };
+const KEPT = new Map<string, Kept>(), BUSY = new Map<string, Promise<Kept | null>>();
+export const KEEP_MS = 60_000;
+const MAX_ONE = 8 * 1024 * 1024, MAX_ALL = 48 * 1024 * 1024;
+export const clearSiteCache = () => { KEPT.clear(); BUSY.clear(); };
+
+async function fetchKept(bucket: R2Bucket, key: string, now: number): Promise<Kept | null> {
+  const old = KEPT.get(key);
+  const obj = await bucket.get(key, old ? { onlyIf: { etagDoesNotMatch: old.etag } } : undefined);
+  if (!obj) { KEPT.delete(key); return null; }
+  // Unchanged since the copy we have: R2 sends the object without a body
+  if (old && !('body' in obj)) { const k = { ...old, at: now }; KEPT.set(key, k); return k; }
+  const k: Kept = { etag: obj.httpEtag, bytes: await (obj as R2ObjectBody).arrayBuffer(), at: now };
+  if (k.bytes.byteLength <= MAX_ONE) {
+    KEPT.delete(key); KEPT.set(key, k);
+    let total = 0;
+    for (const v of KEPT.values()) total += v.bytes.byteLength;
+    for (const [kk, v] of KEPT) { if (total <= MAX_ALL) break; KEPT.delete(kk); total -= v.bytes.byteLength; }   // oldest first
+  }
+  return k;
+}
+// One R2 read at a time per key, however many requests arrive together
+export function kept(bucket: R2Bucket, key: string, now = Date.now()): Promise<Kept | null> {
+  const c = KEPT.get(key);
+  if (c && now - c.at < KEEP_MS) return Promise.resolve(c);
+  let p = BUSY.get(key);
+  if (!p) { p = fetchKept(bucket, key, now).finally(() => BUSY.delete(key)); BUSY.set(key, p); }
+  return p;
+}
+const etagIn = (header: string | null, etag: string) => !!header && header.split(',').some(t => t.trim().replace(/^W\//, '') === etag.replace(/^W\//, ''));
+
 export async function serveSite(request: Request, bucket: R2Bucket): Promise<Response | null> {
   if (request.method !== 'GET' && request.method !== 'HEAD') return null;
   const url = new URL(request.url);

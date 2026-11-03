@@ -19,7 +19,7 @@ const CTA = /(?<!\p{L})(احجز|تسوق|تسوّق|تواصل|كلمنا|را�
 const EMOJI = /\p{Extended_Pictographic}/gu;
 
 export interface Check { ok: boolean; title: string; detail: string }
-export function analyze(text: string) {
+export function analyze(text: string, extra: Rule[] = []) {
   const t = String(text || '').trim().slice(0, 4000);
   const words = t.split(/\s+/).filter(Boolean);
   const sentences = t.split(/[.!؟?\n،]+/).map(s => s.trim()).filter(Boolean);

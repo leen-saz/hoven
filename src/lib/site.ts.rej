@@ -1,0 +1,39 @@
+diff a/src/lib/site.ts b/src/lib/site.ts	(rejected hunks)
+@@ -57,20 +91,27 @@ export async function serveSite(request: Request, bucket: R2Bucket): Promise<Res
+   if (to) return new Response(null, { status: 302, headers: { location: to, 'cache-control': 'no-store' } });
+   const key = siteKey(url.pathname);
+   if (!key) return null;
++  if (key.startsWith('site/')) return servePage(request, bucket, key);
++  // Covers (thumbs/): named by their content hash and behind the login, so the viewer's browser keeps them
+   const obj = await bucket.get(key, { onlyIf: request.headers });
+   if (!obj) return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+   const ext = key.slice(key.lastIndexOf('.') + 1);
+-  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag: obj.httpEtag });
+-  // Covers are named by their content hash and sit behind the login: the viewer's browser keeps them.
+-  headers.set('cache-control', key.startsWith('thumbs/') ? 'private, max-age=604800, immutable' : 'private, no-cache');
+-  if (ext === 'html') {
+-    // build.py hashes the page's inline scripts into this policy (same CSP the live site sends)
+-    const csp = await bucket.get('site/csp.txt');
+-    if (csp) headers.set('content-security-policy', framable((await csp.text()).trim()));
+-  }
++  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag: obj.httpEtag, 'cache-control': 'private, max-age=604800, immutable' });
+   if (!('body' in obj)) return new Response(null, { status: 304, headers });
+-  const res = new Response(request.method === 'HEAD' ? null : obj.body, { status: 200, headers });
+-  if (ext !== 'html' || typeof HTMLRewriter === 'undefined') return res;
++  return new Response(request.method === 'HEAD' ? null : obj.body, { status: 200, headers });
++}
++
++async function servePage(request: Request, bucket: R2Bucket, key: string): Promise<Response> {
++  const ext = key.slice(key.lastIndexOf('.') + 1), html = ext === 'html';
++  // The page and its policy are read together, not one after the other
++  const [page, csp] = await Promise.all([kept(bucket, key), html ? kept(bucket, 'site/csp.txt') : Promise.resolve(null)]);
++  if (!page) return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
++  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag: page.etag, 'cache-control': 'private, no-cache' });
++  // build.py hashes the page's inline scripts into this policy (same CSP the live site sends)
++  if (csp) headers.set('content-security-policy', framable(new TextDecoder().decode(csp.bytes).trim()));
++  if (etagIn(request.headers.get('if-none-match'), page.etag)) return new Response(null, { status: 304, headers });
++  const res = new Response(request.method === 'HEAD' ? null : page.bytes, { status: 200, headers });
++  if (!html || typeof HTMLRewriter === 'undefined') return res;
+   return new HTMLRewriter().on('meta[http-equiv="Content-Security-Policy"]', {
+     element(el) { const c = el.getAttribute('content'); if (c) el.setAttribute('content', metaCsp(c)); },
+   }).transform(res);

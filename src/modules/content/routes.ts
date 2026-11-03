@@ -1,13 +1,16 @@
 // /api/content/*: the content + SEO/AEO agent of the user's company. Analyze -> plan -> approve each item -> draft -> publish.
 import { sb, json, readJson, handle, requireUser, audit, atLeast, NO_APPROVE, type AuthEnv } from '../../lib/auth';
 import { scoped, WELL_COMPANY } from '../../lib/tenant';
-import { knowledgeFor, withKnowledge } from '../knowledge/knowledge';
-import { AI_MODEL, PUBLISH, crawl, normalizeSite, plan, searchConsole, type AiRun, type Item } from './content';
+import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
+import { check } from '../compliance/compliance';
+import { aiFor, type LlmEnv } from '../../lib/llm';
+import { AI_MODEL, PUBLISH, crawl, engineOf, normalizeSite, plan, searchConsole, type AiRun, type Item } from './content';
 
 type Row = Record<string, unknown>;
-type AiEnv = AuthEnv & { AI?: { run: AiRun } };
+type AiEnv = AuthEnv & LlmEnv;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);
-const aiOf = (e: AiEnv): AiRun | undefined => (e.AI ? (m, i) => e.AI!.run(m, i) : undefined);
+// Content writes with OpenAI when OPENAI_API_KEY is set, else Workers AI (src/lib/llm.ts)
+const aiOf = (e: AiEnv): AiRun | undefined => aiFor(e, 'content');
 
 export const plans = { GET: handle(async (request, e) => {
   const { cfg, user } = await requireUser(request, e, 'content');

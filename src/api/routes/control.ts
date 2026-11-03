@@ -2,6 +2,8 @@
 // reads need the `control` dashboard, writes are same-origin, owner-only actions stay owner-only,
 // nothing here touches an ad platform (the executor in pipeline/modules/execute does, behind its guards).
 import { check } from '../../lib/rules';
+import { check as comply, notice } from '../../modules/compliance/compliance';
+import { rulesFor } from '../../modules/knowledge/knowledge';
 import { sb, json, readJson, handle, requireUser, audit, isOwner, DEPTS, type Cfg, type Session } from '../../lib/auth';
 
 type Row = Record<string, unknown>;
@@ -214,9 +216,10 @@ export const campaigns = {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return json(400, { error: 'تاريخ البداية ناقص' });
     if (!/^https?:\/\//i.test(typeof f.creative === 'string' ? f.creative : '')) return json(400, { error: 'رابط الكرييتف لازم يبدأ بـ http' });
     const issues = check(f);
-    const text = [f.primary, f.headline, f.wa_message, f.headlines, f.descriptions].join(' ');
-    const moh = MOH.filter(w => text.includes(w));
-    if (moh.length) issues.push(`كلمات تخالف تعليمات حماية المستهلك: ${moh.join('، ')}`);
+    // One compliance list for every tab (src/modules/compliance) + the company's forbidden words. A notice for Leen, not a block.
+    const hits = comply(copyOf(f), await rulesFor(cfg, user.co));
+    const moh = hits.filter(h => h.level !== 'info').map(h => h.match);
+    for (const h of hits.filter(x => x.level !== 'info')) issues.push(notice(h));
     const missing = OPTIONAL.filter(k => k in f && (f[k] === '' || f[k] == null));
     if (missing.length) issues.push(`خانات فاضية لازم تنعبّى قبل الإطلاق: ${missing.join('، ')}`);
     const name = (typeof f.name === 'string' && f.name) || `${platform}_${dept}_${start.slice(8, 10)}${start.slice(5, 7)}`;

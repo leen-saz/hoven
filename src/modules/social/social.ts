@@ -1,6 +1,7 @@
 // السوشال: التحقق من المنشور، وحدود كل منصة، والنشر. النشر الفعلي الحين لفيسبوك وانستقرام (Graph API)،
 // والباقي يطلع "قريباً" لين يكون عندنا تطبيق معتمد لكل منصة (ADR-0006).
 // التوكنات من الخزنة (صفحة الربط) بأسماء المتغيرات، وما ترجع للمتصفح أبداً.
+import { check, notice, type Rule } from '../compliance/compliance';
 
 export const SOCIAL = {
   facebook: { name: 'فيسبوك', max: 63206, live: true },
@@ -28,7 +29,7 @@ export function validate(input: Record<string, unknown>, now = Date.now()): { dr
   const at = Date.parse(String(input.publish_at || ''));
   // Leen: nothing goes out without the named approver, so every post waits for approval (no auto mode)
   const mode = 'manual' as const;
-  const notices = MOH_WORDS.filter(w => body.includes(w)).map(w => `تنبيه امتثال (حماية المستهلك): "${w}" ممكن تعتبر ادعاء. راجعها قبل النشر.`);
+  const notices = check(body, extra).map(notice);
   if (!platforms.length) return { error: 'اختر منصة وحدة على الأقل', notices };
   if (!body && !media.length) return { error: 'اكتب نص أو أضف صورة/فيديو', notices };
   if (!Number.isFinite(at)) return { error: 'حدد وقت النشر', notices };
@@ -92,4 +93,19 @@ export async function publishPost(post: Draft, t: Tokens, f: typeof fetch = fetc
   }
   const ok = Object.values(results).filter(r => r.ok).length;
   return { status: ok === post.platforms.length ? 'published' : ok ? 'partial' : 'failed', results };
+}
+
+// "اكتب لي نص": the post written by the social model (Grok when keyed) from what the user typed, within the
+// shortest limit of the chosen platforms. Checked like any post; the user edits it before scheduling.
+export function suggestPrompt(brief: string, platforms: SocialPlatform[]): string {
+  const max = Math.min(...platforms.map(p => SOCIAL[p].max), 600);
+  return `اكتب منشور سوشال بالسعودي لشركة رعاية صحية منزلية في الرياض، مخاطبة المذكر، للمنصات: ${platforms.map(p => SOCIAL[p].name).join('، ')}.
+الفكرة: ${brief}
+القواعد: جمل قصيرة، الفائدة قبل الميزة، دعوة واضحة للحجز، بدون وعد بشفاء أو نتيجة، بدون "الأفضل" أو "الوحيد"، بدون تجارب مرضى، بدون سعر إلا لو موجود في المعرفة ومعه الإجمالي.
+الحد ${max} حرف. رد بنص المنشور بس، بدون شرح وبدون علامات تنصيص.`;
+}
+export function cleanSuggestion(raw: string, platforms: SocialPlatform[]): string {
+  const max = Math.min(...platforms.map(p => SOCIAL[p].max), 600);
+  const t = String(raw || '').trim().replace(/^["«“]+|["»”]+$/g, '').replace(/^(المنشور|النص)\s*:\s*/, '').trim();
+  return t.length > max ? t.slice(0, max).replace(/\s+\S*$/, '') : t;
 }

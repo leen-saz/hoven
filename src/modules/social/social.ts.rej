@@ -1,0 +1,15 @@
+diff a/src/modules/social/social.ts b/src/modules/social/social.ts	(rejected hunks)
+@@ -15,10 +16,10 @@ export interface Media { url: string; type: 'image' | 'video' }
+ export interface Draft { platforms: SocialPlatform[]; body: string; media: Media[]; publish_at: string; mode: 'auto' | 'manual' }
+ 
+ const GRAPH = 'https://graph.facebook.com/v23.0';
+-// Saudi MOH advertising: a reminder, never a block (Leen's rule: compliance is a notice)
+-const MOH_WORDS = ['علاج نهائي', 'مضمون', 'شفاء تام', '100%', 'بدون أضرار', 'أفضل طبيب', 'الأرخص'];
+ 
+-export function validate(input: Record<string, unknown>, now = Date.now()): { draft?: Draft; error?: string; notices: string[] } {
++// Compliance (one list, src/modules/compliance) plus the company's forbidden words: a precise notice, never a block (Leen's rule).
++// The notice shows when a post is scheduled and on the post itself, so its approver sees it too.
++export function validate(input: Record<string, unknown>, now = Date.now(), extra: Rule[] = []): { draft?: Draft; error?: string; notices: string[] } {
+   const platforms = [...new Set(Array.isArray(input.platforms) ? input.platforms : [])].filter((p): p is SocialPlatform => typeof p === 'string' && p in SOCIAL);
+   const body = String(input.body || '').trim();
+   const media = (Array.isArray(input.media) ? input.media : []).flatMap(m => {

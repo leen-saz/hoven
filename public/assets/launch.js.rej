@@ -1,0 +1,10 @@
+diff a/public/assets/launch.js b/public/assets/launch.js	(rejected hunks)
+@@ -8,8 +9,6 @@ export default async function mount() {
+   const DEPTS = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل' };
+   const CODE = { iv: 'IV', midwife: 'Midwife', foot: 'Foot', renan: 'Renan' };
+   const PNAME = { meta: 'Meta', snap: 'Snap', tiktok: 'TikTok', google: 'Google' };
+-  // كلمات تخالف تعليمات حماية المستهلك في الإعلان الصحي (تطلع تحذير قبل الإرسال)
+-  const MOH = ['الأفضل', 'الوحيد', 'الأكثر', 'الخبير', 'مضمون', 'مضمونة', 'علاج فوري', 'نتائج مثبتة', 'تجارب المرضى', 'تجربة مريض', 'شفاء تام', '100%'];
+ 
+   const C = (id, label, type, opt = {}) => ({ id, label, type, ...opt });
+   const COMMON = [
