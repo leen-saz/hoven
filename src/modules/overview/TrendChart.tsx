@@ -40,14 +40,36 @@ export function DayChart({ days, metric, height = 250, gran = 'day' }: { days: (
   );
 }
 
+// Each platform's part of every bar, stacked like the main dashboard's daily charts (template.html stacked())
+function PlatBars({ all, plats, metric, gran, config: cfg }: { all: Bucket[]; plats: string[]; metric: Metric; gran: string; config: ChartConfig }) {
+  const rows = all.map(b => ({ day: b.day, ...Object.fromEntries(plats.map(p => [p, b.plat[p]?.[metric] ?? 0])) }));
+  return (
+    <ChartContainer config={cfg} className="aspect-auto w-full" style={{ height: 250 }} dir="ltr">
+      <BarChart data={rows}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} minTickGap={32} tickFormatter={tickOf(gran)} />
+        <YAxis orientation="right" tickLine={false} axisLine={false} width={48} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent labelFormatter={v => labelOf(gran)(String(v))} indicator="dot" />} />
+        <ChartLegend content={<ChartLegendContent />} />
+        {plats.map((p, i) => <Bar key={p} dataKey={p} stackId="a" fill={`var(--color-${p})`} radius={i === plats.length - 1 ? [3, 3, 0, 0] : 0} />)}
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
 export function TrendChart({ data, from, to }: { data: Dash; from: string; to: string }) {
   const [metric, setMetric] = React.useState<Metric>('spend');
   const [gran, setGran] = React.useState<Gran>('auto');
+  const [split, setSplit] = React.useState<'total' | 'plat'>('total');
   const g = granOf(from, to, gran);
   const all = buckets(data, from, to, gran);
   const plats = order(data).filter(p => all.some(b => b.cpl[p] != null));
   const cplRows = all.map(b => ({ day: b.day, ...Object.fromEntries(plats.map(p => [p, b.cpl[p] ?? null])) }));
-  const cplConfig = Object.fromEntries(plats.map((p, i) => [p, { label: platformName(p), color: COLORS[i % COLORS.length]! }])) satisfies ChartConfig;
+  // One colour per platform, from its place in the dashboard order, so it is the same in both charts
+  const platOrder = order(data), colorOf = (p: string) => COLORS[Math.max(0, platOrder.indexOf(p)) % COLORS.length]!;
+  const cplConfig = Object.fromEntries(plats.map(p => [p, { label: platformName(p), color: colorOf(p) }])) satisfies ChartConfig;
+  const shown = platOrder.filter(p => all.some(b => (b.plat[p]?.spend ?? 0) > 0 || (b.plat[p]?.results ?? 0) > 0));
+  const platConfig = Object.fromEntries(shown.map(p => [p, { label: platformName(p), color: colorOf(p) }])) satisfies ChartConfig;
   return (
     <Card className="@container/card">
       <CardHeader>

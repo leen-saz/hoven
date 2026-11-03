@@ -132,17 +132,9 @@ export function can(s: Session | null | undefined, need: Need, cfg?: Cfg): boole
   if (need === 'owner') return false;
   return Array.isArray(s.dash) && (s.dash as string[]).includes(need);
 }
-// First dashboard the user may open
-export function home(s: Session, cfg?: Cfg): string {
-  if (can(s, 'ceo', cfg)) return '/';
-  if (can(s, 'creative', cfg)) return '/?view=creative';
-  if (can(s, 'control', cfg)) return '/control/';
-  if (can(s, 'connectors', cfg)) return '/connectors/';
-  if (can(s, 'social', cfg)) return '/social/';
-  if (can(s, 'journeys', cfg)) return '/journeys/';
-  if (can(s, 'content', cfg)) return '/content/';
-  return '/account/';
-}
+// Where the user lands after sign-in, and where a page they may not open sends them: the start page. Every user may
+// open it, and it lists what they can reach (src/api/routes/today.ts).
+export const home = (): string => '/today/';
 // Blocks redirects to another site after login
 export const safePath = (p: unknown): string =>
   typeof p === 'string' && /^\/(?!\/)[^\s\\]*$/.test(p) ? p : '';

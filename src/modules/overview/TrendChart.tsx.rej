@@ -1,0 +1,39 @@
+diff a/src/modules/overview/TrendChart.tsx b/src/modules/overview/TrendChart.tsx	(rejected hunks)
+@@ -1,11 +1,11 @@
+-// الاتجاه: الصرف أو النتائج أو الليدز، يومي أو أسبوعي أو شهري (تلقائي حسب طول الفترة مثل التحليلات)، وتكلفة الليد لكل منصة
++// الاتجاه: الصرف أو النتائج أو الليدز، يومي أو أسبوعي أو شهري (تلقائي حسب طول الفترة مثل التحليلات)، مجموع أو أعمدة حسب المنصة، وتكلفة الليد لكل منصة
+ import * as React from 'react';
+-import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
++import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
+ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
++import { type ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+ import { type Dash, type Day, platformName } from './numbers';
+-import { type Gran, buckets, granOf, order } from './analytics';
++import { type Bucket, type Gran, buckets, granOf, order } from './analytics';
+ import { shortDay } from './format';
+ 
+ const config = {
+@@ -59,6 +81,10 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
+             <ToggleGroupItem value="results" className="px-3">النتائج</ToggleGroupItem>
+             <ToggleGroupItem value="leads" className="px-3">الليدز</ToggleGroupItem>
+           </ToggleGroup>
++          <ToggleGroup type="single" variant="outline" value={split} onValueChange={v => v && setSplit(v as 'total' | 'plat')} aria-label="العرض">
++            <ToggleGroupItem value="total" className="px-3">المجموع</ToggleGroupItem>
++            <ToggleGroupItem value="plat" className="px-3">حسب المنصة</ToggleGroupItem>
++          </ToggleGroup>
+           <ToggleGroup type="single" variant="outline" value={gran} onValueChange={v => v && setGran(v as Gran)} aria-label="التجميع">
+             <ToggleGroupItem value="auto" className="px-3">تلقائي</ToggleGroupItem>
+             <ToggleGroupItem value="day" className="px-3">يومي</ToggleGroupItem>
+@@ -68,7 +94,9 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
+         </CardAction>
+       </CardHeader>
+       <CardContent className="grid gap-6 px-2 pt-4 sm:px-6 sm:pt-6">
+-        <DayChart days={all} metric={metric} gran={g} />
++        {split === 'plat' && shown.length
++          ? <PlatBars all={all} plats={shown} metric={metric} gran={g} config={platConfig} />
++          : <DayChart days={all} metric={metric} gran={g} />}
+         <div>
+           <p className="mb-2 text-sm text-muted-foreground">تكلفة الليد حسب المنصة (ر.س، إعلانات الليدز)</p>
+           {plats.length ? (

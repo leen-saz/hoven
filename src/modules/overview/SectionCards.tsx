@@ -1,11 +1,28 @@
-// كروت الأرقام: كل رقم مع نسبة تغيّره عن نفس المدة اللي قبلها
+// كروت الأرقام: كل رقم مع نسبة تغيّره عن نفس المدة اللي قبلها، وخط صغير لمشيه خلال الفترة
 import { TrendingDown, TrendingUp } from 'lucide-react';
+import { Area, AreaChart } from 'recharts';
+import { type ChartConfig, ChartContainer } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { type Dash, canCompare, change, previous, summarize } from './numbers';
+import { type Bucket, buckets } from './analytics';
 import { pct, qty, sar } from './format';
 
 interface Props { data: Dash; from: string; to: string }
+
+const spark = { v: { label: '', color: 'var(--ui-chart-1)' } } satisfies ChartConfig;
+// The card's number for each day (week or month on long periods); a day with nothing to divide is a gap, not a zero
+function Spark({ points }: { points: (number | null)[] }) {
+  if (points.filter(v => v != null).length < 2) return null;
+  return (
+    <ChartContainer config={spark} className="aspect-auto h-10 w-full" dir="ltr" aria-hidden="true">
+      <AreaChart data={points.map(v => ({ v }))} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+        <Area dataKey="v" type="monotone" stroke="var(--color-v)" fill="var(--color-v)" fillOpacity={0.15} strokeWidth={1.5} isAnimationActive={false} connectNulls={false} />
+      </AreaChart>
+    </ChartContainer>
+  );
+}
+const per = (a: number, b: number) => (b > 0 ? a / b : null);
 
 export function SectionCards({ data, from, to }: Props) {
   const now = summarize(data, from, to);
@@ -40,7 +57,10 @@ export function SectionCards({ data, from, to }: Props) {
                 </CardAction>
               )}
             </CardHeader>
-            <CardFooter className="text-sm text-muted-foreground">{c.note}</CardFooter>
+            <CardFooter className="flex-col items-stretch gap-2 text-sm text-muted-foreground">
+              <Spark points={c.points} />
+              {c.note}
+            </CardFooter>
           </Card>
         );
       })}

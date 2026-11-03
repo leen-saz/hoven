@@ -7,14 +7,14 @@ const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v)
 // The main dashboard's platform order (channels.py), then any other platform present
 const FALLBACK = ['facebook', 'instagram', 'messenger', 'snap', 'tiktok', 'google_search', 'google_pmax', 'google_display', 'google_video', 'google_demand_gen', 'google', 'meta'];
 
-type Row = { key: string; ad: Ad; day: string; spend: number; leads: number; conv: number };
+type Row = { key: string; ad: Ad; day: string; spend: number; impr: number; clicks: number; leads: number; conv: number };
 function* rows(d: Dash, from: string, to: string): Generator<Row> {
   const ads = d.ads ?? {};
   for (const r of d.rows ?? []) {
     const key = String(r[0]), day = String(r[1]);
     if (day < from || day > to) continue;
     const ad = ads[key];
-    if (ad) yield { key, ad, day, spend: num(r[2]), leads: num(r[5]), conv: num(r[6]) };
+    if (ad) yield { key, ad, day, spend: num(r[2]), impr: num(r[3]), clicks: num(r[4]), leads: num(r[5]), conv: num(r[6]) };
   }
 }
 
@@ -234,7 +234,10 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
 
 // ---- The trend by day, week (from Sunday) or month (template.html granOf + buckets). Auto: day up to 62 days, week to 200, then month.
 export type Gran = 'auto' | 'day' | 'week' | 'month';
-export interface Bucket { day: string; spend: number; results: number; leads: number; cpl: Record<string, number | null> }
+// One bar of the trend chart. `plat` = each shown platform's part, for the stacked bars (template.html stacked());
+// hidden platforms count in the totals only, like everywhere else
+export interface PlatPart { spend: number; results: number; leads: number }
+export interface Bucket { day: string; spend: number; results: number; leads: number; impr: number; clicks: number; cpl: Record<string, number | null>; plat: Record<string, PlatPart> }
 export function granOf(from: string, to: string, g: Gran): Exclude<Gran, 'auto'> {
   if (g !== 'auto') return g;
   const n = Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1;
