@@ -42,17 +42,10 @@ export function SectionCards({ data, from, to }: Props) {
   };
   const bk = buckets(data, from, to);
   const line = (f: (b: Bucket) => number | null) => bk.map(f);
-<<<<<<< well
   const cards: { label: string; value: string; d: number | null; lowerIsBetter: boolean | null; note: string; points: (number | null)[]; why?: string | null }[] = [
     { label: 'الصرف', value: sar(now.spend), d: vs(now.spend, was.spend), lowerIsBetter: null, note: ok ? `قبلها ${sar(was.spend)}` : 'ما فيه مقارنة: الفترة اللي قبلها ناقصة', points: line(b => b.spend), why: why('spend', sar) },
-    { label: 'الطلبات', value: qty(now.results), d: vs(now.results, was.results), lowerIsBetter: false, note: 'الطلبات والمحادثات', points: line(b => b.results), why: why('res', qty) },
-    { label: 'تكلفة الطلب', value: sar(now.cpr), d: vs(now.cpr, was.cpr), lowerIsBetter: true, note: ok ? `قبلها ${sar(was.cpr)}` : 'الصرف ÷ الطلبات والمحادثات', points: line(b => per(b.spend, b.results)) },
-=======
-  const cards: { label: string; value: string; d: number | null; lowerIsBetter: boolean | null; note: string; points: (number | null)[] }[] = [
-    { label: 'الصرف', value: sar(now.spend), d: vs(now.spend, was.spend), lowerIsBetter: null, note: ok ? `قبلها ${sar(was.spend)}` : 'ما فيه مقارنة: الفترة اللي قبلها ناقصة', points: line(b => b.spend) },
-    { label: 'الطلبات', value: qty(now.results), d: vs(now.results, was.results), lowerIsBetter: false, note: 'طلبات الشراء من الإعلانات', points: line(b => b.results) },
+    { label: 'الطلبات', value: qty(now.results), d: vs(now.results, was.results), lowerIsBetter: false, note: 'طلبات الشراء من الإعلانات', points: line(b => b.results), why: why('res', qty) },
     { label: 'تكلفة الطلب', value: sar(now.cpr), d: vs(now.cpr, was.cpr), lowerIsBetter: true, note: ok ? `قبلها ${sar(was.cpr)}` : 'الصرف ÷ الطلبات', points: line(b => per(b.spend, b.results)) },
->>>>>>> hoven
     { label: 'نسبة النقر', value: pct(now.ctr), d: vs(now.ctr, was.ctr), lowerIsBetter: false, note: `${qty(now.clicks)} نقرة من ${qty(now.impr)} ظهور`, points: line(b => { const r = per(b.clicks, b.impr); return r == null ? null : 100 * r; }) },
   ];
   return (
