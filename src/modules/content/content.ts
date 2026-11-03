@@ -2,7 +2,7 @@ import { withKnowledge } from '../knowledge/knowledge';
 import type { Hit } from '../compliance/compliance';
 
 // إيجنت المحتوى و SEO/AEO: يقرا الموقع (الصفحة الرئيسية + sitemap)، ويطلع الملاحظات بقواعد ثابتة،
-// وبعدين يبني بلان بـ Workers AI (مجاني ضمن حد Cloudflare اليومي). لو الذكاء الاصطناعي ما اشتغل، البلان من القواعد بس.
+// وبعدين يبني خطة بـ Workers AI (مجاني ضمن حد Cloudflare اليومي). لو الذكاء الاصطناعي ما اشتغل، الخطة من القواعد بس.
 // كل بند يحتاج موافقة الماركتير قبل النشر (أو تلقائي مع تنبيه).
 
 export interface PageFacts { url: string; status: number; title: string; description: string; h1: string[]; words: number; schema: string[]; faq: boolean; lang: string; canonical: boolean }

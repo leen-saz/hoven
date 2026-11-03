@@ -137,7 +137,7 @@ function mediaHTML(item, play){
   let inner;
   if(thumb && isImg(thumb)) inner = `<img src="${esc(thumb)}" alt="${esc(label)}" loading="lazy" data-media="img">`;
   else if(thumb && /^https?:/i.test(thumb)) inner = `<img src="${esc(thumb)}" alt="${esc(label)}" loading="lazy" data-media="img">`;
-  else inner = `<div class="nothumb" role="img" aria-label="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true">${/فيديو|video/i.test(item.format||'')||file||embed?'<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/>':'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h10M7 17h6"/>'}</svg><span>${ui('متحمس تعرف؟ اضغط زر «عرض الكرييتف» لمعرفته','Curious? Press «View creative» to see it')}</span></div>`;
+  else inner = `<div class="nothumb" role="img" aria-label="${esc(label)}"><svg viewBox="0 0 24 24" aria-hidden="true">${/فيديو|video/i.test(item.format||'')||file||embed?'<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/>':'<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h10M7 17h6"/>'}</svg><span>${ui('متحمس تعرف؟ اضغط زر «عرض المادة الإعلانية» لمعرفته','Curious? Press «View creative» to see it')}</span></div>`;
   if(!play && (file || embed)) inner += `<span class="play" aria-hidden="true">▶</span>`;
   return inner;
 }
@@ -157,7 +157,7 @@ function creativeAction(a){
 }
 function viewControl(a){
   const act=creativeAction(a); if(!act) return '';
-  const label=ui('عرض الكرييتف','View creative');
+  const label=ui('عرض المادة الإعلانية','View creative');
   if(act.type==='tab') return `<a class="btn view" href="${esc(act.href)}" target="_blank" rel="noopener">${label}</a>`;
   return `<button type="button" class="btn view" data-view="1">${label}</button>`;
 }
