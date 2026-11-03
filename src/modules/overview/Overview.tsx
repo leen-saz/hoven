@@ -1,4 +1,4 @@
-// نظرة عامة: كروت الأرقام والرسم اليومي وجدول الإعلانات (من قالب shadcn dashboard-01، على بياناتنا).
+// نظرة عامة: كروت الأرقام، والرسم اليومي، وحصة المنصات، ووتيرة الشهر، والأقسام، وتكلفة الطلب حسب اليوم، وجدول الإعلانات.
 // البيانات من /api/overview/data (نفس /dash.json)، والحساب كله في numbers.ts.
 import * as React from 'react';
 import { Direction } from 'radix-ui';
@@ -8,6 +8,8 @@ import { type Dash, addDays, lastDay } from './numbers';
 import { SectionCards } from './SectionCards';
 import { TrendChart } from './TrendChart';
 import { AdsTable } from './AdsTable';
+import { DeptsCard, HeatCard, PaceCard, ShareCard, WinsCard } from './AnalyticsCards';
+import { OutcomeCards } from './OutcomeCards';
 import { longDay } from './format';
 
 const RANGES = [['7', '7 أيام'], ['30', '30 يوم'], ['90', '90 يوم']] as const;
@@ -51,7 +53,19 @@ export default function Overview() {
         </ToggleGroup>
       </div>
       <SectionCards data={data} from={from} to={to} />
+      <OutcomeCards data={data} from={from} to={to} />
       <TrendChart data={data} from={from} to={to} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ShareCard data={data} from={from} to={to} />
+        <PaceCard data={data} from={from} to={to} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WinsCard data={data} from={from} to={to} />
+        <DeptsCard data={data} from={from} to={to} />
+      </div>
+      <div className="grid gap-4">
+        <HeatCard data={data} from={from} to={to} />
+      </div>
       <AdsTable data={data} from={from} to={to} />
     </div>
     </Direction.Provider>

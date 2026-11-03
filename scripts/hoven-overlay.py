@@ -164,7 +164,95 @@ def content_prompts(s):
     return s
 
 
+
+# ---- The dashboard (pipeline/template.html + pipeline/dash/*.js, split by Well in phase 4.3) ----
+# Hoven (ADR-0007): leads = purchases, conv = revenue in SAR. Tiles for orders, revenue, ROAS and Salla.
+HOVEN_TILES = """    tile('الصرف',sar(a.spend),money(),spend,'spend',keys.map(k=>daySum(k,'spend'))),
+    // Hoven (ADR-0007): leads = purchases, conv = revenue in SAR; Salla = the store's own sales
+    ...(!crm ? (()=>{ const x=sallaSum(S.from,S.to), y=cur&&cur.compareOk&&prev?sallaSum(cur.pFrom,cur.pTo):{};
+      const roas=ratio(a.conv,a.spend), roasB=ratio(b.conv,b.spend), tr2=ratio(x.net,a.spend), tr2B=y.net!=null?ratio(y.net,b.spend):null;
+      return [
+        tile('طلبات الإعلانات',qty(a.leads),'',delta(a.leads,b.leads,false),'closings',keys.map(k=>daySum(k,'leads')),'feature'),
+        tile('إيراد الإعلانات',sar(a.conv),money(),delta(a.conv,b.conv,false),'paid',null),
+        tile('ROAS',roas==null?'—':fmt(roas,2)+'×','',delta(roas,roasB,false),'ret',null),
+        ...(D.salla&&D.salla.length ? [
+          tile('مبيعات سلة',sar(x.net),money(),delta(x.net,y.net,false),'paid',null),
+          tile('طلبات سلة',fmt(x.orders),'',delta(x.orders,y.orders,false),'closings',null),
+          tile('العائد الحقيقي (سلة ÷ الصرف)',tr2==null?'—':fmt(tr2,2)+'×','',delta(tr2,tr2B,false),'ret',null),
+        ] : []),
+      ]; })() : []),
+"""
+SALLA_SUM = """function sallaSum(from,to){
+  const o={orders:0,net:0};
+  for(const r of D.salla||[]) if(r.day>=from&&r.day<=to){o.orders+=r.orders||0;o.net+=r.net||0;}
+  return o;
+}
+function renderKpis(now,prev){"""
+DASH_I18N = """  'الظهور':'Impressions',
+  'طلبات الإعلانات':'Ad orders',
+  'إيراد الإعلانات':'Ad revenue',
+  'طلبات سلة':'Salla orders',
+  'مبيعات سلة':'Salla sales',
+  'العائد الحقيقي (سلة ÷ الصرف)':'True ROAS (Salla ÷ spend)',
+  'كم واحد اشترى':'How many bought',
+  'الإيراد (ر.س)':'Revenue (SAR)',
+  'من نقرة إلى طلب':'Click to order',"""
+
+
+def dash(s):
+    if "HOVEN-DASH" in s:
+        return s
+    o = s
+    one = lambda a, b: s.replace(a, b, 1) if a in s else s
+    s = one("    tile('الصرف',sar(a.spend),money(),spend,'spend',keys.map(k=>daySum(k,'spend'))),\n", HOVEN_TILES)
+    s = one("function renderKpis(now,prev){", SALLA_SUM)
+    s = one("const vol = [a.impr||0, a.clicks||0, (a.leads||0)+(a.conv||0), crm ? allN : (a.booked||0)];", "const vol = [a.impr||0, a.clicks||0, a.leads||0, crm ? allN : (a.booked||0)];   // Hoven: conv is revenue, not a count")
+    s = one("const clickToLead = ratio(100*((a.leads||0)+(a.conv||0)), a.clicks), clickToLeadB = ratio(100*((b.leads||0)+(b.conv||0)), b.clicks);", "const clickToLead = ratio(100*(a.leads||0), a.clicks), clickToLeadB = ratio(100*(b.leads||0), b.clicks);")
+    s = one("hint:'كم واحد ترك بياناته أو راسلنا'", "hint:'كم واحد اشترى'")
+    s = one("kpi('محادثات واتساب وماسنجر',fmt(a.conv),'',delta(a.conv,b.conv,false),'sub')", "kpi('الإيراد (ر.س)',sar(a.conv),money(),delta(a.conv,b.conv,false),'sub')")
+    s = s.replace("['#7C8CFF','#8B6CFF','#294036','#5B36D6']", "['#7fb59a','#4f7a63','#294036','#293342']")
+    s = one("  'الظهور':'Impressions',", DASH_I18N)
+    s = s.replace("'محادثات واتساب وماسنجر':", "'x-unused-chats':")
+    s = s.replace("page.name==='Hoven Care.'", "page.name==='Hoven'")
+    # Personas: results are orders
+    for a, b in [("ui('النتايج (ليدز ومحادثات)','Results (leads and chats)')", "ui('الطلبات','Orders')"), ("ui('تكلفة النتيجة','Cost per result')", "ui('تكلفة الطلب','Cost per order')"),
+                 ("ui('الأرخص نتيجة','Cheapest result')", "ui('الأرخص طلب','Cheapest order')")]:
+        s = s.replace(a, b)
+    # Well's departments and the excluded TikTok account
+    s = re.sub(r"departments:\{\s*iv:\{ar:'المحاليل الوريدية'.*?brand:\{ar:'[^']*',color:'--d-brand'\}\s*\}", "departments:{ hoven:{ar:'هوفن',color:'--d-brand'} }", s, count=1, flags=re.S)
+    s = s.replace("{default:'brand', order:['iv','midwife','foot','renan','brand'], departments:{", "{default:'hoven', order:['hoven'], departments:{")
+    s = re.sub(r"const DEP_EN=\{[^}]*\};", "const DEP_EN={hoven:'Hoven'};", s, count=1)
+    s = re.sub(r"const hints=LANG==='en'\s*\?\s*\{iv:.*?\}\s*:\s*\{iv:.*?renan:'رينان'\};", "const hints={hoven:''};", s, count=1, flags=re.S)
+    s = re.sub(r"\s*--d-iv:[^;]*;\s*--d-midwife:[^;]*;\s*--d-foot:[^;]*;\s*--d-renan:[^;]*;", "\n  ", s, count=1)
+    s = s.replace("يُستنتج من نص المنشور، وحيوية الشعر ضمن المحاليل.", "يُستنتج من نص المنشور.")
+    if "// Spring Rose0406" in s and "function ttExcludedAd(a){" in s:
+        a = s.index("// Spring Rose0406"); b = s.index("function ttExcludedAd(a){"); e = s.index("\n}\n", b) + 3
+        s = s[:a] + "// Well excluded one TikTok account here; Hoven excludes none.\nfunction ttExcludedAccount(){ return false; }\nfunction ttExcludedAd(){ return false; }\n" + s[e:]
+    s = re.sub(r".*fonts\.googleapis\.com/css2\?family=Playfair.*\n", "", s)
+    # Labels: leads -> orders, chats -> revenue (Arabic, then English inside ui()/dictionaries)
+    for a, b in [("ومحادثات", "والإيراد"), ("والمحادثات", "والإيراد"), ("ومحادثة", "وإيراد"), ("والليدز", "والطلبات"), ("وليدز", "وطلبات"), ("بالمحادثات", "بالإيراد"),
+                 ("للمحادثات", "للإيراد"), ("للليدز", "للطلبات"), ("بالليدز", "بالطلبات"), ("تكلفة المحادثة", "تكلفة الطلب"), ("من نقرة إلى ليد", "من نقرة إلى طلب")]:
+        s = s.replace(a, b)
+    for a, b in [("تكلفة الليد", "تكلفة الطلب"), ("الليدز", "الطلبات"), ("الليد", "الطلب"), ("ليدز", "طلبات"), ("ليد", "طلب"), ("المحادثات", "الإيراد"), ("محادثات", "الإيراد"), ("محادثة", "ريال إيراد")]:
+        s = re.sub(rf"(?<![{A}]){a}(?![{A}])", b, s)
+    for a, b in [("Cost per lead", "Cost per order"), ("CPL", "CPA"), ("Leads", "Orders"), ("Lead", "Order"), ("Conversations", "Revenue"), ("Chats", "Revenue")]:
+        s = re.sub(rf"(?<![A-Za-z_.$'\"]){a}(?![A-Za-z_])", b, s)
+    for a, b in [("leads", "orders"), ("lead or chat", "order"), ("conversations", "revenue"), ("chats", "SAR revenue")]:
+        s = re.sub(rf"(?<=[ '`(]){a}(?![A-Za-z_])", b, s)
+    if s != o:
+        s = s.rstrip("\n") + "\n" + ("<!-- HOVEN-DASH -->\n" if s.lstrip().startswith("<") else "// HOVEN-DASH: Hoven overlay applied\n")
+    return s
+
+
+def overview_results(s):
+    # Hoven (ADR-0007): conv is revenue in SAR, never added to a count of results
+    s = s.replace("x.leads + x.conv", "x.leads").replace("res: num(r[5]) + num(r[6])", "res: num(r[5])")
+    return lead_to_order(s)
+
+
 RULES = {
+    "src/modules/overview/analytics.ts": [overview_results],
+    "src/modules/overview/numbers.ts": [overview_results],
     "src/lib/site.ts": [site],
     "src/modules/content/routes.ts": [content_prompts],
     "src/modules/content/content.ts": [content_prompts],
@@ -181,8 +269,11 @@ RULES = {
 GLOBS = ["pipeline/modules/**/*.py", "public/assets/*.js", "public/modules/**/*.js", "src/**/*.astro", "src/**/*.ts", "src/**/*.tsx"]
 
 
+DASH_FILES = ["pipeline/template.html"] + sorted(glob.glob("pipeline/dash/*.js"))
+
+
 def main(paths):
-    targets = set(paths) if paths else {f for g in GLOBS for f in glob.glob(g, recursive=True)} | set(RULES)
+    targets = set(paths) if paths else {f for g in GLOBS for f in glob.glob(g, recursive=True)} | set(RULES) | set(DASH_FILES)
     for p in sorted(targets):
         if "/tests/" in p or p.endswith((".test.ts", ".test.tsx")) or "__pycache__" in p:
             continue
@@ -191,7 +282,7 @@ def main(paths):
         except (FileNotFoundError, IsADirectoryError, UnicodeDecodeError):
             continue
         o = s
-        for fn in RULES.get(p, [lead_to_order]):
+        for fn in RULES.get(p, [dash] if p in DASH_FILES else [lead_to_order]):
             s = fn(s)
         if s != o:
             open(p, "w", encoding="utf-8").write(s)
