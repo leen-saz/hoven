@@ -22,4 +22,4 @@ Work through the categories in priority order and check the work against them be
 
 For the full rules read `references/quick-reference.md`. For the pre-delivery checklist read `references/pro-rules.md`.
 
-Hoven's own rules come first: keep the brand fonts (Thmanyah) and the Hoven logo, use the palette in `public/assets/app.css`, keep the glass layer as built (blur only on large containers, solid fallback under prefers-reduced-transparency), and take screenshots at 1440 px and 390 px before opening a PR.
+Hoven's own rules come first: keep the brand fonts (Hoven Brand + IBM Plex Sans Arabic) and the Hoven logo, use the palette in `public/assets/app.css`, keep the glass layer as built (blur only on large containers, solid fallback under prefers-reduced-transparency), and take screenshots at 1440 px and 390 px before opening a PR.

@@ -9,7 +9,7 @@
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500 600;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:700;font-display:swap}
-/* Hoven brand tokens (من hoven.sa: خطوط ثمانية، كروت 20px بظل بنفسجي ناعم بدون حدود، البنفسجي للنشط). Ivory page, white cards, indigo ink, purple for active and the wordmark dot. */
+/* Hoven brand tokens (from leen-saz/hoven-dashboard). Ivory page, white cards, navy ink, forest green for active and the wordmark dot. */
 :root{
   --bg:#F2F0E3;
   --surface:#FFFFFF;
@@ -96,7 +96,7 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
   max-height:calc(100dvh - 24px);overflow:auto;overscroll-behavior:contain;
   display:grid;gap:8px;align-content:start;
   padding:12px 14px 12px;border-radius:22px;color:var(--ink);
-  background:linear-gradient(165deg, rgba(255,255,255,.58) 0%, rgba(255,255,255,.30) 42%, rgba(246,240,227,.36) 100%);
+  background:linear-gradient(165deg, rgba(255,255,255,.58) 0%, rgba(255,255,255,.30) 42%, rgba(242,240,227,.36) 100%);
   -webkit-backdrop-filter:blur(22px) saturate(1.7);
   backdrop-filter:blur(22px) saturate(1.7);
   border:1px solid rgba(255,255,255,.9);
@@ -127,14 +127,14 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-be
     padding:max(16px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
     visibility:hidden;transform:translateX(-100%);
     transition:transform .28s ease, visibility 0s linear .28s;
-    background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(246,240,227,.66));
+    background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(242,240,227,.66));
     -webkit-backdrop-filter:blur(28px) saturate(1.75);
     backdrop-filter:blur(28px) saturate(1.75);
   }
   [dir="rtl"] .filter-card{transform:translateX(100%)}
   .filter-open:checked ~ .dash .filter-card{visibility:visible;transform:none;transition:transform .28s ease, visibility 0s}
   .filter-open:checked ~ .dash .filter-close{display:inline-flex;align-items:center;cursor:pointer}
-  .filter-open:checked ~ .dash .filter-scrim{display:block;position:fixed;inset:0;z-index:35;background:rgba(18,11,63,.38);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);cursor:pointer}
+  .filter-open:checked ~ .dash .filter-scrim{display:block;position:fixed;inset:0;z-index:35;background:rgba(20,20,20,.38);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);cursor:pointer}
   body:has(#filterOpen:checked){overflow:hidden}
 }
 .seg{display:flex;flex-wrap:wrap;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
@@ -171,7 +171,7 @@ input[type=search]{width:min(240px,100%)}
 .fname span{font-weight:600;color:var(--ink)}
 .fname em{font-style:normal;font-size:.75rem;color:var(--muted);flex-basis:100%}
 .fband-wrap{display:flex;justify-content:center}
-.fband{width:var(--w);min-width:180px;clip-path:polygon(0 0,100% 0,94% 100%,6% 100%);background:color-mix(in srgb,var(--accent) calc(100% - var(--k) * 14%),#1b1240);padding:12px 18px 14px;text-align:center}
+.fband{width:var(--w);min-width:180px;clip-path:polygon(0 0,100% 0,94% 100%,6% 100%);background:color-mix(in srgb,var(--accent) calc(100% - var(--k) * 14%),#141414);padding:12px 18px 14px;text-align:center}
 .fband .kpi{background:transparent;box-shadow:none;padding:0;justify-items:center}
 .fband .kpi .l,.fband .kpi .v,.fband .kpi .v small,.fband .delta,.fband .delta span{color:#fff!important}
 .fband .kpi .l{opacity:.85}
@@ -280,7 +280,7 @@ a.btn{text-decoration:none}
 
 /* Drawer */
 dialog{border:0;border-radius:14px;padding:0;max-width:min(720px,calc(100vw - 32px));width:100%;background:var(--surface);color:var(--ink)}
-dialog::backdrop{background:rgba(18,11,63,.45)}
+dialog::backdrop{background:rgba(20,20,20,.45)}
 .dlg{display:grid;gap:14px;padding:18px}
 .dlg-top{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:16px}
 .dlg-top:has(iframe),.dlg-top:has(video){grid-template-columns:minmax(180px,280px) minmax(0,1fr)}
@@ -387,9 +387,9 @@ td.cap{white-space:normal;min-width:200px;max-width:360px}
 .vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
 
 /* ---- Liquid glass, same layer as the app shell (public/assets/app.css). Blur only on large containers. */
-:root{--bg:#F1EEFA;--glass:rgba(255,255,255,.58);--glass-strong:rgba(255,255,255,.78);--glass-edge:rgba(255,255,255,.85);--glass-blur:blur(20px) saturate(160%);
+:root{--bg:#F2F0E3;--glass:rgba(255,255,255,.58);--glass-strong:rgba(255,255,255,.78);--glass-edge:rgba(255,255,255,.85);--glass-blur:blur(20px) saturate(160%);
   --lift:inset 0 1px 0 rgba(255,255,255,.9),0 1px 2px rgba(41,64,54,.06),0 12px 32px rgba(41,64,54,.12);--r:22px}
-body{background:radial-gradient(1100px 680px at 100% -10%,rgba(41,64,54,.22),transparent 62%),radial-gradient(900px 640px at -10% 35%,rgba(127,181,154,.55),transparent 62%),radial-gradient(760px 560px at 55% 115%,rgba(20,20,20,.12),transparent 60%),linear-gradient(180deg,#F5F3FC,#ECE8F8);background-attachment:fixed}
+body{background:radial-gradient(1100px 680px at 100% -10%,rgba(41,64,54,.22),transparent 62%),radial-gradient(900px 640px at -10% 35%,rgba(127,181,154,.55),transparent 62%),radial-gradient(760px 560px at 55% 115%,rgba(20,20,20,.12),transparent 60%),linear-gradient(180deg,#F5F3EA,#ECE9DA);background-attachment:fixed}
 .panel,.ffun,.filter-card{background:var(--glass);border:1px solid var(--glass-edge);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
 .kpi,.card,.kpi.hero{background:var(--glass-strong);border:1px solid var(--glass-edge)}
 .fband .kpi,.fcost .kpi,.flink .kpi{border:0}
@@ -401,22 +401,22 @@ body{background:radial-gradient(1100px 680px at 100% -10%,rgba(41,64,54,.22),tra
 
 /* ---- Glass v2: closer to ShopWave. Colour behind the glass, gradient glass with a bright edge, glossy funnel layers. Fonts and logo stay Hoven's. */
 :root{--glass-bg:linear-gradient(140deg,rgba(255,255,255,.74),rgba(255,255,255,.34));--glass-blur:blur(26px) saturate(185%);
-  --lift:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(41,64,54,.06),0 2px 6px rgba(76,52,180,.05),0 18px 40px rgba(76,52,180,.13)}
+  --lift:inset 0 1px 1px rgba(255,255,255,.95),inset 0 -1px 1px rgba(41,64,54,.06),0 2px 6px rgba(41,51,66,.05),0 18px 40px rgba(41,51,66,.13)}
 body{background:
   radial-gradient(42vw 38vw at 92% 4%,rgba(41,64,54,.42),transparent 70%),
-  radial-gradient(38vw 34vw at 6% 28%,rgba(120,150,255,.38),transparent 70%),
+  radial-gradient(38vw 34vw at 6% 28%,rgba(41,51,66,.38),transparent 70%),
   radial-gradient(34vw 30vw at 48% 62%,rgba(127,181,154,.55),transparent 70%),
   radial-gradient(40vw 36vw at 88% 96%,rgba(20,20,20,.20),transparent 70%),
-  linear-gradient(160deg,#EEF0FF,#ECE6FB 55%,#F1EAFB);background-attachment:fixed}
+  linear-gradient(160deg,#F4F2E8,#EEEBDD 55%,#F2EFE2);background-attachment:fixed}
 .panel,.ffun,.filter-card,.kpi,.card,.kpi.hero{background:var(--glass-bg);border:1px solid rgba(255,255,255,.78);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur);box-shadow:var(--lift)}
 .fband .kpi,.fcost .kpi,.flink .kpi{background:transparent;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 .flink .kpi{background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.8)}
 .tile .v{font-size:1.75rem}
 .tile .ic{border-radius:14px;background:linear-gradient(140deg,rgba(41,64,54,.22),rgba(127,181,154,.30));box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
-.kpis.kout>.tile:nth-child(3) .ic{background:linear-gradient(140deg,rgba(120,150,255,.28),rgba(127,181,154,.28));color:#4A5BD8}
+.kpis.kout>.tile:nth-child(3) .ic{background:linear-gradient(140deg,rgba(41,51,66,.28),rgba(127,181,154,.28));color:#293342}
 .kpis.kout>.tile:nth-child(4) .ic{background:linear-gradient(140deg,rgba(20,20,20,.16),rgba(41,64,54,.18));color:var(--ink)}
-.kpi.tile.feature{background:linear-gradient(150deg,#9B7BFF,#6A45F0 55%,#3A22B8);border-color:rgba(255,255,255,.45);box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 18px 40px rgba(106,69,240,.35)}
-.fband{clip-path:none;border-radius:22px 22px 60px 60px/22px 22px 34px 34px;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 48%),var(--fc);box-shadow:inset 0 2px 1px rgba(255,255,255,.55),inset 0 -6px 14px rgba(20,8,90,.18),0 12px 26px rgba(76,52,180,.28)}
+.kpi.tile.feature{background:linear-gradient(150deg,#4F7A63,#294036 55%,#1d2e27);border-color:rgba(255,255,255,.45);box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 18px 40px rgba(41,64,54,.35)}
+.fband{clip-path:none;border-radius:22px 22px 60px 60px/22px 22px 34px 34px;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 48%),var(--fc);box-shadow:inset 0 2px 1px rgba(255,255,255,.55),inset 0 -6px 14px rgba(20,8,90,.18),0 12px 26px rgba(41,51,66,.28)}
 
 /* ---- Bento (Leen's references): a 12-column grid for the sections, filters in one row on top. Phones keep the drawer. */
 @media (min-width:1101px){

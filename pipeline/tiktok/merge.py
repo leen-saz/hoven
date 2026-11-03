@@ -70,7 +70,7 @@ def is_spring_rose_ad(ad):
 
 
 def without_spring_rose(blob):
-    """يسقط إعلانات شركة زهرة الربيع وصفوفها من لقطة تيك توك أو data.json."""
+    """يسقط إعلانات الحسابات المستبعدة وصفوفها من لقطة تيك توك أو data.json."""
     if not isinstance(blob, dict):
         return blob
     if is_spring_rose_account(blob.get("advertiser_id"), blob.get("advertiser_name")):

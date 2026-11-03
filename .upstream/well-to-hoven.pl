@@ -17,8 +17,11 @@ my @plain = (
   ['thmanyahserifdisplay-Bold','hoven-brand'], ['thmanyahserifdisplay-Black','hoven-brand'],
   ['"Thmanyah Display"','"Hoven Brand"'], ['"Thmanyah Serif"','"Plex"'], ['"Thmanyah Sans"','"Plex"'], ['"Playfair Display"','"Hoven Brand"'],
   ['126,87,253','41,64,54'], ['29,16,105','41,51,66'], ['34,17,150','20,20,20'], ['172,166,225','127,181,154'], ['248,96,128','179,38,30'],
+  ['18,11,63','20,20,20'], ['246,240,227','242,240,227'], ['106,69,240','41,64,54'], ['29, 16, 105','41, 51, 66'], ['76,52,180','41,51,66'], ['120,150,255','41,51,66'],   # Well's glass shadows and blue blob -> Hoven navy
 );
-my @hex = (['1D1069','293342'], ['7E57FD','294036'], ['221196','141414'], ['ACA6E1','7fb59a'], ['F6F0E3','F2F0E3'], ['F86080','B3261E']);
+my @hex = (['1D1069','293342'], ['7E57FD','294036'], ['221196','141414'], ['ACA6E1','7fb59a'], ['F6F0E3','F2F0E3'], ['F86080','B3261E'],
+           # Well's lavender glass backgrounds -> Hoven ivory
+           ['1b1240','141414'], ['4A5BD8','293342'], ['9B7BFF','4F7A63'], ['6A45F0','294036'], ['3A22B8','1d2e27'], ['5B4BC4','5b6070'], ['8F86D6','a9aebb'], ['3A2FA0','3d4a5c'], ['F1EEFA','F2F0E3'], ['F3F0FB','F2F0E3'], ['F5F3FC','F5F3EA'], ['ECE8F8','ECE9DA'], ['EEF0FF','F4F2E8'], ['ECE6FB','EEEBDD'], ['F1EAFB','F2EFE2']);
 while (my $l = <STDIN>) {
   if ($l =~ /^(diff --git|index |--- |\+\+\+ |@@ )/) { print $l; next; }   # never rewrite paths or hunk headers
   for my $p (@plain) { my ($a, $b) = @$p; $l =~ s/\Q$a\E/$b/g; }

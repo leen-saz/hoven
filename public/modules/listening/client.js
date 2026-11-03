@@ -74,8 +74,8 @@ async function organic() {
 const KIND = { brand: 'علامتنا', competitor: 'المنافسين', alert: 'كلمات التنبيه' };
 const SENT = { positive: 'إيجابي', negative: 'سلبي', neutral: 'محايد', unscored: 'ما تصنّف للحين' };
 const SOURCE = { news: 'أخبار', reddit: 'ريديت', youtube: 'يوتيوب', x: 'X' };
-// Colours: ours is the brand purple; competitors get muted indigo shades; sentiment strip uses deep / soft / pulse
-const COL = ['#294036', '#293342', '#141414', '#7fb59a', '#5B4BC4', '#8F86D6', '#3A2FA0'];
+// Colours: ours is Hoven green; competitors get navy and grey shades; sentiment strip uses deep / soft / pulse
+const COL = ['#294036', '#293342', '#141414', '#7fb59a', '#5b6070', '#a9aebb', '#3d4a5c'];
 const MOOD = { positive: 'var(--deep)', neutral: 'var(--soft)', negative: 'var(--pulse)', unscored: 'rgba(41,51,66,.12)' };
 const pctS = x => `${Math.round(x * 100)}%`;
 const day = s => (s ? String(s).slice(0, 10) : '—');
