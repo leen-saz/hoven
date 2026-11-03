@@ -27,9 +27,9 @@ function lines(ctx, text, max) {
 export function draw(canvas, size, v, img, pal, brand = null) {
   canvas.width = size.w; canvas.height = size.h;
   const ctx = canvas.getContext('2d'), W = size.w, H = size.h, pad = Math.round(W * 0.07);
-  ctx.fillStyle = '#ECE6FB'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#EEEBDD'; ctx.fillRect(0, 0, W, H);
   if (img) { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
-  const dark = (pal && pal.dark) || [29, 16, 105], acc = (pal && pal.accent) || C.accent;
+  const dark = (pal && pal.dark) || [41, 51, 66], acc = (pal && pal.accent) || C.accent;
   const g = ctx.createLinearGradient(0, H * 0.35, 0, H); g.addColorStop(0, `rgba(${dark.join(',')},0)`); g.addColorStop(1, `rgba(${dark.join(',')},.88)`);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';

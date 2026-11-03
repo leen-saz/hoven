@@ -2,7 +2,7 @@
 """يسحب إعلانات تيك توك من Marketing API (Business API v1.3).
 
 الأسرار من البيئة فقط: TIKTOK_ACCESS_TOKEN و TIKTOK_ADVERTISER_IDS (مفصولة بفاصلة).
-حساب Spring Rose0406 مستبعد كما في merge.py ولا يُطلب أصلاً.
+الحسابات المستبعدة (EXCLUDED_ADVERTISER_IDS في merge.py) ما تنطلب أصلاً، وهوفن ما يستبعد شي.
 الصرف يُحوَّل للريال بنفس معامل الدولار المستخدم لميتا. أيام بلا أي رقم لا تُكتب.
 إذا غابت الأسرار أو فشل الطلب تُستخدم لقطة فرع tiktok-data، وإن كانت أقدم من البيانات
 المحفوظة تبقى المحفوظة. لا يُطبع التوكن.
@@ -236,13 +236,13 @@ def pull(env, start, end, transport, audience_due=False):
         aid = str(account.get("advertiser_id") or "")
         name = account.get("name") or account.get("advertiser_name") or ""
         if is_spring_rose_account(aid, name):
-            _log("tiktok: تخطي حساب مستبعد (Spring Rose0406)")
+            _log("tiktok: تخطي حساب مستبعد")
             continue
         if not aid:
             continue
         accounts.append(account)
     if not accounts:
-        raise RuntimeError("لا يوجد حساب تيك توك مسموح بعد استبعاد Spring Rose0406")
+        raise RuntimeError("لا يوجد حساب تيك توك مسموح بعد الاستبعاد")
 
     ads, rows, names = {}, [], {}
     all_objectives = {}

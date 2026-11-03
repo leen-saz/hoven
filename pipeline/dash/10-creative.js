@@ -24,7 +24,7 @@ function cardsList(c){
 // Placements of one Meta ad (m123|facebook, m123|instagram) count together. Ads already running on the
 // first day of the data are skipped: their real launch day is unknown.
 const WIN_MIN_LEADS = 30, WIN_DAYS = 3;
-// Off until the CRM is linked: a winner should be judged on closed patients, not raw orders.
+// Off until the CRM is linked: a winner should be judged on delivered, non-returned orders, not raw orders.
 const WIN_ON = false;
 const WIN = !WIN_ON ? new Set() : (()=>{
   const base = k => String(k).split('|')[0], first={}, rows=D.rows.filter(r=>ADS[r[0]] && ADS[r[0]].goal==='lead' && (r[2]||r[3]));
