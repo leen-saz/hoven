@@ -13,7 +13,7 @@ document.addEventListener('astro:after-swap', () => { document.documentElement.l
 
 const EN = {
   // التنقل والهيكل
-  'التحليلات': 'Analytics', 'ملخص الأداء': 'Performance summary', 'المواد الإعلانية بالتفصيل': 'Creatives in detail', 'الحملات والمنصات': 'Campaigns & platforms', 'ملخص اليوم': 'Today', 'الأداء': 'Performance', 'إنشاء المحتوى': 'Content creation', 'المراجعة والتنفيذ': 'Review & execution', 'إدارة النظام': 'System', 'السجل': 'History', 'الصلاحيات': 'Permissions', 'اليوم': 'Today', 'إغلاق القائمة': 'Close menu', 'المواد الإعلانية': 'Creatives', 'المادة الإعلانية': 'Creative', 'بموافقتي': 'With my approval', 'تنفيذ تلقائي': 'Auto-run', 'التنفيذ التلقائي': 'auto-run', 'لوحة القرارات': 'Decision board', 'الصلاحيات والدخول': 'Access & sign-in', 'السوشال': 'Social', 'صورة أو فيديو': 'Photo or video', 'أو حط رابط': 'Or paste a link', 'يرفع…': 'Uploading…', 'انرفع ✓': 'Uploaded ✓', 'الرحلات والرسائل': 'Journeys', 'المحتوى و SEO': 'Content & SEO', 'المايسترو': 'Maestro', 'الموديولات': 'Modules', 'موديولات الشركة': 'Company modules', 'الإعدادات': 'Settings', 'أساسي': 'Core', 'أساسية لتشغيل النظام': 'Needed to run the system',
+  'التحليلات': 'Analytics', 'ملخص الأداء': 'Performance summary', 'المواد الإعلانية بالتفصيل': 'Creatives in detail', 'الحملات والمنصات': 'Campaigns & platforms', 'ملخص اليوم': 'Today', 'الأداء': 'Performance', 'إنشاء المحتوى': 'Content creation', 'المراجعة والتنفيذ': 'Review & execution', 'إدارة النظام': 'System', 'الصلاحيات': 'Permissions', 'اليوم': 'Today', 'إغلاق القائمة': 'Close menu', 'المواد الإعلانية': 'Creatives', 'المادة الإعلانية': 'Creative', 'بموافقتي': 'With my approval', 'تنفيذ تلقائي': 'Auto-run', 'التنفيذ التلقائي': 'auto-run', 'لوحة القرارات': 'Decision board', 'الصلاحيات والدخول': 'Access & sign-in', 'السوشال': 'Social', 'صورة أو فيديو': 'Photo or video', 'أو حط رابط': 'Or paste a link', 'يرفع…': 'Uploading…', 'انرفع ✓': 'Uploaded ✓', 'الرحلات والرسائل': 'Journeys', 'المحتوى و SEO': 'Content & SEO', 'المايسترو': 'Maestro', 'الموديولات': 'Modules', 'موديولات الشركة': 'Company modules', 'الإعدادات': 'Settings', 'أساسي': 'Core', 'أساسية لتشغيل النظام': 'Needed to run the system',
   'حسابي': 'My account', 'خروج': 'Sign out', 'المالكة': 'Owner', 'عضو': 'Member', 'القائمة': 'Menu', 'التنقل': 'Navigation',
   'عربي': 'عربي', 'English': 'English', 'اللغة': 'Language',
   // الدخول
@@ -34,7 +34,7 @@ const EN = {
   'إضافة مستخدم': 'Add user', 'يوصله إيميل دعوة يحدد منه الباسوورد. ويقدر يغيّره بعدين أو يستعيده من صفحة الدخول.': 'They get an invite email to set a password, and can change or reset it later.',
   'الاسم': 'Name', 'اللوحات': 'Dashboards', 'أرسل الدعوة': 'Send invite', 'المستخدمون وصلاحياتهم': 'Users & access', 'سجل الدخول والنشاط': 'Sign-in & activity log', 'اللوحات المسموحة': 'Allowed dashboards', 'الأقسام المسموحة': 'Allowed departments',
   'آخر 200 فعل. السجل ما ينعدّل ولا ينحذف.': 'Last 200 actions. The log can\'t be edited or deleted.', 'الحالة': 'Status',
-  'كل اللوحات': 'All dashboards', 'مفعّل': 'Active', 'موقوف': 'Disabled', 'احفظ اللوحات': 'Save dashboards', 'أوقف': 'Disable', 'فعّل': 'Enable',
+  'كل اللوحات': 'All dashboards', 'مفعّل': 'Active', 'احفظ اللوحات': 'Save dashboards', 'أوقف': 'Disable', 'فعّل': 'Enable',
   'الوقت': 'Time', 'مين': 'Who', 'الفعل': 'Action', 'على': 'On', 'ملاحظة': 'Note', 'الملاحظة': 'Note', 'ما فيه أفعال لين الحين': 'No actions yet',
   'انرسلت الدعوة.': 'Invite sent.', 'انحفظ.': 'Saved.', 'الإيميل غير صحيح': 'Invalid email', 'اختر لوحة وحدة على الأقل': 'Pick at least one dashboard',
   'الإيميل مسجّل من قبل': 'This email is already registered', 'ما انرسلت الدعوة': 'The invite wasn\'t sent', 'ما تقدر توقف حسابك': 'You can\'t disable your own account',
@@ -46,7 +46,7 @@ const EN = {
   'آخر سحب للأرقام من المنصات': 'Last pull from the ad platforms', 'الكتابة مقفلة': 'Writes locked', 'ما ينرسل أي تعديل لحسابات الإعلانات': 'No change is sent to the ad accounts',
   'الطوارئ': 'Kill switch', 'يتفعّل مع المرحلة A': 'Enabled in phase A', 'مبلغ معرّض للهدر': 'Spend at risk', 'اقتراحات مفتوحة': 'Open suggestions',
   'نُفّذ هالأسبوع': 'Executed this week', 'نسبة الموافقة': 'Approval rate', 'ر.س/أسبوع': 'SAR/week', 'الوضع': 'Mode', 'الحدود': 'Limits',
-  'يفتح في المرحلة B': 'Opens in phase B', 'حدود التنفيذ': 'Execution limits', 'أقصى تغيير ميزانية بخطوة وحدة:': 'Max budget change per step:',
+  'يفتح في المرحلة B': 'Opens in phase B', 'أقصى تغيير ميزانية بخطوة وحدة:': 'Max budget change per step:',
   'سقف الصرف اليومي: يتحدد مع المرحلة B': 'Daily spend cap: set in phase B', 'ما فيه إيقاف قبل': 'No pause before', 'أيام من التشغيل': 'days of running',
   'أي حملة جديدة تحتاج موافقة لين، حتى في التنفيذ التلقائي': 'Any new campaign needs Leen\'s approval, even on auto-run',
   'كل المنصات': 'All platforms', 'السجل': 'History', 'ابحث بالإعلان أو الحملة': 'Search ad or campaign', 'ابحث بالإعلان أو الشخص': 'Search ad or person', 'بحث': 'Search',
@@ -59,7 +59,7 @@ const EN = {
   'طلبات أرخص من الهدف بـ 20% أو أكثر': 'Orders 20%+ cheaper than target', 'محادثات أرخص من الهدف بـ 20% أو أكثر': 'Chats 20%+ cheaper than target', 'محادثات': 'Chats', 'نسبة النقر نزلت 30% أو أكثر': 'CTR down 30% or more',
   'اقتراح كلود': 'Claude suggestion', 'قاعدة': 'Rule', 'حملة': 'Campaign', 'مجموعة': 'Ad set', 'إعلان': 'Ad',
   'وافق': 'Approve', 'رفض': 'Rejected', 'وافق بتعديل': 'Approve with change', 'تنفّذ': 'Executed', 'فشل': 'Failed', 'انتهى': 'Expired', 'ارفض': 'Reject',
-  'وافق (a)': 'Approve (a)', 'عدّل': 'Edit', 'يتنفّذ في Meta خلال ساعة': 'Runs in Meta within the hour', 'تنحفظ الموافقة · تنفيذ يدوي': 'Approval saved · done by hand',
+  'وافق (a)': 'Approve (a)', 'يتنفّذ في Meta خلال ساعة': 'Runs in Meta within the hour', 'تنحفظ الموافقة · تنفيذ يدوي': 'Approval saved · done by hand',
   'تنحفظ الموافقة · التنفيذ موقوف': 'Approval saved · execution stopped', 'تنحفظ الموافقة · الحملة مو تجربة': 'Approval saved · not a test campaign',
   'تنحفظ الموافقة بس · خارج التنفيذ الحالي': 'Approval saved only · outside current execution', 'مبلغ معرّض للهدر (تقدير)': 'Spend at risk (estimate)',
   'ر.س/أسبوع توفير متوقع': 'SAR/week expected saving', 'ر.س/أسبوع صرف إضافي متوقع': 'SAR/week expected extra spend', 'لو وافقت:': 'If you approve:',
@@ -78,7 +78,7 @@ const EN = {
   'احفظ الصلاحيات': 'Save access', 'مدير قسم': 'Department manager', 'المحاليل الوريدية': 'IV Drips', 'القبالة / رعاية الحمل': 'Midwifery / Maternity', 'تقويم القدم': 'Foot Alignment', 'رينان لصحة الطفل': 'Renan Child Health',
   'الطوارئ مفعّلة': 'Kill switch on', 'إيقاف الطوارئ': 'Turn off kill switch', 'لين بس توقف الطوارئ': 'Only Leen can turn it off', 'يوقف أي تنفيذ على حسابات الإعلانات فوراً': 'Stops any change to the ad accounts immediately',
   'تشغيل الطوارئ؟': 'Turn on the kill switch?', 'إيقاف الطوارئ؟': 'Turn off the kill switch?', 'يوقف أي تنفيذ على حسابات الإعلانات فوراً. لين بس تقدر توقفه بعدين.': 'Stops any change to the ad accounts now. Only Leen can turn it off later.',
-  'يرجع التنفيذ حسب الحدود والموافقات.': 'Execution resumes within limits and approvals.', 'شغّل الطوارئ': 'Turn on', 'أوقف الطوارئ': 'Turn off', 'الطوارئ موقوفة': 'Kill switch off', 'لين بس تقدر توقف الطوارئ': 'Only Leen can turn off the kill switch',
+  'يرجع التنفيذ حسب الحدود والموافقات.': 'Execution resumes within limits and approvals.', 'الطوارئ موقوفة': 'Kill switch off', 'لين بس تقدر توقف الطوارئ': 'Only Leen can turn off the kill switch',
   'المراجع': 'Critic', 'المراجع رفضه': 'Critic blocked', 'عدّى قواعد لين': 'Passed Leen\'s rules', 'الخطة': 'Plan', 'التوقّع': 'Expected', 'القياس': 'Measure', 'التراجع': 'Rollback', 'الخطر': 'Risk',
   'موقوف': 'Paused', 'شغّال': 'Running', 'الحملة الحالية': 'Current', 'الميزانية الحالية (تنقرا وقت التنفيذ)': 'Current budget (read at execution)', 'مرحلة تعلّم': 'Learning', 'طلبات قليلة': 'Few orders', 'صرف عالي': 'High spend',
   'شغّل الطوارئ': 'Kill switch on', 'أوقف الطوارئ': 'Kill switch off', 'المراجع راجع الاقتراحات': 'Critic reviewed suggestions',
@@ -471,7 +471,7 @@ const EN = {
   'تفاصيل التصميم': 'Design details', 'النوع': 'Type', 'بوست عضوي': 'Organic post', 'وش نعلن عنه': 'What we advertise',
   'مثال: جلسة فيتامين سي بالوريد في البيت': 'Example: an IV vitamin C session at home', 'الفئة المستهدفة': 'Audience', 'مثال: الموظفين اللي يحسون بإرهاق': 'Example: employees who feel drained',
   'بدون': 'None', 'المقاسات': 'Sizes', 'صورة المنتج أو الخدمة': 'Product or service photo', '(تبقى في جهازك)': '(stays on your device)', 'جهّز تفاصيل التصميم': 'Prepare the design details', 'صمّم': 'Design',
-  'ولّد الصوت': 'Generate the voice', 'اللهجة': 'Accent', 'النبرة': 'Tone', 'نزّل WAV': 'Download WAV',
+  'ولّد الصوت': 'Generate the voice', 'النبرة': 'Tone', 'نزّل WAV': 'Download WAV',
   'يتولّد بلهجة سعودية، وتسمعه وتنزله ملف WAV.': 'Generated in a Saudi accent; play it and download a WAV file.',
   'اسمعه بسرعة من جهازك': 'Quick listen on your device', 'من أصوات جهازك، للتجربة السريعة بس.': "Your device's voices, for a quick try only.",
   'يتولّد الصوت… ياخذ ثواني': 'Generating the voice… takes a few seconds', 'جاهز. اسمعه قبل ما تستخدمه.': 'Ready. Listen before you use it.',

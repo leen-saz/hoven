@@ -274,6 +274,31 @@ def content_store(s):
     return s.replace("(الفئة العمرية، الخدمة، المكان)، ومن خدماتنا فعلاً", "(المنتج، الفئة، المكان)، ومن منتجاتنا فعلاً")
 
 
+HOVEN_EN = {"الإيراد": "Revenue", "تكلفة الطلب": "Cost per order", "طلبات": "Orders", "الطلبات": "Orders",
+            "من نقرة إلى طلب": "Click to order", "الطلبات اليومية": "Daily orders", "الإيراد اليومي": "Daily revenue", "هدف تكلفة الطلب": "Cost-per-order target"}
+PAIR = re.compile(r"'((?:[^'\\]|\\.)+)'\s*:\s*'((?:[^'\\]|\\.)*)'\s*,?[ \t]*")
+
+
+def dedupe_dict(s):
+    """Lead->order rewording makes two keys identical in the EN dictionaries. A JS object keeps the last one, so the
+    English label could read 'Conversations' for الإيراد. Keep one entry per key (the last), with Hoven's meaning."""
+    start = s.find("{", s.find("const EN") if "const EN" in s else 0)
+    hits = [m for m in PAIR.finditer(s) if m.start() > start]
+    last = {}
+    for m in hits:
+        last[m.group(1)] = m
+    out, pos = [], 0
+    for m in hits:
+        k = m.group(1)
+        if last[k] is not m:
+            out.append(s[pos:m.start()]); pos = m.end()
+    out.append(s[pos:]); s = "".join(out)
+    s = re.sub(r"\n[ \t]+(?=\n)", "", s)   # the lines emptied above
+    for k, v in HOVEN_EN.items():
+        s = re.sub(r"('" + re.escape(k) + r"'\s*:\s*')(?:[^'\\]|\\.)*(')", lambda m: m.group(1) + v + m.group(2), s)
+    return s
+
+
 RULES = {
     "src/modules/overview/analytics.ts": [overview_results],
     "src/modules/overview/numbers.ts": [overview_results],
@@ -286,7 +311,7 @@ RULES = {
     "public/assets/common.js": [common, lead_to_order],
     "public/assets/control.js": [depts, moh, lead_to_order],
     "public/assets/launch.js": [depts, moh, launch, lead_to_order],
-    "public/assets/i18n.js": [lead_to_order, i18n_en],
+    "public/assets/i18n.js": [lead_to_order, i18n_en, dedupe_dict],
     "src/api/routes/control.ts": [moh, lead_to_order],
     "src/lib/auth.ts": [depts],
 }
@@ -309,6 +334,8 @@ def main(paths):
         o = s
         for fn in RULES.get(p, [dash] if p in DASH_FILES else [lead_to_order]):
             s = fn(s)
+        if p == "pipeline/dash/01-base.js":
+            s = dedupe_dict(i18n_en(s))
         if s != o:
             open(p, "w", encoding="utf-8").write(s)
             print("overlay:", p)
