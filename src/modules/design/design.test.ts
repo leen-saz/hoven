@@ -25,7 +25,7 @@ describe('design', () => {
   it('parses model JSON, trims long fields, and flags risky wording', () => {
     const v = parseVariants('هذي الخيارات: [{"headline":"تخفيضات 50%","sub":"لكل المفارش","cta":"اطلب"},{"headline":"' + 'ك'.repeat(90) + '","sub":"s","cta":"c"}]', 'o', 'a');
     expect(v).toHaveLength(2);
-    expect(v[0]?.flags[0]?.title).toBe('خصم بدون السعر قبل الخصم');
+    expect(v[0]?.flags[0]?.title).toBe('خصم بدون السعر قبل الخصم أو مدة العرض');
     expect(v[1]?.headline.length).toBe(60);
   });
 
