@@ -95,7 +95,8 @@ describe('route', () => {
   });
   it('with the key and a Salla link it edits that photo into a new scene', async () => {
     const calls: string[] = []; stub(calls);
-    const r = await (await ROUTES.design.studio.POST!(await req({ product_url: 'https://cdn.salla.sa/x/p.jpg', size: 'x' }), { ...E, OPENAI_API_KEY: 'k' })).json() as { image: string; reason: null };
+    const withKey = { ...E, OPENAI_API_KEY: 'k' };
+    const r = await (await ROUTES.design.studio.POST!(await req({ product_url: 'https://cdn.salla.sa/x/p.jpg', size: 'x' }), withKey)).json() as { image: string; reason: null };
     expect(r.image).toMatch(/^data:image\/jpeg;base64,/);
     expect(calls.some(c => c.includes('cdn.salla.sa'))).toBe(true);
     expect(calls.some(c => c.includes('/v1/images/edits'))).toBe(true);
