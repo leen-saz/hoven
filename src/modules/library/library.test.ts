@@ -91,7 +91,7 @@ describe('routes', () => {
     const calls: { url: string; init: RequestInit }[] = [];
     stub({ library_templates: [{ name: STARTER[0]!.name }] }, calls);
     const r = await ROUTES.library.starter.POST!(await req('/api/library/starter', { method: 'POST', body: '{}' }), E);
-    expect(await r.json()).toEqual({ ok: true, added: STARTER.length - 1 });
+    expect(await r.json()).toEqual({ ok: true, added: STARTER.length - 1, documents: 0 });
     const post = calls.find(c => c.init.method === 'POST' && c.url.includes('library_templates'))!;
     expect((JSON.parse(String(post.init.body)) as { source: string }[]).every(x => x.source === 'starter')).toBe(true);
   });

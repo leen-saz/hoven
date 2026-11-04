@@ -49,11 +49,25 @@ export default async function mount() {
   $('#tlist').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b) return; CUR = TEMPLATES.find(t => t.id === Number(b.dataset.id)) || null; drawTemplates(); drawForm(); });
   $('#tnew').onclick = () => { CUR = null; drawTemplates(); drawForm(); };
 
-  $('#starter').onclick = async e => {
-    busy(e.currentTarget, true);
-    try { const r = await api('/api/library/starter', { method: 'POST', body: {} }); say($('#tmsg'), r.added ? `انضاف ${r.added} قوالب.` : 'الحزمة موجودة كلها.', true); await loadAll(); } catch (err) { say($('#tmsg'), err.message); }
-    busy(e.currentTarget, false);
+  for (const b of $$('[data-pack]')) b.onclick = async e => {
+    const btn = e.currentTarget; busy(btn, true);
+    try {
+      const r = await api('/api/library/starter', { method: 'POST', body: { pack: btn.dataset.pack } });
+      say($('#tmsg'), r.added || r.documents ? `انضاف ${r.added} قوالب${r.documents ? ` و${r.documents} مستند (مسودة)` : ''}.` : 'الحزمة موجودة كلها.', true); await loadAll();
+    } catch (err) { say($('#tmsg'), err.message); }
+    busy(btn, false);
   };
+
+  $('#sf').addEventListener('submit', async e => {
+    e.preventDefault(); const b = e.submitter; busy(b, true);
+    const sheet = { trend: { name: $('#s_name').value, startedAt: $('#s_start').value, referenceDate: $('#s_ref').value }, referenceUrl: $('#s_url').value, takenSpecifically: $('#s_taken').value, hovenConnection: $('#s_conn').value,
+      classification: $('#s_cls').value, previousBatchReferences: $('#s_prev').value.split('\n').map(x => x.trim()).filter(Boolean) };
+    try {
+      const r = await api('/api/library/sourcecheck', { method: 'POST', body: sheet });
+      $('#sres').innerHTML = `<div class="lb-note"><b>${r.ok ? 'الورقة كاملة' : r.decision === 'needs_approval' ? 'تحتاج موافقة' : 'مرفوضة'}</b><br>${r.errors.map(esc).join('<br>')}${r.errors.length ? '<br>' : ''}${esc(r.note)}</div>`;
+    } catch (err) { $('#sres').innerHTML = `<div class="lb-note">${esc(err.message)}</div>`; }
+    busy(b, false);
+  });
 
   $('#tf').addEventListener('submit', async e => {
     e.preventDefault(); const b = e.submitter; busy(b, true);
