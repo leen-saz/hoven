@@ -4,7 +4,9 @@ import { sb, json, readJson, handle, requireUser, audit, missingSchema, notAppli
 import { scoped } from '../../lib/tenant';
 import { loadKnowledge, forbiddenRules } from '../knowledge/knowledge';
 import { check, notice } from '../compliance/compliance';
-import { KINDS, STATUSES, STARTER, cleanTemplate, cleanDoc, cleanFolder, render as renderText, type Template, type Doc } from './library';
+import { HOV6, VOICE_DOC } from './hov6';
+import { checkSource } from './sourcesheet';
+import { KINDS, STATUSES, STARTER, cleanTemplate, cleanDoc, cleanFolder, render as renderText, type Template, type Doc, type Kind } from './library';
 
 const MIG = 'migration 023_library.sql';
 type TRow = Template & { id: number; source: string; updated_at?: string };
@@ -61,19 +63,43 @@ export const templates = {
   }),
 };
 
-// Adds the starter templates this company does not have yet (matched by source + name), so it is safe to press twice
+// Adds the templates (and documents) of a pack this company does not have yet, matched by source + name/title, so it is
+// safe to press twice. Packs: starter (the basic six) and hov6 (the eight HOV-6 design templates + the dialect guide).
+const PACKS: Record<string, { source: string; templates: Template[]; docs: { title: string; kind: Kind; body: string; source: string }[] }> = {
+  starter: { source: 'starter', templates: STARTER, docs: [] },
+  hov6: { source: 'hov6', templates: HOV6, docs: [VOICE_DOC] },
+};
 export const starter = { POST: handle(async (request, e) => {
   const { cfg, user } = await requireUser(request, e, 'library', { write: true });
-  const have = await sb<{ name: string }[]>(cfg, scoped("/rest/v1/library_templates?source=eq.starter&select=name", user.co), { admin: true });
+  const b = await readJson(request);
+  const key = typeof b.pack === 'string' && Object.hasOwn(PACKS, b.pack) ? b.pack : 'starter';
+  const pack = PACKS[key]!;
+  const [have, haveDocs] = await Promise.all([
+    sb<{ name: string }[]>(cfg, scoped(`/rest/v1/library_templates?source=eq.${pack.source}&select=name`, user.co), { admin: true }),
+    pack.docs.length ? sb<{ title: string }[]>(cfg, scoped(`/rest/v1/library_documents?source=eq.${pack.source}&select=title`, user.co), { admin: true }) : Promise.resolve(null),
+  ]);
   if (!have.ok) return fail(have, 'ما قدرت أقرأ القوالب');
+  if (haveDocs && !haveDocs.ok) return fail(haveDocs, 'ما قدرت أقرأ المستندات');
   const names = new Set(rows<{ name: string }>(have.data).map(x => x.name));
-  const add = STARTER.filter(t => !names.has(t.name)).map(t => ({ ...t, source: 'starter', company_id: user.co, created_by: user.email }));
+  const titles = new Set(rows<{ title: string }>(haveDocs?.data).map(x => x.title));
+  const add = pack.templates.filter(t => !names.has(t.name)).map(t => ({ ...t, source: pack.source, company_id: user.co, created_by: user.email }));
+  const addDocs = pack.docs.filter(d => !titles.has(d.title)).map(d => ({ ...d, status: 'draft', company_id: user.co, created_by: user.email }));
   if (add.length) {
     const r = await sb(cfg, '/rest/v1/library_templates', { method: 'POST', admin: true, headers: { Prefer: 'return=minimal' }, body: add });
     if (!r.ok) return fail(r, 'ما انضافت القوالب');
-    await audit(cfg, user, 'library_starter_added', { target: { count: add.length } });
   }
-  return json(200, { ok: true, added: add.length });
+  if (addDocs.length) {
+    const r = await sb(cfg, '/rest/v1/library_documents', { method: 'POST', admin: true, headers: { Prefer: 'return=minimal' }, body: addDocs });
+    if (!r.ok) return fail(r, 'ما انضافت المستندات');
+  }
+  if (add.length || addDocs.length) await audit(cfg, user, 'library_pack_added', { target: { pack: key, templates: add.length, documents: addDocs.length } });
+  return json(200, { ok: true, added: add.length, documents: addDocs.length });
+}) };
+
+// Checks a trend source sheet (HOV-6 gate). Nothing is stored: a pass only means the sheet is complete.
+export const sourcecheck = { POST: handle(async (request, e) => {
+  await requireUser(request, e, 'library', { write: true });
+  return json(200, checkSource(await readJson(request, 20_000)));
 }) };
 
 export const renderRoute = { POST: handle(async (request, e) => {

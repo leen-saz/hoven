@@ -12,6 +12,7 @@
 | 6 Cutover | ready | docs/cutover.md; needs Leen (secrets, "انشر الإنتاج", connect platforms) |
 | Upstream | done | Well synced to e272810 (47 commits): modules, access levels, TikTok MCP, design; migrations 013-014 applied |
 | Davinci A: Library | PR open | templates + documents + folders (`library` module, migration 023); PRD in docs/prd-davinci.md |
+| Davinci C: HOV-6 | PR open | HOV-6 pack (8 design templates + dialect guide draft) and the source-sheet gate in `library`; stacked on Davinci A |
 | 7 Tighten | not started | 7 days after cutover |
 
 ## Decisions

@@ -46,7 +46,8 @@ import { KINDS } from './library';
         <section class="card pad">
           <div class="bar" style="justify-content:space-between"><h2>القوالب</h2>
             <span class="bar"><label class="sr" for="tkind"><select id="tkind" aria-label="النوع"><option value="">كل الأنواع</option>{Object.entries(KINDS).map(([k, v]) => <option value={k}>{v}</option>)}</select></label>
-            <button class="btn sm secondary" type="button" id="starter">أضف الحزمة الأساسية</button></span></div>
+            <button class="btn sm secondary" type="button" id="starter" data-pack="starter">أضف الحزمة الأساسية</button>
+            <button class="btn sm secondary" type="button" id="hov6" data-pack="hov6">أضف قوالب هوڤن HOV-6</button></span></div>
           <div class="lb-list" id="tlist"></div>
           <h2 style="margin-top:22px" id="tformTitle">قالب جديد</h2>
           <form id="tf" novalidate>
@@ -91,6 +92,24 @@ import { KINDS } from './library';
           <button class="btn sm secondary" type="button" id="newfolder">مجلد جديد</button></span></div>
         <div class="lb-list" id="dlist"></div>
         <div class="msg" id="lmsg" role="status"></div>
+      </section>
+      <section class="card pad" style="margin-top:16px;max-width:720px">
+        <h2>فحص ورقة المصدر (محتوى الترند)</h2>
+        <p class="muted" style="margin:0 0 8px">قبل أي محتوى جاذب للانتباه: الحقول الخمسة، والمرجع خلال 14 يوم، ورابط مباشر غير مكرر، والتصنيف «آمن تجاريا». الرفض نتيجة مكتملة. المرور يعني إن الورقة كاملة بس، والتحقق من المنشور الأصلي عليك.</p>
+        <form id="sf" novalidate>
+          <div class="lb-two">
+            <div><label for="s_name">الترند</label><input type="text" id="s_name" maxlength="120"></div>
+            <div><label for="s_url">الرابط المباشر للمنشور</label><input type="url" id="s_url" dir="ltr" placeholder="https://…"></div>
+            <div><label for="s_start">بداية الترند</label><input type="date" id="s_start"></div>
+            <div><label for="s_ref">تاريخ المرجع</label><input type="date" id="s_ref"></div>
+          </div>
+          <label for="s_taken">وش أخذنا منه تحديداً</label><input type="text" id="s_taken" maxlength="300">
+          <label for="s_conn">الربط بهوڤن</label><input type="text" id="s_conn" maxlength="300">
+          <label for="s_cls">التصنيف</label><select id="s_cls"><option value="آمن تجاريا">آمن تجاريا</option><option value="حساس يحتاج موافقة">حساس يحتاج موافقة</option><option value="ممنوع">ممنوع (لا نقترب)</option></select>
+          <label for="s_prev">مراجع الدفعات السابقة <span class="muted">(رابط في كل سطر)</span></label><textarea id="s_prev" rows="2" dir="ltr"></textarea>
+          <div class="bar" style="margin-top:12px"><button class="btn primary" type="submit">افحص الورقة</button></div>
+          <div id="sres"></div>
+        </form>
       </section>
     </main>
   </div>
