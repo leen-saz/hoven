@@ -1,10 +1,12 @@
 // /api/design/brief: brief + headline variants from our best ads, and a ChatGPT background when no photo is given. Writes nothing.
-import { sb, json, readJson, handle, requireUser, type Cfg } from '../../lib/auth';
+import { sb, json, readJson, handle, requireUser, audit, type Cfg } from '../../lib/auth';
 import { scoped } from '../../lib/tenant';
 import { type AiRun } from '../content/content';
 import { generate, openaiImage, pick, type LlmEnv } from '../../lib/llm';
-import { knowledgeFor, withKnowledge } from '../knowledge/knowledge';
+import { knowledgeFor, withKnowledge, loadKnowledge, forbiddenRules } from '../knowledge/knowledge';
 import { brandFor, serveFile } from '../knowledge/brand';
+import { STUDIO_SIZES, SCENES, TEXT_COLORS, scenePrompt, overlaySpec, fetchSallaImage, type StudioSize, type Scene, type Tone } from './studio';
+import { check, notice } from '../compliance/compliance';
 import { SIZES, TYPES, VISION_MODEL, VISION_PROMPT, backgroundPrompt, images, productPhoto, variantsFrom, prompt, stylePrompt, templates, winners, type AdIn, type MetIn } from './design';
 
 // Vision stays on Workers AI (free); the copy is written by OpenAI when OPENAI_API_KEY is set (src/lib/llm.ts)
@@ -77,3 +79,25 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
 
 // «موشن جرافيك»: the video projects of this tab (src/modules/design/video.ts)
 export { videos, videofile, video, videoedit, videoapprove } from './video';
+
+// «الاستوديو»: the product photo (Salla CDN link or an upload) in a new scene by the Hoven rules, and where the flat text goes.
+// The picture needs the image model (OPENAI_API_KEY, paid per image); without it the page still lays the text on a photo you give it.
+export const studio = { POST: handle(async (request, e: AiEnv & Parameters<typeof requireUser>[1]) => {
+  const { cfg, user } = await requireUser(request, e, 'design', { write: true });
+  const b = await readJson(request, 3_200_000);
+  const size: StudioSize = String(b.size) in STUDIO_SIZES ? (String(b.size) as StudioSize) : 'feed';
+  const scene: Scene = String(b.scene) in SCENES ? (String(b.scene) as Scene) : 'bedroom';
+  const tone: Tone = String(b.tone) in TEXT_COLORS ? (String(b.tone) as Tone) : 'dark';
+  const text = { title: String(b.title || '').trim().slice(0, 80), sub: String(b.sub || '').trim().slice(0, 120), cta: String(b.cta || '').trim().slice(0, 40) };
+  let photo: { bytes: Uint8Array<ArrayBuffer>; mime: string } | null = null;
+  if (b.product_url) {
+    const got = await fetchSallaImage(b.product_url);
+    if ('error' in got) return json(400, { error: got.error });
+    photo = got;
+  } else photo = productPhoto(b.product);
+  const prompt = scenePrompt(scene, size, !!photo, String(b.note || ''));
+  const notes = check([text.title, text.sub, text.cta].filter(Boolean).join('\n'), forbiddenRules(await loadKnowledge(cfg, user.co))).map(notice);
+  const image = e.OPENAI_API_KEY ? await openaiImage(e, prompt, fetch, photo ?? undefined, STUDIO_SIZES[size].image) : null;
+  await audit(cfg, user, 'design_studio', { target: { size, scene, product: photo ? 'photo' : 'none', image: !!image } });
+  return json(200, { image, reason: image ? null : e.OPENAI_API_KEY ? 'image_failed' : 'no_image_model', prompt, overlay: overlaySpec(size, tone), text, notes });
+}) };
