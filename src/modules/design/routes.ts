@@ -6,6 +6,7 @@ import { generate, openaiImage, pick, type LlmEnv } from '../../lib/llm';
 import { knowledgeFor, withKnowledge } from '../knowledge/knowledge';
 import { brandFor, serveFile } from '../knowledge/brand';
 import { SIZES, TYPES, VISION_MODEL, VISION_PROMPT, backgroundPrompt, images, productPhoto, variantsFrom, prompt, stylePrompt, templates, winners, type AdIn, type MetIn } from './design';
+import { guard, meter } from '../../lib/usage';
 
 // Vision stays on Workers AI (free); the copy is written by OpenAI when OPENAI_API_KEY is set (src/lib/llm.ts)
 type AiEnv = Omit<LlmEnv, 'AI'> & { AI?: { run: AiRun & ((model: string, input: { image: number[]; prompt: string; max_tokens: number }) => Promise<unknown>) } };
@@ -35,6 +36,7 @@ export const brandfile = { GET: handle(async (request, e) => {
 
 export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof requireUser>[1]) => {
   const { cfg, user } = await requireUser(request, e, 'design', { write: true });
+  if (pick(e, 'design')) { const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'design', 'text'); }
   // Up to 5 small images (product + 4 references, each capped in images()) and the product at 1024 px ride in this body
   const b = await readJson(request, 3_200_000);
   const input = { type: String(b.type || 'ad'), offer: String(b.offer || '').slice(0, 200), audience: String(b.audience || '').slice(0, 200), dept: String(b.dept || '').slice(0, 60) };

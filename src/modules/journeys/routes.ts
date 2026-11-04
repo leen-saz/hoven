@@ -6,6 +6,7 @@ import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { check } from '../compliance/compliance';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import type { JourneyParams } from './workflow';
+import { guard, meter } from '../../lib/usage';
 
 type Row = Record<string, unknown>;
 type WfEnv = AuthEnv & { JOURNEY?: { create(o: { id: string; params: JourneyParams }): Promise<unknown> } };
@@ -60,6 +61,7 @@ export const write = { POST: handle(async (request, e: AuthEnv & LlmEnv) => {
   const type = b.type === 'push' ? 'push' : b.type === 'email' ? 'email' : null;
   if (!type) return json(400, { error: 'الكتابة للإيميل والإشعار بس' });
   if (!pick(e, 'journeys')) return json(503, { error: 'الكتابة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
+  const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'journeys', 'text');
   let out;
   try { out = await generate(e, 'journeys', { messages: withKnowledge([{ role: 'user', content: writePrompt(type, String(b.idea || '').slice(0, 1000), String(b.journey || '').slice(0, 120)) }], await knowledgeFor(cfg, user.co, 'journeys')), max_tokens: 900 }); }
   catch { return json(503, { error: 'الذكاء الاصطناعي ما رد الحين، جرّب بعد دقيقة' }); }

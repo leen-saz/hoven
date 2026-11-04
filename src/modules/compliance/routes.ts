@@ -5,6 +5,7 @@ import { scoped } from '../../lib/tenant';
 import { check as checkText, scan as scanAds, rewritePrompt, RULES, type AdText } from './compliance';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
+import { guard, meter } from '../../lib/usage';
 
 type AiEnv = AuthEnv & LlmEnv;
 
@@ -35,6 +36,7 @@ export const rewrite = { POST: handle(async (request, e: AiEnv) => {
   const hits = checkText(text, extra).filter(h => h.level !== 'info');
   if (!hits.length) return json(200, { text, hits: [], same: true });
   if (!pick(e, 'content')) return json(503, { error: 'إعادة الصياغة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
+  const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'compliance', 'text');
   let out: unknown;
   try { out = await generate(e, 'content', { messages: withKnowledge([{ role: 'user', content: rewritePrompt(text, hits) }], await knowledgeFor(cfg, user.co, 'content')), max_tokens: 700 }); }
   catch { return json(503, { error: 'الذكاء الاصطناعي ما رد الحين، جرّب بعد دقيقة' }); }

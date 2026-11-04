@@ -7,6 +7,7 @@ import { check } from '../compliance/compliance';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { MEDIA_TYPES, MEDIA_MAX, mediaKey } from './media';
+import { guard, meter } from '../../lib/usage';
 
 type Row = Record<string, unknown>;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);
@@ -131,6 +132,7 @@ export const suggest = { POST: handle(async (request, e: Parameters<typeof requi
   if (!brief) return json(400, { error: 'اكتب الفكرة في خانة النص أول' });
   if (!platforms.length) return json(400, { error: 'اختر منصة وحدة على الأقل' });
   if (!pick(e, 'social')) return json(503, { error: 'الكتابة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
+  const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'social', 'text');
   let out;
   try { out = await generate(e, 'social', { messages: withKnowledge([{ role: 'user', content: suggestPrompt(brief, platforms) }], await knowledgeFor(cfg, user.co, 'social')), max_tokens: 600 }); }
   catch { return json(503, { error: 'الذكاء الاصطناعي ما رد الحين، جرّب بعد دقيقة' }); }
