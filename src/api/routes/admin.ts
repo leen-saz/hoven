@@ -3,6 +3,7 @@ import { sb, json, readJson, handle, requireUser, audit, levelsOf, DASHBOARDS, D
 import { logRange } from '../../lib/logrange';
 import { MODULES, isModule } from '../../modules/registry';
 import { scoped } from '../../lib/tenant';
+import { summary, cleanQuotas, UNITS } from '../../lib/usage';
 
 type Row = Record<string, unknown> & { email?: string };
 const cleanDash = (d: unknown) => [...new Set((Array.isArray(d) ? d : []).filter((x): x is string => typeof x === 'string' && x in DASHBOARDS))];
@@ -94,5 +95,25 @@ export const modules = {
     if (!r.ok) return json(500, { error: 'ما انحفظ' });
     await audit(cfg, user, 'modules_changed', { after: { off } });
     return json(200, { ok: true, off });
+  }),
+};
+
+// Usage this month and the quotas (owner). A unit with no quota is unlimited; PATCH { text: 500, voice_sec: null } sets or clears.
+export const usage = {
+  GET: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'owner');
+    return json(200, await summary(cfg, user.co));
+  }),
+  PATCH: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'owner', { write: true });
+    const q = cleanQuotas(await readJson(request));
+    if ('error' in q) return json(400, { error: q.error });
+    for (const [unit, monthly_limit] of Object.entries(q.set)) {
+      const r = await sb(cfg, '/rest/v1/usage_quotas?on_conflict=company_id,unit', { method: 'POST', admin: true, headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: { company_id: user.co, unit, monthly_limit, updated_at: new Date().toISOString() } });
+      if (!r.ok) return json(500, { error: 'ما انحفظ الحد. تأكد إن migration 024_usage.sql انطبق' });
+    }
+    for (const unit of q.clear) await sb(cfg, scoped(`/rest/v1/usage_quotas?unit=eq.${unit}`, user.co), { method: 'DELETE', admin: true });
+    await audit(cfg, user, 'usage_quotas_changed', { after: { set: q.set, cleared: q.clear, units: Object.keys(UNITS) } });
+    return json(200, { ok: true, ...(await summary(cfg, user.co)) });
   }),
 };

@@ -6,6 +6,7 @@ import { loadKnowledge, systemPrompt, forbiddenRules, withKnowledge } from '../k
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { winners, type AdIn, type MetIn } from '../design/design';
 import { KINDS, DEFAULT_KIND, fitDraft, cleanProject, styleCard, writePrompt, parseDrafts, fallbackDrafts, review, type Project } from './copy';
+import { guard, meter } from '../../lib/usage';
 
 // The copywriter writes with OpenAI when OPENAI_API_KEY is set, else Workers AI (src/lib/llm.ts); it reads the knowledge too
 type AiEnv = LlmEnv;
@@ -69,6 +70,7 @@ export const write = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   // One read of the knowledge: what the writer is told, and the company's forbidden words for the compliance notes
   const known = await loadKnowledge(cfg, user.co), extra = forbiddenRules(known);
   if (pick(e, 'copy')) {
+    const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'copy', 'text');
     try {
       const out = await generate(e, 'copy', { messages: withKnowledge([{ role: 'user', content: writePrompt(p, kind, count, cards, hooks) }], systemPrompt(known, 'copy')), max_tokens: 900 });
       const got = parseDrafts(out.response, KINDS[kind]!.max);

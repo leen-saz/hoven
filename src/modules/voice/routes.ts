@@ -3,6 +3,7 @@ import { json, readJson, handle, requireUser, notEnabled } from '../../lib/auth'
 import { AI_MODEL, type AiRun } from '../content/content';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { ACCENTS, GUIDE, TONES, TTS_MODEL, TTS_VOICES, analyze, rewritePrompt, ttsBody, ttsInput } from './voice';
+import { guard, meter } from '../../lib/usage';
 
 type AiEnv = { AI?: { run: AiRun } };
 type TtsEnv = { GEMINI_API_KEY?: string; GEMINI_TTS_MODEL?: string };
@@ -27,6 +28,7 @@ export const rewrite = { POST: handle(async (request, e: AiEnv & Parameters<type
   const seconds = [15, 30, 60].includes(Number(b.seconds)) ? Number(b.seconds) : 30;
   if (!text) return json(400, { error: 'اكتب النص أول' });
   if (!e.AI) return json(503, { error: 'إعادة الكتابة بالذكاء الاصطناعي غير مفعّلة في هالبيئة' });
+  const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'voice', 'text');
   let out: unknown;
   try { out = await e.AI.run(AI_MODEL, { messages: withKnowledge([{ role: 'user', content: rewritePrompt(text, seconds) }], await knowledgeFor(cfg, user.co, 'voice')), max_tokens: 400 }); }
   catch { return json(503, { error: 'الذكاء الاصطناعي ما رد الحين، جرّب بعد دقيقة' }); }
@@ -38,10 +40,13 @@ export const rewrite = { POST: handle(async (request, e: AiEnv & Parameters<type
 // /api/voice/speak: Gemini TTS. The audio JSON is passed straight through (no parsing here: the free Workers
 // plan allows 10 ms of CPU); the page turns the PCM into a WAV file. The key never reaches the browser.
 export const speak = { POST: handle(async (request, e: TtsEnv & Parameters<typeof requireUser>[1]) => {
-  const { user } = await requireUser(request, e, 'voice', { write: true });
+  const { cfg, user } = await requireUser(request, e, 'voice', { write: true });
   const i = ttsInput(await readJson(request));
   if (!i.text) return json(400, { error: 'اكتب النص أول' });
   if (!e.GEMINI_API_KEY) return json(503, { error: notEnabled(user, 'توليد الصوت', 'GEMINI_API_KEY') });
+  // About 2.3 words a second, the same figure the voice tab uses for the voice-over length
+  const secs = Math.max(1, Math.ceil(i.text.split(/\s+/).filter(Boolean).length / 2.3));
+  const over = await guard(cfg, user, 'voice_sec', secs); if (over) return over; await meter(cfg, user, 'voice', 'voice_sec', secs);
   const model = (e.GEMINI_TTS_MODEL || TTS_MODEL).replace(/[^a-z0-9.\-]/gi, '');
   let r: Response;
   try {
