@@ -1,0 +1,100 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import { KINDS } from './library';
+// المكتبة: قوالب بمتغيرات، ومستندات محفوظة في مجلدات (docs/prd-davinci.md، المرحلة A).
+---
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F2F0E3">
+<title>المكتبة · Hoven</title>
+<link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<ClientRouter />
+<style is:global>
+.lb-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.lb-grid{grid-template-columns:1fr}}
+.lb-grid h2{margin:0 0 6px}
+.lb-two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:640px){.lb-two{grid-template-columns:1fr}}
+.lb-list{display:grid;gap:8px;margin-top:10px}
+.lb-item{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 14px;display:grid;gap:4px;cursor:pointer;text-align:start;background:none;font:inherit;color:inherit}
+.lb-item[aria-pressed="true"]{border-color:var(--color-primary);background:var(--tint)}
+.lb-item header{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lb-item b{font-size:15px}
+.lb-item small{color:var(--muted)}
+.lb-out{white-space:pre-wrap;margin:10px 0 0;padding:14px 16px;background:var(--tint);border-radius:var(--r-sm);line-height:1.8;font-size:15px}
+.lb-note{font-size:13px;padding:8px 12px;border-radius:12px;background:var(--tint);margin-top:8px}
+.lb-doc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 14px}
+.lb-doc .grow{flex:1;min-width:160px}
+.lb-doc pre{margin:4px 0 0;font:inherit;font-size:13px;color:var(--muted);white-space:pre-wrap;max-height:3.6em;overflow:hidden}
+</style>
+</head>
+<body data-page="library" data-module>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="القائمة" transition:persist="side"></aside>
+  <div class="scrim"></div>
+  <div class="main">
+    <header class="topbar" id="top"></header>
+    <main class="content" id="content">
+      <p class="muted" style="margin:0 0 14px">قوالب جاهزة بمتغيرات مثل <bdi dir="ltr">{'{{product}}'}</bdi>. عبّي الخانات وطلّع النص، والخانة الفاضية تبقى [خانة] مو قيمة مخترعة. احفظ الناتج مستند في مجلد.</p>
+      <div class="lb-grid">
+        <section class="card pad">
+          <div class="bar" style="justify-content:space-between"><h2>القوالب</h2>
+            <span class="bar"><label class="sr" for="tkind"><select id="tkind" aria-label="النوع"><option value="">كل الأنواع</option>{Object.entries(KINDS).map(([k, v]) => <option value={k}>{v}</option>)}</select></label>
+            <button class="btn sm secondary" type="button" id="starter">أضف الحزمة الأساسية</button></span></div>
+          <div class="lb-list" id="tlist"></div>
+          <h2 style="margin-top:22px" id="tformTitle">قالب جديد</h2>
+          <form id="tf" novalidate>
+            <div class="lb-two">
+              <div><label for="tname">الاسم</label><input type="text" id="tname" maxlength="80" required></div>
+              <div><label for="tk">النوع</label><select id="tk">{Object.entries(KINDS).map(([k, v]) => <option value={k}>{v}</option>)}</select></div>
+              <div><label for="tcat">الفئة <span class="muted">(اختياري)</span></label><input type="text" id="tcat" maxlength="40"></div>
+              <div><label for="tdesc">وصف <span class="muted">(اختياري)</span></label><input type="text" id="tdesc" maxlength="300"></div>
+            </div>
+            <label for="tbody">النص <span class="muted">(المتغيرات بين قوسين مزدوجين، حروف إنجليزية صغيرة)</span></label>
+            <textarea id="tbody" rows="5" maxlength="4000" dir="auto" required></textarea>
+            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit" id="tsave">احفظ القالب</button>
+              <button class="btn ghost" type="button" id="tnew" hidden>قالب جديد</button>
+              <button class="btn ghost" type="button" id="tfav" hidden>مفضل</button>
+              <button class="btn ghost" type="button" id="tarch" hidden>أرشفة</button></div>
+            <div class="msg" id="tmsg" role="status"></div>
+          </form>
+        </section>
+        <section class="card pad">
+          <h2>استخدم القالب</h2>
+          <p class="muted" id="useHint" style="margin:0">اختر قالب من القائمة.</p>
+          <form id="uf" novalidate hidden>
+            <div id="ufields"></div>
+            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit" id="ugo">طلّع النص</button></div>
+            <div class="msg" id="umsg" role="status"></div>
+          </form>
+          <div id="uout" hidden>
+            <pre class="lb-out" id="utext"></pre>
+            <div id="unotes"></div>
+            <div class="lb-two" style="margin-top:12px">
+              <div><label for="dtitle">عنوان المستند</label><input type="text" id="dtitle" maxlength="120"></div>
+              <div><label for="dfolder">المجلد</label><select id="dfolder"></select></div>
+            </div>
+            <div class="bar" style="margin-top:10px"><button class="btn secondary" type="button" id="dsave">احفظ كمستند</button><button class="btn ghost" type="button" id="dcopy">انسخ</button></div>
+            <div class="msg" id="dmsg" role="status"></div>
+          </div>
+        </section>
+      </div>
+      <section class="card pad" style="margin-top:16px">
+        <div class="bar" style="justify-content:space-between"><h2>المستندات</h2>
+          <span class="bar"><label class="sr" for="ffolder"><select id="ffolder" aria-label="المجلد"></select></label>
+          <button class="btn sm secondary" type="button" id="newfolder">مجلد جديد</button></span></div>
+        <div class="lb-list" id="dlist"></div>
+        <div class="msg" id="lmsg" role="status"></div>
+      </section>
+    </main>
+  </div>
+</div>
+<script is:inline type="module" src="/assets/router.js"></script>
+</body>
+</html>
