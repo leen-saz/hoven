@@ -47,6 +47,9 @@ export interface Profile {
   company_id?: string | null;
   company?: { disabled_modules?: string[] | null } | null;
   access?: Record<string, string> | null;
+  // Two-step sign-in (migration 025). Server only: never put these in a response.
+  totp_secret?: string | null; totp_enabled?: boolean | null; totp_recovery?: string[] | null;
+  totp_last_step?: number | null; totp_fails?: number | null; totp_locked_until?: string | null;
 }
 
 export function env(e: AuthEnv): Cfg {
