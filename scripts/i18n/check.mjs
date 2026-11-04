@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+const [,, root, inp, outp] = process.argv;
+globalThis.location = { search: '?lang=en', href: 'https://x/?lang=en', pathname: '/' };
+globalThis.localStorage = { getItem: () => 'en', setItem() {} };
+globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+globalThis.NodeFilter = { SHOW_TEXT: 4 };
+globalThis.MutationObserver = class { observe() {} disconnect() {} };
+globalThis.document = { documentElement: {}, readyState: 'complete', title: '', body: { nodeType: 1, querySelectorAll: () => [] }, addEventListener() {}, createTreeWalker: () => ({ nextNode: () => null }) };
+const { t } = await import(root + '/public/assets/i18n.js');
+const src = JSON.parse(fs.readFileSync(inp, 'utf8'));
+const missing = Object.entries(src).filter(([k]) => t(k) === k).map(([k, v]) => ({ k, files: v }));
+fs.writeFileSync(outp, JSON.stringify(missing, null, 1));
+console.log('total', Object.keys(src).length, 'missing', missing.length);
