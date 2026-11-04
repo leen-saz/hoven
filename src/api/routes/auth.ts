@@ -1,8 +1,9 @@
 // /api/auth/*: login, logout, refresh, forgot, reset. Port of web/lib/routes/auth/*.js.
 import {
   env, sb, loadProfile, sessionFor, sign, verify, readCookie, setCookie, clearCookie, safePath, home, audit, html, json,
-  sameOrigin, readJson, handle, keyKind, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile,
+  sameOrigin, readJson, handle, keyKind, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile, type Cfg,
 } from '../../lib/auth';
+import { signPending, readPending, open, checkTotp, hashCode, MAX_FAILS, LOCK_MS } from '../../lib/totp';
 
 export const login = { POST: handle(async (request, e) => {
   if (!sameOrigin(request)) return json(403, { error: 'طلب مرفوض' });
@@ -36,9 +37,50 @@ export const login = { POST: handle(async (request, e) => {
     await audit(cfg, { uid, email }, 'login_blocked');
     return json(403, { error: 'حسابك غير مفعّل. تواصل مع مسؤولة اللوحة.' });
   }
+  // Two-step sign-in: the password is right, the code is still needed. No session cookie until it is.
+  if (profile.totp_enabled) {
+    await audit(cfg, { uid, email }, 'login_2fa_required');
+    return json(200, { need2fa: true, pending: await signPending(uid, safePath(body.next) || '', cfg.secret) });
+  }
+  return startSession(cfg, profile, safePath(body.next) || home());
+}) };
+
+async function startSession(cfg: Cfg, profile: Profile, next: string, how = 'login'): Promise<Response> {
   const s = sessionFor(profile, cfg);
-  await audit(cfg, s, 'login');
-  return json(200, { ok: true, next: safePath(body.next) || home() }, { 'set-cookie': setCookie(await sign(s, cfg.secret), SESSION_HOURS * 3600) });
+  await audit(cfg, s, how);
+  return json(200, { ok: true, next }, { 'set-cookie': setCookie(await sign(s, cfg.secret), SESSION_HOURS * 3600) });
+}
+
+// Second step: the 6-digit code (or a recovery code). 5 wrong codes lock this step for 15 minutes.
+export const twofa = { POST: handle(async (request, e) => {
+  if (!sameOrigin(request)) return json(403, { error: 'طلب مرفوض' });
+  const cfg = env(e);
+  const body = await readJson(request);
+  const pend = await readPending(body.pending, cfg.secret);
+  if (!pend) return json(401, { error: 'انتهت المحاولة. سجّل دخول من جديد.' });
+  const profile = await loadProfile(cfg, pend.uid);
+  if (!profile || profile.active === false || !profile.totp_enabled || !profile.totp_secret) return json(401, { error: 'انتهت المحاولة. سجّل دخول من جديد.' });
+  if (profile.totp_locked_until && Date.parse(profile.totp_locked_until) > Date.now()) return json(429, { error: 'محاولات كثيرة. جرّب بعد 15 دقيقة.' });
+  const code = String(body.code || '').trim();
+  const patch = (b: Record<string, unknown>) => sb(cfg, `/rest/v1/profiles?id=eq.${encodeURIComponent(profile.id)}`, { method: 'PATCH', admin: true, headers: { Prefer: 'return=minimal' }, body: b });
+  const secret = await open(profile.totp_secret, cfg.secret);
+  let ok = false, how = 'login_2fa';
+  if (secret) {
+    const step = await checkTotp(secret, code, Date.now(), profile.totp_last_step || 0);
+    if (step !== null) { ok = true; await patch({ totp_last_step: step, totp_fails: 0, totp_locked_until: null }); }
+  }
+  if (!ok && /^[a-z2-7]{5}-?[a-z2-7]{5}$/i.test(code)) {
+    const h = await hashCode(code.includes('-') ? code : `${code.slice(0, 5)}-${code.slice(5)}`, cfg.secret);
+    const left = (profile.totp_recovery || []).filter(x => x !== h);
+    if (left.length !== (profile.totp_recovery || []).length) { ok = true; how = 'login_2fa_recovery'; await patch({ totp_recovery: left, totp_fails: 0, totp_locked_until: null }); }
+  }
+  if (!ok) {
+    const fails = (profile.totp_fails || 0) + 1;
+    await patch(fails >= MAX_FAILS ? { totp_fails: 0, totp_locked_until: new Date(Date.now() + LOCK_MS).toISOString() } : { totp_fails: fails });
+    await audit(cfg, { uid: profile.id, email: profile.email ?? undefined }, 'login_2fa_failed');
+    return json(401, { error: 'الكود غلط' });
+  }
+  return startSession(cfg, profile, pend.next || home(), how);
 }) };
 
 // Logout is POST and same-origin only, so another site cannot log the user out with a link.

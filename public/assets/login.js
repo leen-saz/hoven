@@ -10,9 +10,21 @@ $('#f').addEventListener('submit', async e => {
   const btn = e.submitter; busy(btn, true); say($('#msg'), '');
   try {
     const r = await api('/api/auth/login', { method: 'POST', body: { email: $('#email').value, password: $('#password').value, next } });
+    if (r.need2fa) { PENDING = r.pending; $('#f').hidden = true; $('#f2').hidden = false; $('#code').value = ''; $('#code').focus(); busy(btn, false); return; }
     location.href = r.next || '/';
   } catch (err) { say($('#msg'), err.message); busy(btn, false); }
 });
+// Second step (two-step sign-in): the code, or a recovery code
+let PENDING = '';
+$('#f2').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = e.submitter; busy(btn, true); say($('#msg2'), '');
+  try {
+    const r = await api('/api/auth/twofa', { method: 'POST', body: { pending: PENDING, code: $('#code').value } });
+    location.href = r.next || '/';
+  } catch (err) { say($('#msg2'), err.message); busy(btn, false); }
+});
+$('#back').addEventListener('click', () => { PENDING = ''; $('#f2').hidden = true; $('#f').hidden = false; $('#password').value = ''; });
 $('#forgot').addEventListener('click', async () => {
   const email = $('#email').value.trim();
   if (!email) { say($('#msg'), 'اكتب إيميلك فوق أول'); $('#email').focus(); return; }

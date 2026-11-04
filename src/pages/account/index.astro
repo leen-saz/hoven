@@ -32,6 +32,27 @@ import { ClientRouter } from 'astro:transitions';
           <div class="msg" id="msg" role="status"></div>
         </form>
       </section>
+      <section class="card pad" style="max-width:520px;margin-top:16px">
+        <h2>التحقق بخطوتين</h2>
+        <p class="muted" id="tstate" style="margin:0">...</p>
+        <div id="tstart" hidden>
+          <p class="muted" style="margin:8px 0">ضيف الحساب في تطبيق المصادقة (Google Authenticator أو Microsoft Authenticator أو غيره) بهالمفتاح، وبعدها اكتب الكود اللي يطلع.</p>
+          <p><code id="tsecret" dir="ltr" style="font-size:16px;letter-spacing:1px"></code> <a id="turi" class="btn sm secondary" href="#">افتحه في التطبيق</a></p>
+          <label for="tcode">الكود من 6 أرقام</label><input type="text" id="tcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" dir="ltr">
+          <div class="bar" style="margin-top:12px"><button class="btn primary" type="button" id="tconfirm">فعّل</button></div>
+        </div>
+        <div id="tcodes" hidden>
+          <p><b>كودات الاسترداد.</b> احفظها الحين، ما تنعرض مرة ثانية. كل كود يشتغل مرة وحدة.</p>
+          <pre id="tcodelist" dir="ltr" style="margin:0"></pre>
+        </div>
+        <div id="toff" hidden>
+          <label for="tcur">الباسوورد الحالي</label><input type="password" id="tcur" autocomplete="current-password">
+          <label for="tcode2">الكود (أو كود استرداد)</label><input type="text" id="tcode2" inputmode="numeric" maxlength="11" dir="ltr">
+          <div class="bar" style="margin-top:12px"><button class="btn secondary" type="button" id="tdisable">طفّه</button></div>
+        </div>
+        <div class="bar" style="margin-top:12px"><button class="btn primary" type="button" id="ton" hidden>فعّل التحقق بخطوتين</button></div>
+        <div class="msg" id="tmsg" role="status"></div>
+      </section>
     </main>
   </div>
 </div>
