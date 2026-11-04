@@ -1,0 +1,67 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import { STUDIO_SIZES, SCENES } from './studio';
+// التصميم ← الاستوديو: صورة المنتج (من سلة أو رفع) في مشهد جديد، والنص طبقة مسطحة فوقها (docs/prd-davinci.md، المرحلة D).
+---
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F2F0E3">
+<title>استوديو المنتج · Hoven</title>
+<link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<ClientRouter />
+<style is:global>
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1000px){.st-grid{grid-template-columns:1fr}}
+.st-two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.st-prev{display:grid;gap:10px;justify-items:center}
+.st-prev canvas{max-width:100%;max-height:70vh;border-radius:var(--r-sm);background:var(--tint)}
+.st-note{font-size:13px;padding:8px 12px;border-radius:12px;background:var(--tint);margin-top:8px}
+.st-prompt{white-space:pre-wrap;font-size:12px;color:var(--muted);direction:ltr;text-align:left}
+</style>
+</head>
+<body data-page="studio" data-module>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="القائمة" transition:persist="side"></aside>
+  <div class="scrim"></div>
+  <div class="main">
+    <header class="topbar" id="top"></header>
+    <main class="content" id="content">
+      <p class="muted" style="margin:0 0 14px">المنتج يبقى نفس صورته بالضبط، والمشهد حوله جديد كل مرة، والنص طبقة مسطحة فوق الصورة (بدون بوكس ولا ظل ولا تدرج) بألوان الهوية. الصورة نفسها ما فيها أي كلام.</p>
+      <div class="st-grid">
+        <section class="card pad">
+          <form id="sf" novalidate>
+            <label for="url">رابط صورة المنتج من سلة <span class="muted">(cdn.salla.sa)</span></label><input type="url" id="url" dir="ltr" placeholder="https://cdn.salla.sa/…">
+            <label for="file">أو ارفع صورة المنتج</label><input type="file" id="file" accept="image/jpeg,image/png">
+            <div class="st-two">
+              <div><label for="size">المقاس</label><select id="size">{Object.entries(STUDIO_SIZES).map(([k, v]) => <option value={k}>{v.ar}</option>)}</select></div>
+              <div><label for="scene">المشهد</label><select id="scene">{Object.entries(SCENES).map(([k, v]) => <option value={k}>{v[0]}</option>)}</select></div>
+            </div>
+            <label for="title">العنوان</label><input type="text" id="title" maxlength="80">
+            <label for="sub">سطر ثاني <span class="muted">(مشكلة ← حل)</span></label><input type="text" id="sub" maxlength="120">
+            <div class="st-two">
+              <div><label for="cta">الدعوة</label><input type="text" id="cta" maxlength="40"></div>
+              <div><label for="tone">لون النص</label><select id="tone"><option value="dark">أسود</option><option value="light">أبيض</option><option value="navy">كحلي</option><option value="green">أخضر غامق</option></select></div>
+            </div>
+            <label for="note">ملاحظة على المشهد <span class="muted">(اختياري)</span></label><input type="text" id="note" maxlength="200">
+            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit" id="go">جهّز</button><button class="btn secondary" type="button" id="dl" disabled>حمّل PNG</button></div>
+            <div class="msg" id="msg" role="status"></div>
+          </form>
+        </section>
+        <section class="card pad st-prev">
+          <canvas id="cv" width="540" height="675" aria-label="معاينة"></canvas>
+          <div id="notes" style="width:100%"></div>
+          <details style="width:100%"><summary class="muted">برومبت المشهد</summary><p class="st-prompt" id="prompt"></p></details>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+<script is:inline type="module" src="/assets/router.js"></script>
+</body>
+</html>
