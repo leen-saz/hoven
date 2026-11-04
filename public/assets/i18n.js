@@ -1,5 +1,6 @@
 // اللغة: عربي (الافتراضي) أو إنجليزي. نفس المفتاح اللي تستخدمه اللوحات (hoven-lang)، فالاختيار يمشي على كل الموقع.
 // الترجمة تمسك النصوص الظاهرة والـplaceholder والـaria-label والـtooltip تلقائياً، حتى اللي ينرسم بعدين.
+import { EXTRA } from './i18n-hoven.js';
 export const LANG = (() => {
   const q = new URLSearchParams(location.search).get('lang');
   if (q === 'en' || q === 'ar') { try { localStorage.setItem('hoven-lang', q); } catch {} return q; }
@@ -508,6 +509,9 @@ const EN = {
   'اكتب وش التعديل المطلوب': 'Write what should change', 'انحسمت من قبل': 'Already decided', 'ما قدرت أقرأ المستخدمين': 'Couldn\'t read users',
   'مستخدم غير معروف': 'Unknown user', 'ما انحفظ التعديل': 'Change not saved', 'هدف غير معروف': 'Unknown target', 'قيمة غير صحيحة': 'Invalid value', 'ما انحفظ الوضع': 'Mode not saved',
 };
+// Hoven additions (i18n-hoven.js): never replace a translation that is already here
+for (const [k, v] of Object.entries(EXTRA)) if (!(k in EN)) EN[k] = v;
+
 const PAT = [
   [/^يوفر ~(.+) ر\.س\/أسبوع$/, 'Saves ~$1 SAR/week'],
   [/^\+~(.+) ر\.س\/أسبوع صرف إضافي$/, '+~$1 SAR/week extra spend'],
