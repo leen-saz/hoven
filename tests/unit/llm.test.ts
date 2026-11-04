@@ -1,7 +1,7 @@
 // Text models: each tab's provider, Workers AI when the key is missing or the provider fails, the Responses API body,
 // and live search that never falls back.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULTS, aiFor, body, generate, grokSearch, openaiImage, pick, textOf } from '../../src/lib/llm';
+import { DEFAULTS, aiFor, body, canDraw, chatBody, chatText, drawImage, generate, grokSearch, openaiImage, openrouterImage, pick, textOf } from '../../src/lib/llm';
 import { AI_MODEL } from '../../src/modules/content/content';
 import { cleanSuggestion, suggestPrompt } from '../../src/modules/social/social';
 
@@ -104,5 +104,58 @@ describe('openaiImage with a product photo', () => {
     expect(url).toBe('https://api.openai.com/v1/images/edits');
     expect(form!.get('model')).toBe('gpt-image-2');
     expect(form!.get('image')).toBeInstanceOf(Blob);
+  });
+});
+
+describe('OpenRouter', () => {
+  const OR = { OPENROUTER_API_KEY: 'or-key', OPENAI_API_KEY: 'sk', XAI_API_KEY: 'x', AI };
+  it('wins for every tab; the model is per tab, else the shared one, else the router; slashes stay', () => {
+    expect(pick(OR, 'copy')).toEqual({ provider: 'openrouter', model: 'openrouter/auto' });
+    expect(pick(OR, 'social')?.provider).toBe('openrouter');
+    expect(pick({ ...OR, OPENROUTER_MODEL: 'vendor/shared:free' }, 'copy')?.model).toBe('vendor/shared:free');
+    expect(pick({ ...OR, OPENROUTER_MODEL: 'a/b', OPENROUTER_MODEL_COPY: 'x/copy-model' } as never, 'copy')?.model).toBe('x/copy-model');
+    expect(pick({ ...OR, OPENROUTER_MODEL: 'a/b' }, 'design')?.model).toBe('a/b');
+    expect(pick({ ...OR, OPENROUTER_MODEL: 'bad model!/x;y' }, 'copy')?.model).toBe('badmodel/xy');
+    expect(pick({ AI }, 'copy')?.provider).toBe('workers');                      // without the key nothing changes
+    expect(pick({ OPENAI_API_KEY: 'sk' }, 'copy')?.provider).toBe('openai');
+  });
+  it('builds a Chat Completions body and reads the answer', () => {
+    expect(chatBody('m/x', { messages: MSG, max_tokens: 50 })).toEqual({ model: 'm/x', messages: MSG, max_tokens: 50 });
+    expect(chatBody('m/x', { messages: MSG, max_tokens: 5, search: ['web', 'x'] })).toMatchObject({ plugins: [{ id: 'web' }] });
+    expect(chatText({ choices: [{ message: { content: 'نص' } }] })).toBe('نص');
+    expect(chatText({ choices: [{ message: { content: [{ type: 'text', text: 'أ' }, { type: 'text', text: 'ب' }] } }] })).toBe('أب');
+    expect(chatText(null)).toBe('');
+  });
+  it('generate calls openrouter.ai with the key and says which engine wrote it', async () => {
+    const f = vi.fn(async () => ok({ choices: [{ message: { content: 'من OpenRouter' } }] }));
+    const out = await generate({ ...OR, OPENROUTER_MODEL: 'v/m' }, 'content', { messages: MSG, max_tokens: 10 }, f as unknown as typeof fetch);
+    expect(out).toEqual({ response: 'من OpenRouter', engine: 'openrouter', model: 'v/m' });
+    const [url, init] = f.mock.calls[0] as unknown as [string, { headers: Record<string, string>; body: string }];
+    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(init.headers.authorization).toBe('Bearer or-key');
+    expect(JSON.parse(init.body)).toMatchObject({ model: 'v/m', max_tokens: 10 });
+  });
+  it('falls back to Workers AI when OpenRouter fails', async () => {
+    const f = vi.fn(async () => new Response('x', { status: 500 }));
+    const out = await generate(OR, 'copy', { messages: MSG, max_tokens: 10 }, f as unknown as typeof fetch);
+    expect(out.engine).toBe('workers');
+  });
+  it('images: one call with the product as an input reference, sized by the ratio; null on failure', async () => {
+    const f = vi.fn(async () => ok({ data: [{ b64_json: 'QUJD', media_type: 'image/png' }] }));
+    const img = await openrouterImage({ OPENROUTER_API_KEY: 'k', OPENROUTER_IMAGE_MODEL: 'v/img' }, 'p', f as unknown as typeof fetch, { bytes: new Uint8Array([1, 2, 3]), mime: 'image/webp' }, '1536x1024');
+    expect(img).toBe('data:image/png;base64,QUJD');
+    const [url, init] = f.mock.calls[0] as unknown as [string, { body: string }];
+    expect(url).toBe('https://openrouter.ai/api/v1/images');
+    const b = JSON.parse(init.body);
+    expect(b).toMatchObject({ model: 'v/img', aspect_ratio: '3:2', n: 1 });
+    expect(b.input_references[0].image_url.url).toBe('data:image/webp;base64,AQID');
+    expect(await openrouterImage({ OPENROUTER_API_KEY: 'k' }, 'p', (async () => new Response('', { status: 500 })) as unknown as typeof fetch)).toBeNull();
+    expect(await openrouterImage({}, 'p')).toBeNull();
+  });
+  it('drawImage prefers OpenRouter, then OpenAI, and canDraw says whether any is set', async () => {
+    expect(canDraw({})).toBe(false); expect(canDraw({ OPENAI_API_KEY: 'k' })).toBe(true); expect(canDraw({ OPENROUTER_API_KEY: 'k' })).toBe(true);
+    const f = vi.fn(async () => ok({ data: [{ b64_json: 'QQ==' }] }));
+    await drawImage({ OPENROUTER_API_KEY: 'k', OPENAI_API_KEY: 'k' }, 'p', f as unknown as typeof fetch);
+    expect((f.mock.calls[0] as unknown as [string])[0]).toContain('openrouter.ai');
   });
 });

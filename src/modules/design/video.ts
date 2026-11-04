@@ -53,7 +53,7 @@ async function plan(e: VEnv, cfg: Cfg, co: string, messages: Msg[], seconds: num
 
 export const videos = { GET: handle(async (request, e: VEnv) => {
   const { cfg, user } = await requireUser(request, e, 'design');
-  const base = { ready: !!e.OPENAI_API_KEY, canEdit: atLeast(user, 'design', 'edit', cfg), canApprove: atLeast(user, 'design', 'approve', cfg), ratios: RATIOS, anims: ANIMS };
+  const base = { ready: pick(e, 'motion')?.provider === 'openrouter' || pick(e, 'motion')?.provider === 'openai', canEdit: atLeast(user, 'design', 'edit', cfg), canApprove: atLeast(user, 'design', 'approve', cfg), ratios: RATIOS, anims: ANIMS };
   const id = new URL(request.url).searchParams.get('id');
   if (id) {
     const p = await projectOf(cfg, user.co, id);
@@ -138,7 +138,7 @@ export const videoedit = { POST: handle(async (request, e: VEnv) => {
   const b = await readJson(request);
   const change = String(b.change || '').trim().slice(0, 600);
   if (!change) return json(400, { error: 'اكتب وش تبي تغيّر' });
-  if (!pick(e, 'motion') || !e.OPENAI_API_KEY) return json(503, { error: notEnabled(user, 'تعديل الفيديو', 'OPENAI_API_KEY') });
+  if (!['openrouter', 'openai'].includes(pick(e, 'motion')?.provider ?? '')) return json(503, { error: notEnabled(user, 'تعديل الفيديو', 'OPENROUTER_API_KEY') });
   const p = await projectOf(cfg, user.co, b.id);
   if (!p) return json(404, { error: 'الفيديو مو موجود' });
   const all = await versionsOf(cfg, user.co, p.id);

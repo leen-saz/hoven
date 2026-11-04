@@ -101,6 +101,20 @@ describe('route', () => {
     expect(calls.some(c => c.includes('cdn.salla.sa'))).toBe(true);
     expect(calls.some(c => c.includes('/v1/images/edits'))).toBe(true);
   });
+  it('with only the OpenRouter key it draws through OpenRouter', async () => {
+    const calls: string[] = [];
+    const withOr = { ...E, OPENROUTER_API_KEY: 'k' };
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      calls.push(url);
+      if (url.includes('/profiles?id=eq.')) return new Response(JSON.stringify([owner]));
+      if (url.includes('openrouter.ai')) return new Response(JSON.stringify({ data: [{ b64_json: 'QUJD' }] }));
+      void init; return new Response('[]');
+    }));
+    const r = await (await ROUTES.design.studio.POST!(await req({ size: 'feed' }), withOr)).json() as { image: string; reason: null };
+    expect(r.image).toMatch(/^data:image\/jpeg;base64,/);
+    expect(calls.some(c => c.includes('openrouter.ai/api/v1/images'))).toBe(true);
+    expect(calls.some(c => c.includes('api.openai.com'))).toBe(false);
+  });
   it('refuses a product link that is not Salla\'s, and fetches nothing', async () => {
     const calls: string[] = []; stub(calls);
     const r = await ROUTES.design.studio.POST!(await req({ product_url: 'http://169.254.169.254/latest' }), E);

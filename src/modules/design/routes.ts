@@ -2,7 +2,7 @@
 import { sb, json, readJson, handle, requireUser, audit, type Cfg } from '../../lib/auth';
 import { scoped } from '../../lib/tenant';
 import { type AiRun } from '../content/content';
-import { generate, openaiImage, pick, type LlmEnv } from '../../lib/llm';
+import { generate, drawImage, canDraw, pick, type LlmEnv } from '../../lib/llm';
 import { knowledgeFor, withKnowledge, loadKnowledge, forbiddenRules } from '../knowledge/knowledge';
 import { brandFor, serveFile } from '../knowledge/brand';
 import { STUDIO_SIZES, SCENES, TEXT_COLORS, scenePrompt, overlaySpec, fetchSallaImage, type StudioSize, type Scene, type Tone } from './studio';
@@ -66,7 +66,7 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   // ChatGPT draws the picture (OpenAI Images, PAID per image) while the text is written: the product photo put in a
   // new scene when one is given, else a new background
   const hd = productPhoto(b.product);
-  const drawing = e.OPENAI_API_KEY ? openaiImage(e, backgroundPrompt(input, brand.colors, style, !!hd), fetch, hd ?? undefined) : Promise.resolve(null);
+  const drawing = canDraw(e) ? drawImage(e, backgroundPrompt(input, brand.colors, style, !!hd), fetch, hd ?? undefined) : Promise.resolve(null);
   if (pick(e, 'design')) {
     try {
       const out = await generate(e, 'design', { messages: withKnowledge([{ role: 'user', content: prompt(input, ref.hooks, looks) }], await knowledgeFor(cfg, user.co, 'design')), max_tokens: 700 });
@@ -83,7 +83,7 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
 export { videos, videofile, video, videoedit, videoapprove } from './video';
 
 // «الاستوديو»: the product photo (Salla CDN link or an upload) in a new scene by the Hoven rules, and where the flat text goes.
-// The picture needs the image model (OPENAI_API_KEY, paid per image); without it the page still lays the text on a photo you give it.
+// The picture needs the image model (OPENROUTER_API_KEY, or OPENAI_API_KEY; paid per image); without it the page still lays the text on a photo you give it.
 export const studio = { POST: handle(async (request, e: AiEnv & Parameters<typeof requireUser>[1]) => {
   const { cfg, user } = await requireUser(request, e, 'design', { write: true });
   const b = await readJson(request, 3_200_000);
@@ -99,7 +99,7 @@ export const studio = { POST: handle(async (request, e: AiEnv & Parameters<typeo
   } else photo = productPhoto(b.product);
   const prompt = scenePrompt(scene, size, !!photo, String(b.note || ''));
   const notes = check([text.title, text.sub, text.cta].filter(Boolean).join('\n'), forbiddenRules(await loadKnowledge(cfg, user.co))).map(notice);
-  const image = e.OPENAI_API_KEY ? await openaiImage(e, prompt, fetch, photo ?? undefined, STUDIO_SIZES[size].image) : null;
+  const image = canDraw(e) ? await drawImage(e, prompt, fetch, photo ?? undefined, STUDIO_SIZES[size].image) : null;
   await audit(cfg, user, 'design_studio', { target: { size, scene, product: photo ? 'photo' : 'none', image: !!image } });
-  return json(200, { image, reason: image ? null : e.OPENAI_API_KEY ? 'image_failed' : 'no_image_model', prompt, overlay: overlaySpec(size, tone), text, notes });
+  return json(200, { image, reason: image ? null : canDraw(e) ? 'image_failed' : 'no_image_model', prompt, overlay: overlaySpec(size, tone), text, notes });
 }) };
