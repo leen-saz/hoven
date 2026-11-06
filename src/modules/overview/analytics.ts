@@ -115,18 +115,19 @@ export function depts(d: Dash, from: string, to: string): Dept[] {
 export type CrmBy = 'lead' | 'paid';
 export interface Outcome {
   spend: number; impr: number; clicks: number; leads: number; conv: number;
-  crm: boolean; crmLeads: number; booked: number; value: number; closings: number; paid: number;
+  crm: boolean; crmLinked: boolean; crmLeads: number; booked: number; value: number; closings: number; paid: number;
   cpm: number | null; cpc: number | null; ctr: number | null; cpl: number | null; clickToResult: number | null;
   closeRate: number | null; roas: number | null; mer: number | null; cac: number | null;
 }
 type CrmData = { rows?: unknown[][]; paid_all?: unknown[][] };
 const ratio = (a: number, b: number): number | null => (b ? a / b : null);
 
-export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead'): Outcome {
+// plat: one platform only (the funnel's filter). The CRM's paid_all has no ad, so then closings and paid are the ad-linked ones.
+export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead', plat?: string): Outcome {
   let spend = 0, impr = 0, clicks = 0, leads = 0, conv = 0, ls = 0, ln = 0;
   for (const r of d.rows ?? []) {
     const day = String(r[1]);
-    if (day < from || day > to || !d.ads?.[String(r[0])]) continue;
+    if (day < from || day > to || !d.ads?.[String(r[0])] || (plat && d.ads[String(r[0])]!.platform !== plat)) continue;
     const s = num(r[2]), l = num(r[5]);
     spend += s; impr += num(r[3]); clicks += num(r[4]); leads += l; conv += num(r[6]);
     if (d.ads[String(r[0])]!.goal === 'lead') { ls += s; ln += l; }
@@ -134,21 +135,50 @@ export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead'): 
   const crmData = (d as { crm?: CrmData }).crm;
   let crmLeads = 0, booked = 0, value = 0, closings = 0, paid = 0;
   for (const [k, leadDay, paidDay, isPaid, amount] of (crmData?.rows ?? []) as [string, string, string, unknown, number][]) {
-    if (!d.ads?.[k]) continue;
+    if (!d.ads?.[k] || (plat && d.ads[k]!.platform !== plat)) continue;
     if (leadDay >= from && leadDay <= to) crmLeads++;
     const day = by === 'paid' ? paidDay : leadDay;
     if (isPaid && day && day >= from && day <= to) { booked++; value += num(amount); }
   }
-  for (const [leadDay, paidDay, amount] of (crmData?.paid_all ?? []) as [string, string, number][]) {
+  for (const [leadDay, paidDay, amount] of (plat ? [] : crmData?.paid_all ?? []) as [string, string, number][]) {
     const day = by === 'paid' ? paidDay : leadDay;
     if (day && day >= from && day <= to) { closings++; paid += num(amount); }
   }
+  if (plat) { closings = booked; paid = value; }
   return {
-    spend, impr, clicks, leads, conv, crm: !!crmData?.paid_all, crmLeads, booked, value, closings, paid,
+    spend, impr, clicks, leads, conv, crm: !plat && !!crmData?.paid_all, crmLinked: !!crmData, crmLeads, booked, value, closings, paid,
     cpm: impr ? (1000 * spend) / impr : null, cpc: ratio(spend, clicks), ctr: impr ? (100 * clicks) / impr : null, cpl: ratio(ls, ln),
     clickToResult: clicks ? (100 * (leads + conv)) / clicks : null, closeRate: crmLeads ? (100 * booked) / crmLeads : null,
     roas: spend && value ? value / spend : null, mer: ratio(paid, spend), cac: ratio(spend, closings),
   };
+}
+
+// The customer journey as the main dashboard draws it (pipeline/dash/05-render.js): four layers, each narrower than the
+// one above, the rate that carries people down between layers, the cost beside each. The sale layer always shows: with
+// no CRM block its numbers are null ("—") and noCrm says why. Values: [label, now, kind] where kind picks the format.
+export type Fmt = 'qty' | 'sar' | 'pct' | 'x';
+export type JStat = { label: string; key: keyof Outcome | null; now: number | null; fmt: Fmt; lowerIsBetter: boolean };
+export interface JStage { n: string; hint: string; width: number; colour: string; main: JStat; sub: JStat[]; rate?: JStat }
+export const FUNNEL_WIDTHS = [100, 84, 68, 52];
+export const FUNNEL_COLOURS = ['#7C8CFF', '#8B6CFF', '#294036', '#5B36D6'];
+export const NO_CRM = 'مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الإقفالات هنا.';
+
+export function journey(a: Outcome): { stages: JStage[]; noCrm: string | null } {
+  const st = (label: string, key: keyof Outcome, fmt: Fmt, lowerIsBetter = false, on = true): JStat =>
+    ({ label, key: on ? key : null, now: on ? (a[key] as number | null) : null, fmt, lowerIsBetter });
+  const linked = a.crmLinked;
+  const raw: Omit<JStage, 'width' | 'colour'>[] = [
+    { n: 'الوعي', hint: 'كم شخص شاف الإعلان', main: st('الظهور', 'impr', 'qty'), sub: [st('تكلفة الألف ظهور', 'cpm', 'sar', true)] },
+    { n: 'الاهتمام', hint: 'كم واحد ضغط', main: st('نقرات الرابط والسوايب', 'clicks', 'qty'), sub: [st('تكلفة النقرة', 'cpc', 'sar', true)], rate: st('نسبة النقر', 'ctr', 'pct') },
+    { n: 'التحويل', hint: 'كم واحد ترك بياناته أو راسلنا', main: st('الطلبات', 'leads', 'qty'),
+      sub: [st('تكلفة الطلب', 'cpl', 'sar', true), st('محادثات واتساب وماسنجر', 'conv', 'qty')], rate: st('من نقرة إلى طلب أو محادثة', 'clickToResult', 'pct') },
+    { n: 'البيع', hint: linked ? 'كم واحد دفع' : 'نظام العملاء مو موصول بهالأرقام',
+      // Same as the main dashboard: every paid closing in the CRM, or the ad-linked ones when that list is missing
+      main: st('إقفالات مدفوعة', a.crm ? 'closings' : 'booked', 'qty', false, linked),
+      sub: [st('إقفالات من الإعلانات', 'booked', 'qty', false, linked), st('العائد من الإعلانات', 'roas', 'x', false, linked), st('تكلفة العميل', 'cac', 'sar', true, linked)],
+      rate: st('من طلب إلى إقفالة', 'closeRate', 'pct', false, linked) },
+  ];
+  return { stages: raw.map((s, i) => ({ ...s, width: FUNNEL_WIDTHS[i]!, colour: FUNNEL_COLOURS[i]! })), noCrm: linked ? null : NO_CRM };
 }
 
 // ---- Wins of the period against the one before it (template.html renderWins). "New winning ads" stays out: the main

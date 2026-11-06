@@ -1,9 +1,20 @@
 // /api/design/brief: brief + headline variants from our best ads, and a ChatGPT background when no photo is given. Writes nothing.
+<<<<<<< well
+// /api/design/videos|videofile|video|videoedit|videoapprove: the «موشن جرافيك» type (motion projects and their versions).
+import { json, readJson, handle, requireUser } from '../../lib/auth';
+=======
 import { sb, json, readJson, handle, requireUser, audit, type Cfg } from '../../lib/auth';
+>>>>>>> hoven
 import { scoped } from '../../lib/tenant';
+import { readAll } from '../../lib/paging';
 import { type AiRun } from '../content/content';
 import { generate, openaiImage, pick, type LlmEnv } from '../../lib/llm';
+<<<<<<< well
+import { usageCtx } from '../../lib/usage';
+import { knowledgeFor, withKnowledge } from '../knowledge/knowledge';
+=======
 import { knowledgeFor, withKnowledge, loadKnowledge, forbiddenRules } from '../knowledge/knowledge';
+>>>>>>> hoven
 import { brandFor, serveFile } from '../knowledge/brand';
 import { STUDIO_SIZES, SCENES, TEXT_COLORS, scenePrompt, overlaySpec, fetchSallaImage, type StudioSize, type Scene, type Tone } from './studio';
 import { check, notice } from '../compliance/compliance';
@@ -12,17 +23,6 @@ import { guard, meter } from '../../lib/usage';
 
 // Vision stays on Workers AI (free); the copy is written by OpenAI when OPENAI_API_KEY is set (src/lib/llm.ts)
 type AiEnv = Omit<LlmEnv, 'AI'> & { AI?: { run: AiRun & ((model: string, input: { image: number[]; prompt: string; max_tokens: number }) => Promise<unknown>) } };
-
-async function pages<T>(cfg: Cfg, path: string, max = 8): Promise<T[]> {
-  const out: T[] = [];
-  for (let i = 0; i < max; i++) {
-    const r = await sb<T[]>(cfg, path, { admin: true, headers: { 'Range-Unit': 'items', Range: `${i * 1000}-${i * 1000 + 999}` } });
-    if (!r.ok || !Array.isArray(r.data)) break;
-    out.push(...r.data);
-    if (r.data.length < 1000) break;
-  }
-  return out;
-}
 
 // The company's active brand (المعرفة ← الهوية والبصريات) comes with the options, so the page uses it without uploads
 export const options = { GET: handle(async (request, e) => {
@@ -44,10 +44,10 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   const input = { type: String(b.type || 'ad'), offer: String(b.offer || '').slice(0, 200), audience: String(b.audience || '').slice(0, 200), dept: String(b.dept || '').slice(0, 60) };
   const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
   const [ads, metrics] = await Promise.all([
-    pages<AdIn>(cfg, scoped('/rest/v1/ads?select=ad_key,platform,name,format,goal,text:doc->>text&goal=eq.lead', user.co), 3),
-    pages<MetIn>(cfg, `/rest/v1/ad_metrics?select=ad_key,spend,leads,clicks,impressions&day=gte.${since}`),
+    readAll<AdIn>(cfg, scoped('/rest/v1/ads?select=ad_key,platform,name,format,goal,text:doc->>text&goal=eq.lead', user.co), 'ad_key.asc', 3),
+    readAll<MetIn>(cfg, `/rest/v1/ad_metrics?select=ad_key,spend,leads,clicks,impressions&day=gte.${since}`, 'ad_key.asc,day.asc', 8),
   ]);
-  const ref = winners(ads, metrics);
+  const ref = winners(ads.rows, metrics.rows);
   let variants = templates(input.offer, input.audience), engine = 'templates', style = '';
   // Product photo and references: described by Workers AI vision, then used by the copy model. Not stored anywhere.
   const pics = images(b.images), looks = { product: [] as string[], refs: [] as string[] };
@@ -61,7 +61,7 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   if (!looks.refs.length) looks.refs.push(...brand.notes);
   if (brand.colors.length) looks.refs.push(`ألوان العلامة: ${brand.colors.join(' ')}`);
   if (pick(e, 'design') && (looks.product.length || looks.refs.length)) {
-    try { style = (await generate(e, 'design', { messages: [{ role: 'user', content: stylePrompt(looks) }], max_tokens: 160 })).response.trim().slice(0, 400); } catch { /* notes are optional */ }
+    try { style = (await generate(e, 'design', { messages: [{ role: 'user', content: stylePrompt(looks) }], max_tokens: 160 }, fetch, usageCtx(cfg, user))).response.trim().slice(0, 400); } catch { /* notes are optional */ }
   }
   // ChatGPT draws the picture (OpenAI Images, PAID per image) while the text is written: the product photo put in a
   // new scene when one is given, else a new background
@@ -69,7 +69,7 @@ export const brief = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   const drawing = e.OPENAI_API_KEY ? openaiImage(e, backgroundPrompt(input, brand.colors, style, !!hd), fetch, hd ?? undefined) : Promise.resolve(null);
   if (pick(e, 'design')) {
     try {
-      const out = await generate(e, 'design', { messages: withKnowledge([{ role: 'user', content: prompt(input, ref.hooks, looks) }], await knowledgeFor(cfg, user.co, 'design')), max_tokens: 700 });
+      const out = await generate(e, 'design', { messages: withKnowledge([{ role: 'user', content: prompt(input, ref.hooks, looks) }], await knowledgeFor(cfg, user.co, 'design')), max_tokens: 700 }, fetch, usageCtx(cfg, user));
       // parseVariants keeps only well-formed variants (length-capped, compliance-flagged) and falls back to the templates
       const got = variantsFrom(out.response);
       if (got.length) { variants = got; engine = out.engine === 'workers' ? 'workers-ai' : out.engine; }

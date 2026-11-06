@@ -1,6 +1,6 @@
 // Email + password via Supabase Auth, session in an HMAC-signed cookie. Web Crypto only.
 
-import { companyOf } from './tenant';
+import { companyOf, WELL_COMPANY } from './tenant';
 import { MODULES, LIVE, isModule } from '../modules/registry';
 
 export const SESSION = '__Host-hoven_session';
@@ -15,6 +15,9 @@ export const PASSWORD_MIN = 10;
 export const LOCKED = 'هالموديول مقفل لشركتك';
 export const VIEW_ONLY = 'صلاحيتك هنا مشاهدة بس';
 export const NO_APPROVE = 'الموافقة تحتاج صلاحية موافقة';
+// Control (decisions, learning) and Connectors (ad-platform keys in the Vault) have no company column yet (ADR-0006):
+// they are Hoven's alone, so another company's users are refused instead of reading or overwriting Hoven's data.
+export const WELL_ONLY = 'هالقسم مو متاح لشركتك للحين';
 
 export type Dashboard = string;
 // Per dashboard/module: view < edit < approve. Owners have approve everywhere.
@@ -212,6 +215,10 @@ export async function loadProfile(cfg: Cfg, uid: string): Promise<Profile | null
   return plain.ok && Array.isArray(plain.data) ? plain.data[0] || null : null;
 }
 
+// What a visitor typed in the email box, for the audit log: only something shaped like an email and of sane length.
+// People type passwords there, and anyone without a session can write these rows, so nothing else is stored.
+export const auditEmail = (v: unknown): string | null => { const s = String(v ?? '').trim().toLowerCase(); return s.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s) ? s : null; };
+
 type Who = { uid?: string; id?: string | undefined; email?: string | undefined; co?: string } | null;
 export async function audit(cfg: Cfg, user: Who, action: string, fields: Record<string, unknown> = {}): Promise<void> {
   await sb(cfg, '/rest/v1/audit_log', {
@@ -248,7 +255,7 @@ export async function readJson(request: Request, limit = 20000): Promise<Record<
 }
 
 // For the API: cookie + permissions re-read from the DB every time (the source of truth). Throws a Response on refusal.
-export async function requireUser(request: Request, e: AuthEnv, need: Need, { write = false, approve = false } = {}): Promise<{ cfg: Cfg; user: Session }> {
+export async function requireUser(request: Request, e: AuthEnv, need: Need, { write = false, approve = false, well = false } = {}): Promise<{ cfg: Cfg; user: Session }> {
   let cfg: Cfg;
   try { cfg = env(e); } catch { throw json(503, { error: 'الإعداد غير مكتمل' }); }
   if (write && !sameOrigin(request)) throw json(403, { error: 'طلب مرفوض' });
@@ -258,6 +265,7 @@ export async function requireUser(request: Request, e: AuthEnv, need: Need, { wr
   if (!profile || profile.active === false) throw json(401, { error: 'الحساب موقوف' }, { 'set-cookie': clearCookie() });
   const user = sessionFor(profile, cfg);
   if (locked(user, need)) throw json(403, { error: LOCKED });
+  if (well && user.co !== WELL_COMPANY) throw json(403, { error: WELL_ONLY });
   if (!can(user, need, cfg)) throw json(403, { error: 'ما عندك صلاحية' });
   // Writes need edit and approvals need approve on that dashboard (owner/any/media checks stay as they are)
   if (need in DASHBOARDS && approve && !atLeast(user, need, 'approve', cfg)) throw json(403, { error: NO_APPROVE });
@@ -270,6 +278,9 @@ export type Handler = (request: Request, e: AuthEnv) => Response | Promise<Respo
 export const handle = (fn: Handler): Handler => async (request, e) => {
   try { return await fn(request, e); } catch (err) {
     if (err instanceof Response) return err;
+    // A body that is not JSON, or too large, is the caller's mistake: say so, not "server error"
+    if (err instanceof SyntaxError) return json(400, { error: 'الطلب مو مكتوب صح' });
+    if (err instanceof Error && err.message === 'too large') return json(413, { error: 'الطلب كبير' });
     console.error(err);
     return json(500, { error: 'صار خطأ، جرّب مرة ثانية' });
   }
