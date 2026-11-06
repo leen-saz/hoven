@@ -143,12 +143,23 @@ function renderKpis(now,prev){
     {n:'الاهتمام', hint:'كم واحد ضغط', main:kpi('نقرات الرابط والسوايب',fmt(a.clicks),'',delta(a.clicks,b.clicks,false),'main'),
      sub:[kpi('تكلفة النقرة',sar(a.cpc),money(),delta(a.cpc,b.cpc,true),'sub')],
      rate:kpi('نسبة النقر',pct(a.ctr),'',delta(a.ctr,b.ctr,false),'rate')},
+<<<<<<< well
+    {n:'التحويل', hint:'كم واحد ترك بياناته أو راسلنا', main:kpi('الليدز',qty(a.leads),'',delta(a.leads,b.leads,false),'main'),
+     sub:[kpi('تكلفة الليد',sar(a.cpl),money(),delta(a.cpl,b.cpl,true),'sub'), kpi('محادثات واتساب وماسنجر',fmt(a.conv),'',delta(a.conv,b.conv,false),'sub')],
+     rate:kpi('من نقرة إلى ليد',pct(clickToLead),'',delta(clickToLead,clickToLeadB,false),'rate')},
+    // The sale stage always shows: with no CRM block in the data its numbers are "—" and the note says why
+    {n:'البيع', hint:D.crm?'كم واحد دفع':'نظام العملاء مو موصول بهالأرقام',
+     main:kpi('اقفالات مدفوعة',D.crm?fmt(crm?allN:(a.booked||0)):'—','',D.crm?delta(crm?allN:a.booked,crm?b.allPaidN:b.booked,false):'','main'),
+     sub:[kpi('اقفالات من الإعلانات',D.crm?fmt(a.booked||0):'—','',D.crm?delta(a.booked,b.booked,false):'','sub'), kpi('العائد من الإعلانات',!D.crm||a.roas==null?'—':fmt(a.roas,2)+'×','',D.crm?delta(a.roas,b.roas,false):'','sub')],
+     rate:kpi('من ليد إلى اقفالة',D.crm?pct(leadToSale):'—','',D.crm?delta(leadToSale,leadToSaleB,false):'','rate')},
+=======
     {n:'التحويل', hint:'كم واحد اشترى', main:kpi('الطلبات',qty(a.leads),'',delta(a.leads,b.leads,false),'main'),
      sub:[kpi('تكلفة الطلب',sar(a.cpl),money(),delta(a.cpl,b.cpl,true),'sub'), kpi('الإيراد (ر.س)',sar(a.conv),money(),delta(a.conv,b.conv,false),'sub')],
      rate:kpi('من نقرة إلى طلب',pct(clickToLead),'',delta(clickToLead,clickToLeadB,false),'rate')},
     ...(D.crm ? [{n:'البيع', hint:'كم واحد دفع', main:kpi('اقفالات مدفوعة',fmt(crm?allN:(a.booked||0)),'',delta(crm?allN:a.booked,crm?b.allPaidN:b.booked,false),'main'),
      sub:[kpi('اقفالات من الإعلانات',fmt(a.booked||0),'',delta(a.booked,b.booked,false),'sub'), kpi('العائد من الإعلانات',a.roas==null?'—':fmt(a.roas,2)+'×','',delta(a.roas,b.roas,false),'sub')],
      rate:kpi('من طلب إلى اقفالة',pct(leadToSale),'',delta(leadToSale,leadToSaleB,false),'rate')}] : []),
+>>>>>>> hoven
   ];
   // A real funnel: each layer narrower than the one above; stage name on one side, its cost on the other, the rate between layers
   const widths = [100, 84, 68, 52];
@@ -159,7 +170,8 @@ function renderKpis(now,prev){
   $('#kpis').innerHTML =
     `<div class="kgroup"><div class="khead"><h3>النتيجة</h3>${toggle}</div><div class="kpis kout">${outcome}</div>`
     + (crm ? `<p class="knote">${tr('الاقفالات والمدفوع من كل المصادر في نظام العملاء (مدفوعات ميسّر). العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الاقفالات.')}</p>` : '') + `</div>`
-    + `<div class="kgroup"><div class="khead"><h3>رحلة العميل</h3></div><div class="ffun">${funnel}</div></div>`;
+    + `<div class="kgroup"><div class="khead"><h3>رحلة العميل</h3></div><div class="ffun">${funnel}</div>`
+    + (D.crm ? '' : `<p class="knote">${tr('مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الاقفالات هنا.')}</p>`) + `</div>`;
 }
 
 function noteCard(title, line, alert){

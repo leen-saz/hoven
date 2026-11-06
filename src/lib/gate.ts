@@ -1,5 +1,6 @@
 // only the dashboards Leen picked. Returns a Response (redirect / refusal) or a pass decision.
-import { env, verify, readCookie, SESSION, can, home, html, json, type AuthEnv, type Cfg, type Need, locked, LOCKED } from './auth';
+import { env, verify, readCookie, SESSION, can, home, html, json, type AuthEnv, type Cfg, type Need, locked, LOCKED, WELL_ONLY } from './auth';
+import { WELL_COMPANY } from './tenant';
 import { LIVE } from '../modules/registry';
 
 export type Pass = { pass: true; rewrite?: string };
@@ -18,16 +19,21 @@ export const HUBS: Record<string, [Need, string][]> = {
   review: [['control', '/control/'], ['compliance', '/compliance/'], ['maestro', '/maestro/']],
   system: [['connectors', '/connectors/'], ['knowledge', '/knowledge/'], ['debugger', '/debugger/']],
 };
+// What the pipeline builds and the control board and connectors keep is Hoven's alone (R2 pages and data, decisions, keys):
+// another company's users never reach it, whatever dashboards they hold.
+const WELL_NEEDS: Need[] = ['ceo', 'creative', 'control', 'connectors', 'media'];
 const HUB = /^\/(performance|create|review|system)\/?$/;
 // Short and earlier links of the same places
 const ALIAS: Record<string, string> = { '/analytics': '/', '/home': '/today/', '/start': '/today/', '/history': '/control/?tab=log', '/review/history': '/control/?tab=log', '/permissions': '/admin/',
-  // Motion video moved from Maestro to Design (a video's ?id= goes with it)
-  '/maestro/video': '/design/video/' };
+  // Motion graphics moved from Maestro into Design, then from /design/video/ into Design's type switch; ?id= rides along
+  '/maestro/video': '/design/?type=motion', '/design/video': '/design/?type=motion' };
 
 export function need(pathname: string, search: string): Need | null {
   if (PUBLIC.some(r => r.test(pathname))) return null;
   if (HUB.test(pathname) || ALIAS[pathname.replace(/\/$/, '')] || /^\/(api\/)?today(\/|$)/.test(pathname)) return 'any';
   if (/^\/(api\/)?admin(\/|$)/.test(pathname)) return 'owner';
+  // Data health (a sub-page of the Manager): the owner only
+  if (/^\/(api\/)?maestro\/(health|crm)(\/|$)/.test(pathname)) return 'owner';
   if (/^\/(api\/)?control(\/|$)/.test(pathname)) return 'control';
   if (/^\/(api\/)?connectors(\/|$)/.test(pathname)) return 'connectors';
   // Dashboard data: the route picks the user's copy (analytics, creative or their department)
@@ -38,6 +44,8 @@ export function need(pathname: string, search: string): Need | null {
   const mod = pathname.match(/^\/(?:api\/)?([a-z]+)(?:\/|$)/)?.[1];
   if (mod && LIVE.includes(mod)) return mod;
   if (/^\/(api\/)?account(\/|$)/.test(pathname)) return 'any';
+  // Web Vitals reports: every signed-in user sends them, not only those with analytics
+  if (/^\/api\/vitals\//.test(pathname)) return 'any';
   if (/^\/settings\/?$/.test(pathname)) return 'any';
   if (/^\/soon\/?$/.test(pathname)) return 'any';
   if (/^\/creative\/?$/.test(pathname)) return 'creative';
@@ -74,9 +82,14 @@ export async function gate(request: Request, e: AuthEnv): Promise<Decision> {
     return redirect(r.toString());
   }
   const alias = ALIAS[url.pathname.replace(/\/$/, '')];
-  if (alias) return redirect(new URL(alias.includes('?') ? alias : alias + url.search, url.origin).toString());
+  if (alias) {
+    const to = new URL(alias, url.origin);
+    url.searchParams.forEach((v, k) => { if (!to.searchParams.has(k)) to.searchParams.set(k, v); });
+    return redirect(to.toString());
+  }
   const hub = url.pathname.match(HUB)?.[1];
-  if (hub) return redirect(new URL(HUBS[hub]!.find(([k]) => can(s, k, cfg))?.[1] ?? '/today/', url.origin).toString());
+  if (hub) return redirect(new URL(HUBS[hub]!.find(([k]) => can(s, k, cfg) && (s.co === WELL_COMPANY || !WELL_NEEDS.includes(k)))?.[1] ?? '/today/', url.origin).toString());
+  if (s.co !== WELL_COMPANY && WELL_NEEDS.includes(want)) return api ? json(403, { error: WELL_ONLY }) : html(403, WELL_ONLY);
   // Images: any user with at least one dashboard
   if (want === 'media') return (s.dash || []).length || s.role === 'owner' ? { pass: true } : html(403, 'ما عندك صلاحية');
   if (locked(s, want)) return api ? json(403, { error: LOCKED }) : html(403, LOCKED);

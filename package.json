@@ -9,7 +9,14 @@
     "typecheck": "astro check && tsc --noEmit",
     "lint": "eslint .",
     "test:unit": "vitest run",
+<<<<<<< well
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test:parity": "playwright test",
+    "test:smoke": "playwright test --config playwright.smoke.config.ts",
+    "test:parity:update": "UPDATE_GOLDEN=1 playwright test --workers=1"
+=======
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests"
+>>>>>>> hoven
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.2.0",
