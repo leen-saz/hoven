@@ -6,7 +6,12 @@ import { gate } from './lib/gate';
 import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
+<<<<<<< well
+import { versionAssets } from './lib/assets';
+import { dispatchRefresh, type CronEnv } from './lib/cron';
+=======
 import { dispatchRefresh, UPSTREAM_URL, type CronEnv } from './lib/cron';
+>>>>>>> hoven
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
 import { runSocial } from './modules/social/cron';
 // Cloudflare Workflows: the class must be exported from the Worker entry
@@ -25,6 +30,11 @@ app.use(async (c, next) => {
   await next();
   c.res = withSecurityHeaders(c.res);
 });
+// Pages load our scripts and styles from their versioned, immutable copies
+app.use(async (c, next) => {
+  await next();
+  c.res = versionAssets(c.res);
+});
 app.use(async (c, next) => {
   if (REWRITTEN.has(c.req.raw)) return next();
   const d = await gate(c.req.raw, c.env);
@@ -38,7 +48,11 @@ app.use(async (c, next) => {
 });
 app.route('/', api);
 // Dashboards built by the pipeline, from R2 (phase 4.1)
-app.use(async (c, next) => (await serveSite(c.req.raw, c.env.FILES)) ?? next());
+app.use(async (c, next) => {
+  let wait: ((p: Promise<unknown>) => void) | undefined;
+  try { const ctx = c.executionCtx; wait = p => ctx.waitUntil(p); } catch { /* no execution context (tests) */ }
+  return (await serveSite(c.req.raw, c.env.FILES, wait)) ?? next();
+});
 app.use(cf());
 app.use(notFound());
 app.use(actions());

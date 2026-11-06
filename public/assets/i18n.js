@@ -11,6 +11,12 @@ document.documentElement.dir = LANG === 'en' ? 'ltr' : 'rtl';
 // The ClientRouter copies <html lang/dir> from each new page: put the chosen language back
 document.addEventListener('astro:after-swap', () => { document.documentElement.lang = LANG; document.documentElement.dir = LANG === 'en' ? 'ltr' : 'rtl'; });
 
+<<<<<<< well
+// The English strings (~60 KB) are fetched only for English; Arabic, the default, needs none of them
+const { EN, PAT } = LANG === 'en'
+  ? await import('./i18n-en.js').then(m => ({ EN: m.EN, PAT: m.pat(t) }))
+  : { EN: {}, PAT: [] };
+=======
 const EN = {
   // التنقل والهيكل
   'المدير': 'Manager', 
@@ -532,6 +538,7 @@ const PAT = [
   [/^نسبة النقر نزلت من ([\d.,]+)% في أول 7 أيام إلى ([\d.,]+)% آخر 7 أيام\. (?:المادة الإعلانية بدأت تتعب|المادة الإعلانية بدأت تتعب)، جهّز بديل\.$/, 'CTR fell from $1% in the first 7 days to $2% in the last 7. The creative is wearing out; prepare a replacement.'],
   [/^حملة هدفها Traffic\. القاعدة: الهدف Sales أو Leads بس، أبد مو Traffic\.$/, 'Traffic-objective campaign. Rule: Sales or Leads only, never Traffic.'],
 ];
+>>>>>>> hoven
 
 export function t(s) {
   if (LANG !== 'en' || s == null) return s;
