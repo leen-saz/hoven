@@ -83,7 +83,7 @@ class PullTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             spend_sar("10", "")
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_fixture_report_becomes_riyadh_rows_without_the_excluded_account(self):
         transport = FixtureTransport()
@@ -141,7 +141,7 @@ class PullTests(unittest.TestCase):
             pull(_env(HOVEN), START, END, eur)
         self.assertFalse(any("/report/" in url for url in eur.urls))
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_named_spring_rose_account_is_not_reported(self):
         transport = FixtureTransport(info=FIXTURE["rose_named_advertiser_info"])
@@ -203,7 +203,7 @@ class IngestTests(unittest.TestCase):
         self.assertNotIn(TOKEN, json.dumps(got["status"], ensure_ascii=False))
         return got, buf.getvalue()
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_recent_window_keeps_older_days_and_skips_the_gap(self):
         prev = {
@@ -232,7 +232,7 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(got["ads"]["tOLD"]["status"], "متوقف")
         self.assertEqual(got["ads"]["tKEEP"]["status"], "المجموعة متوقفة")
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_branch_backfills_only_days_before_the_api_window(self):
         import tempfile
@@ -259,7 +259,7 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(got["status"]["source"], "api")
         self.assertNotIn("2026-10-13", {r[1] for r in got["rows"]})
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_gap_before_the_window_keeps_coverage_on_the_old_day(self):
         prev = {
@@ -274,7 +274,7 @@ class IngestTests(unittest.TestCase):
         self.assertNotIn("2026-10-13", {r[1] for r in got["rows"]})
         self.assertIn("2026-10-17", {r[1] for r in got["rows"]})
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_missing_secrets_use_the_branch_file_exactly(self):
         import tempfile
@@ -372,7 +372,7 @@ class IngestTests(unittest.TestCase):
         self.assertIn("فشل السحب", log)
         self.assertIn("tiktok-data", log)
 
-    @unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+    @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_nothing_available_stays_pending_without_zero_rows(self):
         def boom(*_a, **_k):

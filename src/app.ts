@@ -6,6 +6,8 @@ import { gate } from './lib/gate';
 import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
+import { versionAssets } from './lib/assets';
+import { withWaiter } from './lib/usage';
 import { dispatchRefresh, UPSTREAM_URL, type CronEnv } from './lib/cron';
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
 import { runSocial } from './modules/social/cron';
@@ -25,6 +27,17 @@ app.use(async (c, next) => {
   await next();
   c.res = withSecurityHeaders(c.res);
 });
+// Cost records (src/lib/usage.ts) are written after the answer: this gives them the request's waitUntil
+app.use(async (c, next) => {
+  let wait: ((p: Promise<unknown>) => void) | undefined;
+  try { const ctx = c.executionCtx; wait = p => ctx.waitUntil(p); } catch { /* no execution context (tests) */ }
+  return wait ? withWaiter(wait, next) : next();
+});
+// Pages load our scripts and styles from their versioned, immutable copies
+app.use(async (c, next) => {
+  await next();
+  c.res = versionAssets(c.res);
+});
 app.use(async (c, next) => {
   if (REWRITTEN.has(c.req.raw)) return next();
   const d = await gate(c.req.raw, c.env);
@@ -38,7 +51,11 @@ app.use(async (c, next) => {
 });
 app.route('/', api);
 // Dashboards built by the pipeline, from R2 (phase 4.1)
-app.use(async (c, next) => (await serveSite(c.req.raw, c.env.FILES)) ?? next());
+app.use(async (c, next) => {
+  let wait: ((p: Promise<unknown>) => void) | undefined;
+  try { const ctx = c.executionCtx; wait = p => ctx.waitUntil(p); } catch { /* no execution context (tests) */ }
+  return (await serveSite(c.req.raw, c.env.FILES, wait)) ?? next();
+});
 app.use(cf());
 app.use(notFound());
 app.use(actions());
@@ -51,6 +68,6 @@ export default {
   // Cloudflare Cron Triggers (production only): the hourly data refresh on GitHub Actions, and every 5 minutes the due social posts
   scheduled(event: ScheduledController, env: CronEnv & AuthEnv, ctx: ExecutionContext) {
     // Every 5 minutes: due social posts, then one social-listening keyword that has not been fetched in a day
-    ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)]));
+    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)])));
   },
 };

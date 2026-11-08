@@ -1,4 +1,4 @@
-// Port of well-ads-dashboard tests/test_auth.mjs: same cases. No network: Supabase is stubbed.
+// Port of the original dashboard's auth tests: same cases. No network: Supabase is stubbed.
 // The old middleware signalled pass/rewrite with x-middleware-* headers; the gate returns { pass, rewrite } instead.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
@@ -126,7 +126,8 @@ describe('auth', () => {
     expect(await to('/system')).toBe('/today/'); // nothing open there
     expect(await to('/history/')).toBe('/control/?tab=log');
     expect(await to('/analytics/')).toBe('/');
-    expect(await to('/maestro/video/?id=7')).toBe('/design/video/?id=7'); // motion video moved to Design
+    expect(await to('/maestro/video/?id=7')).toBe('/design/?type=motion&id=7'); // motion is a type of the design page
+    expect(await to('/design/video/?id=7')).toBe('/design/?type=motion&id=7');
     expect(passed(await M(req('/today/', c)))).toBe(true);
   });
 
@@ -200,5 +201,15 @@ describe('auth', () => {
     const out = await authRoutes.logout.POST(req('/api/auth/logout', null, { method: 'POST', headers: { origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' } }), E);
     expect(out.status).toBe(303);
     expect(out.headers.get('set-cookie')).toMatch(/Max-Age=0/i);
+  });
+});
+
+describe('audit rows from visitors without a session', () => {
+  it('keep only an email-shaped, short value (a mistyped password never reaches audit_log)', async () => {
+    const { auditEmail } = await import('../../src/lib/auth');
+    expect(auditEmail(' A@B.co ')).toBe('a@b.co');
+    expect(auditEmail('my-password-1')).toBeNull();
+    expect(auditEmail('a'.repeat(300) + '@b.co')).toBeNull();
+    expect(auditEmail(undefined)).toBeNull();
   });
 });

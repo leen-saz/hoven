@@ -14,7 +14,7 @@ if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then echo
 
 # Well-only files never come over: its PRD/plan/docs, departments, generated pages, CRM, design notes
 EXCLUDE=(':!docs/prd.md' ':!docs/plan.md' ':!docs/plan-progress.md' ':!docs/cutover.md' ':!README.md' ':!pipeline/config/departments.json'
-         ':!pipeline/web/public' ':!pipeline/well-ads-dashboard.html' ':!pipeline/crm' ':!pipeline/tests/test_crm_fetch.py' ':!pipeline/tests/test_crm_join.py' ':!supabase/migrations' ':!.github/workflows' ':!tests/parity' ':!playwright.config.ts' ':!docs/reports' ':!docs/crm-booking-message.md')
+         ':!pipeline/web/public' ':!pipeline/well-ads-dashboard.html' ':!pipeline/crm' ':!pipeline/tests/test_crm_fetch.py' ':!pipeline/tests/test_crm_join.py' ':!supabase/migrations' ':!.github/workflows' ':!tests/parity' ':!playwright.config.ts' ':!docs/reports' ':!docs/crm-booking-message.md' ':!src/modules/overview/journey.test.ts' ':!docs/copywriter-skills' ':!playwright.smoke.config.ts')
 PATCH="$(mktemp)"; BIN="$(mktemp)"
 git diff --no-color "$BASE" "$HEAD" -- . "${EXCLUDE[@]}" | perl .upstream/well-to-hoven.pl > "$PATCH"
 git diff --numstat "$BASE" "$HEAD" -- . "${EXCLUDE[@]}" | awk '$1=="-"{print $3}' > "$BIN"   # binary files: listed, not applied

@@ -24,8 +24,8 @@ from datetime import datetime, timedelta, timezone
 GOAL = {"LEAD_GENERATION": "lead", "WEB_CONVERSIONS": "lead", "ENGAGEMENT": "profile", "VIDEO_VIEWS": "other", "TRAFFIC": "traffic"}
 STATUS = {"AD_STATUS_DELIVERY_OK": "نشط", "AD_STATUS_CAMPAIGN_EXCEED": "حد صرف الحملة خلص", "AD_STATUS_BUDGET_EXCEED": "حد صرف المجموعة خلص", "AD_STATUS_CAMPAIGN_DISABLE": "الحملة متوقفة", "AD_STATUS_ADGROUP_DISABLE": "المجموعة متوقفة",
           "AD_STATUS_DISABLE": "متوقف", "AD_STATUS_DELETE": "محذوف", "AD_STATUS_CAMPAIGN_DELETE": "محذوف", "AD_STATUS_ADGROUP_DELETE": "محذوف"}
-# TikTok accounts kept out of the dashboard. Well excluded one (a separate company); Hoven excludes none.
-# The is_spring_rose_* names stay so Well's upstream changes keep applying.
+# TikTok accounts kept out of the dashboard. Hoven excludes none.
+# The is_spring_rose_* function names stay so upstream changes keep applying.
 EXCLUDED_ADVERTISER_IDS = set()
 SPRING_MARKERS = ()
 
@@ -223,8 +223,10 @@ def main():
     json.dump(out, open(a.out, "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     if a.covers:
         print(f"أغلفة: {len(covers)} جديدة | {sum(1 for v in ads.values() if v.get('thumb'))} من {len(ads)} إعلان لها صورة")
-    print(f"tiktok: {len(ads)} إعلان ({sum(v['live'] for v in ads.values())} نشط) | {len(rows)} صف | "
-          f"صرف {sum(r[2] for r in rows):.2f} | ليدز {sum(r[5] for r in rows):.0f} | {rows[0][1] if rows else '-'} → {rows[-1][1] if rows else '-'}")
+    # Public Actions log (also the last line tiktok/mcp.py repeats): spend and leads only with PIPELINE_DEBUG=1
+    figures = f" | صرف {sum(r[2] for r in rows):.2f} | ليدز {sum(r[5] for r in rows):.0f}" if os.environ.get("PIPELINE_DEBUG") == "1" else ""
+    print(f"tiktok: {len(ads)} إعلان ({sum(v['live'] for v in ads.values())} نشط) | {len(rows)} صف{figures} | "
+          f"{rows[0][1] if rows else '-'} → {rows[-1][1] if rows else '-'}")
 
 
 if __name__ == "__main__":

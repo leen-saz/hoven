@@ -4,7 +4,7 @@
 export interface CronEnv { GH_DISPATCH_TOKEN?: string }
 
 export const DISPATCH_URL = 'https://api.github.com/repos/leen-saz/hoven/actions/workflows/refresh.yml/dispatches';
-// Well's new commits arrive here as a PR (.github/workflows/upstream-well.yml), checked with the same hourly trigger
+// Upstream commits arrive here as a PR (.github/workflows/upstream-well.yml), checked with the same hourly trigger
 export const UPSTREAM_URL = 'https://api.github.com/repos/leen-saz/hoven/actions/workflows/upstream-well.yml/dispatches';
 
 export async function dispatchRefresh(e: CronEnv, f: typeof fetch = fetch, url = DISPATCH_URL): Promise<number> {

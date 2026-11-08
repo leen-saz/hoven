@@ -5,7 +5,7 @@ import * as A from '../../src/lib/auth';
 import { list } from '../../src/api/routes/lessons';
 import { needOf, decision } from '../../src/lib/lessons';
 import { need } from '../../src/lib/gate';
-import { WELL_COMPANY } from '../../src/lib/tenant';
+import { HOVEN_COMPANY } from '../../src/lib/tenant';
 
 const E: A.AuthEnv = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'leen@example.com' };
 const cfg = A.env(E);
@@ -44,7 +44,7 @@ describe('/api/lessons/list', () => {
     expect(await r.json()).toEqual({ lessons: [{ id: 1, lesson: 'الساعة 9 مساء تفاعلها أعلى', status: 'new' }], canDecide: false });
     const q = calls.find(c => c.url.includes('/rest/v1/lessons'))!.url;
     expect(q).toContain('module=eq.social');
-    expect(q).toContain(`company_id=eq.${WELL_COMPANY}`);
+    expect(q).toContain(`company_id=eq.${HOVEN_COMPANY}`);
   });
 
   it('no access to the tab, or an unknown tab: refused before the table is read', async () => {
@@ -66,7 +66,7 @@ describe('/api/lessons/list', () => {
     expect(r.status).toBe(200);
     const p = calls.find(c => c.method === 'PATCH' && c.url.includes('/rest/v1/lessons'))!;
     expect(p.url).toContain('status=in.(new,reviewed)');
-    expect(p.url).toContain(`company_id=eq.${WELL_COMPANY}`);
+    expect(p.url).toContain(`company_id=eq.${HOVEN_COMPANY}`);
     expect(p.body).toMatchObject({ status: 'approved', decided_by: 'm@example.com' });
   });
 

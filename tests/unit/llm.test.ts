@@ -72,7 +72,7 @@ describe('generate', () => {
 
 describe('social suggestion', () => {
   it('stays inside the shortest platform limit and drops quotes and labels', () => {
-    expect(suggestPrompt('محاليل في البيت', ['x', 'facebook'])).toContain('الحد 280 حرف');
+    expect(suggestPrompt('مفارش للبيت', ['x', 'facebook'])).toContain('الحد 280 حرف');
     expect(cleanSuggestion('«المنشور: احجز جلستك»', ['facebook'])).toBe('احجز جلستك');
     const long = cleanSuggestion('كلمة '.repeat(100), ['x']);
     expect(long.length).toBeLessThanOrEqual(280);

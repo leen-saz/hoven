@@ -22,8 +22,8 @@ def main_data():
         "currency": "SAR",
         # Synthetic departments for this test only (Hoven's own config has one department)
         "departments": {"default": "brand", "order": ["iv", "midwife", "foot", "renan", "brand"], "departments": {
-            "iv": {"ar": "المحاليل الوريدية", "color": "--d-brand"}, "midwife": {"ar": "القبالة / رعاية الحمل", "color": "--d-brand"},
-            "foot": {"ar": "تقويم القدم", "color": "--d-brand"}, "renan": {"ar": "رينان لصحة الطفل", "color": "--d-brand"},
+            "iv": {"ar": "المفارش", "color": "--d-brand"}, "midwife": {"ar": "المخدات", "color": "--d-brand"},
+            "foot": {"ar": "البطانيات", "color": "--d-brand"}, "renan": {"ar": "مفارش الأطفال", "color": "--d-brand"},
             "brand": {"ar": "العلامة التجارية / الوعي", "color": "--d-brand"}}},
         "goals": {"lead": "ليدز", "messages": "محادثات"},
         "platforms": {

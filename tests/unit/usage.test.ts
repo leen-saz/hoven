@@ -1,7 +1,7 @@
 // Usage: Riyadh-time months, quota cleaning, guard and meter (fail-open), the admin route, and the wiring in a metered route.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
-import { dayOf, monthStart, cleanQuotas, guard, meter, summary } from '../../src/lib/usage';
+import { dayOf, monthStart, cleanQuotas, guard, meter, summary } from '../../src/lib/quotas';
 import { usage } from '../../src/api/routes/admin';
 import { ROUTES } from '../../src/modules/routes';
 

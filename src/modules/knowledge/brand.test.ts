@@ -90,11 +90,11 @@ describe('brand files', () => {
     stub(v, url => (url.includes('/brand_assets') ? [
       { id: 1, kind: 'colors', title: '', value: '#293342 #294036', description: null },
       { id: 2, kind: 'logo', title: 'شعار', value: null, description: null },
-      { id: 3, kind: 'reference', title: '', value: null, description: 'صورة ممرضة في بيت بألوان بنفسجية' },
-      { id: 4, kind: 'font', title: 'Thmanyah', value: null, description: null },
+      { id: 3, kind: 'reference', title: '', value: null, description: 'صورة غرفة نوم بألوان بنفسجية' },
+      { id: 4, kind: 'font', title: 'Hoven Brand', value: null, description: null },
     ] : []));
     const o = (await (await options.GET(req('/api/design/options', await cookieFor(v)), E)).json()) as { brand: Awaited<ReturnType<typeof brandFor>> };
-    expect(o.brand).toEqual({ colors: ['#293342', '#294036'], logo: 2, fonts: [{ id: 4, title: 'Thmanyah' }], refs: [{ id: 3, description: 'صورة ممرضة في بيت بألوان بنفسجية' }], notes: ['صورة ممرضة في بيت بألوان بنفسجية'] });
+    expect(o.brand).toEqual({ colors: ['#293342', '#294036'], logo: 2, fonts: [{ id: 4, title: 'Hoven Brand' }], refs: [{ id: 3, description: 'صورة غرفة نوم بألوان بنفسجية' }], notes: ['صورة غرفة نوم بألوان بنفسجية'] });
   });
   it('no table yet = no brand, not an error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"message":"relation does not exist"}', { status: 404 })));
@@ -132,5 +132,45 @@ describe('brand guide → knowledge', () => {
     // a file of another company is not read
     stub(ed, url => (url.includes('/brand_assets') ? [{ id: 8, r2_key: 'brand/11111111-1111-1111-1111-111111111111/g.pdf' }] : []));
     expect((await brandguide.POST(req('/api/knowledge/brandguide', await cookieFor(ed), { method: 'POST', body: JSON.stringify({ id: 8 }) }), { ...E, FILES, AI: { run, toMarkdown } } as A.AuthEnv)).status).toBe(404);
+  });
+});
+
+describe('brand files: guards', () => {
+  it('reads a guide once even when two requests arrive together', async () => {
+    const ed = member({ knowledge: 'edit' });
+    const FILES = bucket();
+    FILES.store.set(`brand/${CO}/g.pdf`, new Uint8Array([37, 80, 68, 70]).buffer);
+    const toMarkdown = vi.fn(async () => ({ format: 'markdown', data: 'دليل Hoven: نبرتنا ودودة. لا نستخدم كلمة الأفضل. ألواننا #293342.' }));
+    const run = vi.fn(async () => ({ response: '[{"kind":"voice","title":"النبرة","body":"ودودة"}]' }));
+    // The other request holds the lock: the conditional update matches no row
+    const calls = stub(ed, (url, init) => (url.includes('/brand_assets') && init.method === 'PATCH' ? [] : url.includes('/brand_assets') ? [{ id: 7, r2_key: `brand/${CO}/g.pdf` }] : []));
+    const r = await brandguide.POST(req('/api/knowledge/brandguide', await cookieFor(ed), { method: 'POST', body: JSON.stringify({ id: 7 }) }), { ...E, FILES, AI: { run, toMarkdown } } as A.AuthEnv);
+    expect(r.status).toBe(409);
+    expect(calls.find(c => c.method === 'PATCH')?.url).toContain('or=(value.is.null,and(value.eq.reading,updated_at.lt.');
+    expect(run).not.toHaveBeenCalled();
+  });
+  it('releases the lock when the reading fails', async () => {
+    const ed = member({ knowledge: 'edit' });
+    const FILES = bucket();
+    FILES.store.set(`brand/${CO}/g.pdf`, new Uint8Array([37, 80, 68, 70]).buffer);
+    const toMarkdown = vi.fn(async () => ({ format: 'markdown', data: ' ' }));
+    const calls = stub(ed, url => (url.includes('/brand_assets') ? [{ id: 7, r2_key: `brand/${CO}/g.pdf` }] : []));
+    const r = await brandguide.POST(req('/api/knowledge/brandguide', await cookieFor(ed), { method: 'POST', body: JSON.stringify({ id: 7 }) }), { ...E, FILES, AI: { run: vi.fn(), toMarkdown } } as A.AuthEnv);
+    expect(r.status).toBe(422);
+    expect(calls.filter(c => c.method === 'PATCH').map(c => c.body?.value)).toEqual(['reading', null]);
+  });
+  it('a rename without a name is refused, and colour codes only go on the colours entry', async () => {
+    const ed = member({ knowledge: 'edit' });
+    const calls = stub(ed, () => [{ id: 5, kind: 'colors', active: false }]);
+    expect((await brand.PATCH(req('/api/knowledge/brand', await cookieFor(ed), { method: 'PATCH', body: JSON.stringify({ id: 5 }) }), E)).status).toBe(400);
+    expect((await brand.PATCH(req('/api/knowledge/brand', await cookieFor(ed), { method: 'PATCH', body: JSON.stringify({ id: 5, title: '  ' }) }), E)).status).toBe(400);
+    expect(calls.some(c => c.method === 'PATCH')).toBe(false);
+    expect((await brand.PATCH(req('/api/knowledge/brand', await cookieFor(ed), { method: 'PATCH', body: JSON.stringify({ id: 5, value: '#293342' }) }), E)).status).toBe(200);
+    expect(calls.find(c => c.method === 'PATCH')?.url).toContain('kind=eq.colors');
+    // colour codes sent for a file that is not the colours entry: no row matches, and that is a clear 404, not an empty 200
+    stub(ed, () => []);
+    const miss = await brand.PATCH(req('/api/knowledge/brand', await cookieFor(ed), { method: 'PATCH', body: JSON.stringify({ id: 9, value: '#293342' }) }), E);
+    expect(miss.status).toBe(404);
+    expect(((await miss.json()) as { error?: string }).error).toBeTruthy();
   });
 });

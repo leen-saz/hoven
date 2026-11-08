@@ -3,7 +3,7 @@ import { sb, json, readJson, handle, requireUser, audit, levelsOf, DASHBOARDS, D
 import { logRange } from '../../lib/logrange';
 import { MODULES, isModule } from '../../modules/registry';
 import { scoped } from '../../lib/tenant';
-import { summary, cleanQuotas, UNITS } from '../../lib/usage';
+import { summary, cleanQuotas, UNITS } from '../../lib/quotas';
 
 type Row = Record<string, unknown> & { email?: string };
 const cleanDash = (d: unknown) => [...new Set((Array.isArray(d) ? d : []).filter((x): x is string => typeof x === 'string' && x in DASHBOARDS))];

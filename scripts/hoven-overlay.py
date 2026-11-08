@@ -201,6 +201,9 @@ DASH_I18N = """  'الظهور':'Impressions',
 
 def dash(s):
     s = s.replace("'ما فيه ليدز في هذي الفترة.':'No leads in this range.'", "'ما فيه طلبات في هذي الفترة.':'No orders in this range.'")
+    # Hoven's conv column is revenue in SAR (ADR-0007): the KPI that Well labels as WhatsApp/Messenger chats
+    for a in ("kpi(tr('الإيراد واتساب وماسنجر'),fmt(a.conv)", "kpi(tr('محادثات واتساب وماسنجر'),fmt(a.conv)"):
+        s = s.replace(a, "kpi(tr('الإيراد (ر.س)'),sar(a.conv)")
     if "HOVEN-DASH" in s:
         return s
     o = s
@@ -313,11 +316,118 @@ def probe_sample(s):
     return re.sub(r"name: '[^']*', keywords: \['ايفر كير', 'wellunion'\]", "name: 'هوفن', keywords: ['هوفن', 'hoven']", s)
 
 
+def overview_funnel(s):
+    """Overview funnel and wins: Hoven's conv column is revenue in SAR (ADR-0007), not WhatsApp/Messenger chats."""
+    pairs = [("t('كم واحد ترك بياناته أو راسلنا', 'How many left details or messaged us')", "t('كم واحد اشترى', 'How many bought')"),
+             ("st(t('الطلبات', 'Leads'), 'leads', 'qty')", "st(t('الطلبات', 'Orders'), 'leads', 'qty')"),
+             ("st(t('محادثات واتساب وماسنجر', 'WhatsApp and Messenger chats'), 'conv', 'qty')", "st(t('الإيراد', 'Revenue'), 'conv', 'sar')"),
+             ("t('من نقرة إلى طلب أو محادثة', 'Click to lead or chat')", "t('من نقرة إلى طلب', 'Click to order')"),
+             ("icon: '💬', title: T(`المحادثات زادت ${r0(m)}%`, `Conversations up ${r0(m)}%`)", "icon: '💰', title: T(`الإيراد زاد ${r0(m)}%`, `Revenue up ${r0(m)}%`)"),
+             ("${r0(A.tot.conv)} محادثة مقابل ${r0(B.tot.conv)}", "${r0(A.tot.conv)} ريال مقابل ${r0(B.tot.conv)}"),
+             ("${r0(A.tot.conv)} conversations", "${r0(A.tot.conv)} SAR"),
+             ("where: 'من النقرة لليد'", "where: 'من النقرة للطلب'"),
+             ("'Clicks are not becoming leads', where: 'Click to lead'", "'Clicks are not becoming orders', where: 'Click to order'"),
+             ("a long form, a slow page, or an extra step into WhatsApp", "a slow page, a long checkout, or the shipping cost"),
+             ("'Leads are not closing', where: 'Lead to closing'", "'Orders are not completing', where: 'Order to completion'"),
+             ("'Cost per lead is rising', where: 'Cost per lead'", "'Cost per order is rising', where: 'Cost per order'"),
+             ("most leads are not tied", "most orders are not tied")]
+    for a, b in pairs:
+        s = s.replace(a, b)
+    return overview_results(s) if "overview_results" in globals() and False else s
+
+
+def copy_skills_store(s):
+    """Copywriter skills (Well's 13): a home-textiles store, consumer-protection rules, no health examples or MOH approval."""
+    pairs = [
+        ("['lead', 'حجز أو تواصل'], ['awareness', 'يعرفون الخدمة'], ['retention', 'عميل يرجع']", "['lead', 'طلب شراء'], ['awareness', 'يعرفون المنتج'], ['retention', 'عميل يرجع يشتري']"),
+        ("'بدون «مضمون» و«نتيجة مضمونة» و«علاج فوري» و«شفاء» و«علاج نهائي» و«شباب دائم» و«يحسّن الذاكرة أو الأداء»'",
+         "'بدون «مضمون» و«ضمان» بلا شروط، و«أصلي 100%» و«قطن 100%» بلا مصدر، وأي ادعاء صحي («يعالج آلام الظهر»، «مضاد للحساسية») بلا دليل'"),
+        ("'بدون تجارب أو شهادات مرضى، وبدون قبل وبعد، وبدون بيانات أو صور مريض بعينه'", "'بدون تقييمات أو آراء عملاء ما لها مصدر حقيقي، وبدون صور قبل وبعد مضللة'"),
+        ("'بدون تخويف أو إحراج، وبدون مخاطبة حالة صحية شخصية («عندك نقص فيتامين؟»)، وبدون تشجيع على خدمة بدون حاجة'", "'بدون تخويف أو إحراج، وبدون ندرة وهمية («آخر قطعة») إذا ما هي صحيحة'"),
+        ("ومعتمد من الوزارة قبل النشر. أي سعر: الإجمالي بدون رسوم مخفية", "والشحن والاسترجاع واضحين. أي سعر: الإجمالي بدون رسوم مخفية"),
+        ("'إعلان ميتا لجلسة المحاليل في البيت، هدفه حجز، والقارئ يحس بالتعب وما يعرف الحل'", "'إعلان ميتا لطقم مفارش قطن، هدفه طلب شراء، والقارئ نومه ما يرتاح بمفارشه الحالية'"),
+        ("placeholder: 'محاليل وريدية في البيت'", "placeholder: 'مفارش قطن مزدوج'"),
+        ("'عشر هوكات لفيديو عن الرعاية المنزلية لكبار السن'", "'عشر هوكات لفيديو عن ترتيب غرفة النوم بمفارش جديدة'"),
+        ("'بدون تشخيص ولا تخويف'", "'بدون مبالغة ولا تخويف'"),
+        ("'سكربت UGC مدته 30 ثانية لأم تحجز قابلة في البيت، بدون تجربة مريض'", "'سكربت UGC مدته 30 ثانية لعروس تجهّز غرفة نومها من المتجر'"),
+        ("'UGC: الشخص يحكي عن الخدمة وتجربة الحجز، مو عن نتيجة علاجه. لا ممارس صحي يروّج'", "'UGC: الشخص يحكي عن تجربة الطلب والمنتج نفسه (الملمس، المقاس، التوصيل)، بدون ادعاءات ما يقدر يثبتها'"),
+        ("'بدون شهادة مريض ولا قبل وبعد'", "'بدون رأي عميل مخترع ولا قبل وبعد مضلل'"),
+        ("'صفحة هبوط لباقة الرعاية المنزلية، والزائر جاي من إعلان سناب'", "'صفحة هبوط لمجموعة مفارش الشتاء، والزائر جاي من إعلان سناب'"),
+        ("ask: 'وش أكثر شي يأخر العميل عن الحجز؟ (السعر، الثقة، الوقت…)'", "ask: 'وش أكثر شي يأخر العميل عن الطلب؟ (السعر، المقاس، الخامة، الشحن، الاسترجاع…)'"),
+        ("'تذكير قبل موعد الزيارة بيوم، وبعده رسالة متابعة'", "'رسالة سلة متروكة، وبعد التوصيل رسالة متابعة'"),
+        ("'بدون بيانات صحية حساسة في الرسالة'", "'بدون بيانات شخصية حساسة في الرسالة'"),
+        ("'رسالة لعملاء سابقين عن خصم معتمد على جلسات المحاليل'", "'رسالة لعملاء سابقين عن خصم الموسم على المفارش'"),
+        ("'إيميل ترحيب لعميل سجّل ولا حجز'", "'إيميل ترحيب لعميل سجّل ولا طلب'"),
+        ("'التوعية: معلومة وحدة صحيحة وعامة، بدون تشخيص'", "'معلومة وحدة مفيدة وصحيحة (العناية، المقاس، الخامة)'"),
+        ("'سؤال أو دعوة للتفاعل أو للحجز حسب الن", "'سؤال أو دعوة للتفاعل أو للطلب حسب الن"),
+        ("'معلومة عامة بدون تشخيص'", "'معلومة صحيحة بدون مبالغة'"),
+        ("مع شرط اعتماد الوزارة", "مع شروطه ومدته"),
+        ("ar: 'اعتماد الوزارة', type: 'select', required: true, ask: 'العرض معتمد من الشؤون الصحية؟'", "ar: 'الشروط', type: 'select', required: true, ask: 'شروط العرض ومدته مكتوبة وواضحة؟'"),
+        ("'إذا مو معتمد: نبّه إنه ما ينشر قبل الاعتماد'", "'إذا الشروط أو المدة ناقصة: نبّه إنه ما ينشر قبل ما تنكتب'"),
+        ("'لا تشجع على خدمة بدون حاجة («احجز أكثر توفر أكثر» ممنوعة)'", "'لا خصم وهمي (سعر قبل ما انباع فيه فعلاً)'"),
+        ("'وش الشي اللي نسميه؟ (خدمة، باقة، حملة)'", "'وش الشي اللي نسميه؟ (منتج، مجموعة، حملة)'"),
+        ("'تأكد إنه ما يوعد بنتيجة («شفاء»، «صحة دائمة»)'", "'تأكد إنه ما يوعد بشي ما يقدر يثبته («الأفضل»، «يدوم للأبد»)'"),
+        ("'بدون وعد طبي'", "'بدون وعد ما يتثبت'"),
+        ("'وصف خدمة القابلة المنزلية في التطبيق'", "'وصف طقم مفارش في صفحة المنتج'"),
+        ("'كيف تشتغل: من الحجز لين الزيارة'", "'المقاسات والخامة والعناية والتوصيل والاسترجاع'"),
+        ("'مين يقدمها (فريق مرخّص)", "'وش يميزها (من المدخلات بس)"),
+        ("'الأسئلة اللي يسألها العميل قبل ما يحجز'", "'الأسئلة اللي يسألها العميل قبل ما يطلب'"),
+        ("'مقال عن «وش الفرق بين المحاليل الوريدية والمكملات» للي يبحث قبل ما يحجز'", "'مقال عن «وش الفرق بين القطن المصري والساتان» للي يبحث قبل ما يشتري'"),
+        ("'معلومة طبية عامة وصحيحة، وكل معلومة تحتاج مصدر", "'معلومة صحيحة عن الخامة أو العناية، وكل رقم يحتاج مصدر"),
+        ("'المقال يراجعه ممارس صحي قبل النشر (صحة = YMYL)'", "'أي رقم أو ادعاء عن الخامة يتأكد منه الفريق قبل النشر'"),
+        ("'الخدمة تنذكر في مكانها الطبيعي، مو كل فقرة'", "'المنتج ينذكر في مكانه الطبيعي، مو كل فقرة'"),
+        ("'[مصدر] جنب كل معلومة طبية', 'مراجعة ممارس صحي', 'بدون تشخيص ولا وعد علاج'", "'[مصدر] جنب كل رقم', 'مراجعة الفريق', 'بدون ادعاء ما يتثبت'"),
+        ("'إعلان إنجليزي لخدمة الطبيب عن بعد يصير بلهجة سعودية'", "'إعلان إنجليزي لمفارش فندقية يصير بلهجة سعودية'"),
+        ("'المصطلحات الطبية بالعربي اللي يفهمه الناس، والإنجليزي بين قوسين إذا لازم'", "'أسماء الخامات والمقاسات بالعربي اللي يفهمه الناس، والإنجليزي بين قوسين إذا لازم'"),
+        ("'الادعاءات تمر على قواعد الوزارة'", "'الادعاءات تمر على قواعد حماية المستهلك'"),
+        ("ar: 'صياغة ادعاء صحي آمن'", "ar: 'صياغة ادعاء آمن'"),
+        ("'«المحاليل تقوي المناعة وتنشطك فوراً» تصير جملة آمنة'", "'«أنعم مفرش في السوق ويعالج الأرق» تصير جملة آمنة'"),
+        ("'حدد وش في الجملة يخالف: وعد، تفضيل، علاج، سرعة، أمان مطلق، تشخيص'", "'حدد وش في الجملة يخالف: وعد، تفضيل مطلق، ادعاء صحي، خصم بلا شروط، ندرة وهمية'"),
+        ("'اربطها بتقييم الطبيب إذا لازم'", "'اربطها بمواصفة المنتج (الخامة، عدد الخيوط، المقاس)'"),
+        ("['دليل ضوابط المحتوى الإعلاني في القطاع الصحي', 'اشتراطات هيئة الغذاء والدواء', 'سياسة ميتا للصحة']", "['نظام التجارة الإلكترونية', 'نظام حماية المستهلك', 'سياسات إعلانات ميتا وسناب وتيك توك']"),
+    ]
+    miss = [a for a, _ in pairs if a not in s and _ not in s]
+    for a, b in pairs:
+        s = s.replace(a, b)
+    if miss:
+        print("overlay: copy skills changed upstream, not re-applied:", len(miss), file=sys.stderr)
+    return lead_to_order(s)
+
+
+def listening_terms(s):
+    """Listening: Hoven's own brand terms for the empty 'our brand' watch."""
+    s = s.replace("['هوفن يونيون', 'تطبيق هوفن', 'wellunion', 'wellcare']", "['هوفن', 'hoven', 'هوفن للمفارش', 'hoven.sa']")
+    s = s.replace('"+ هوفن يونيون": "+ Hoven Union"', '"+ هوفن للمفارش": "+ Hoven bedding"')
+    return lead_to_order(s)
+
+
+WELL_EN_KEYS = ["المحاليل الوريدية", "القبالة / رعاية الحمل", "تقويم القدم", "رينان لصحة الطفل", "مثال: متابعة طلب المحاليل",
+                "مثال: رعاية منزلية ومحاليل وريدية في الرياض", "مثال: فيتامين سي", "مثال: جلسة فيتامين سي بالوريد في البيت",
+                "+ هوفن يونيون", "احذف فيتامين", "فيتامين", 'كلام ودود فيه ثقة الطبيب',
+                "مثال: المحاليل في البيت · رمضان"]
+
+
+def clean_well_terms(s):
+    """No Well names or health terms anywhere in Hoven's running code (Leen 2026-11-08)."""
+    s = re.sub(r'[ \t]*"كلام ودود فيه ثقة الطبيب[^\n]*\n', "", s)
+    for k in WELL_EN_KEYS:   # EN entries for Well-only Arabic strings: dropped
+        s = re.sub(r"""[ \t]*(['"])""" + re.escape(k) + r"""\1\s*:\s*(['"])(?:[^'"\\]|\\.)*\2,[ \t]*\n?""", "", s)
+    s = re.sub(r"\{ iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل', ", "{ hoven: 'هوفن', ", s)
+    s = s.replace("دعوة واضحة للحجز، بدون وعد بشفاء أو نتيجة", "دعوة واضحة للطلب من المتجر، بدون وعد ما يتثبت")
+    s = s.replace("بدون تجارب مرضى", "بدون آراء عملاء ما لها مصدر")
+    return s
+
+
 RULES = {
+    "src/modules/overview/numbers.ts": [overview_results, clean_well_terms],
+    "src/modules/journeys/journeys.ts": [clean_well_terms, lead_to_order],
+    "src/modules/social/social.ts": [clean_well_terms, lead_to_order],
+    "public/modules/listening/social.js": [listening_terms],
+    "src/modules/copy/skills.ts": [copy_skills_store],
     "src/modules/listening/probe.ts": [probe_sample, lead_to_order],
     **{f: [overview_labels] for f in glob.glob("src/modules/overview/*.tsx") if ".test." not in f},
-    "src/modules/overview/analytics.ts": [overview_results],
-    "src/modules/overview/numbers.ts": [overview_results],
+    "src/modules/overview/analytics.ts": [overview_results, overview_funnel],
+    "src/modules/overview/funnel.ts": [overview_funnel, lead_to_order],
     "src/lib/site.ts": [site],
     "src/modules/content/routes.ts": [content_prompts],
     "src/modules/content/content.ts": [content_prompts, content_store],
@@ -327,7 +437,8 @@ RULES = {
     "public/assets/common.js": [common, lead_to_order],
     "public/assets/control.js": [depts, moh, lead_to_order],
     "public/assets/launch.js": [depts, moh, launch, lead_to_order],
-    "public/assets/i18n.js": [lead_to_order, i18n_en, dedupe_dict],
+    "public/assets/i18n.js": [lead_to_order],   # the EN dictionary lives in i18n-en.js now
+    "public/assets/i18n-en.js": [lead_to_order, i18n_en, dedupe_dict, clean_well_terms],   # Well moved the EN strings here
     "src/api/routes/control.ts": [moh, lead_to_order],
     "src/lib/auth.ts": [depts],
 }

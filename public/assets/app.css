@@ -4,6 +4,9 @@
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-regular.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500;font-display:swap}
+@font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
 @font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:400 900;font-display:swap}
 /* Hoven brand tokens (from leen-saz/hoven-dashboard): ivory, navy, forest green. Fonts: Hoven Brand (titles) + IBM Plex Sans Arabic (OFL). */
 :root{

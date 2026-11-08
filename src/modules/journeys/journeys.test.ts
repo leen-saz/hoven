@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../lib/auth';
 import { cleanContact, cleanSteps, notices, send } from './journeys';
 import { start } from './routes';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -70,8 +70,8 @@ describe('start', () => {
     const req = (id: number) => new Request('https://hoven.example/api/journeys/start', { method: 'POST',
       headers: { cookie, origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin' }, body: JSON.stringify({ id, contact: { phone: '0551234567' } }) });
     expect((await start.POST(req(7), env)).status).toBe(200);
-    expect(created).toEqual([{ id: 'run-99', params: { runId: 99, companyId: WELL_COMPANY, steps: [{ type: 'wait', hours: 1 }], contact: { name: '', phone: '966551234567' } } }]);
-    expect(urls.find(u => u.includes('journeys?id=eq.7'))).toContain(`company_id=eq.${WELL_COMPANY}`);
+    expect(created).toEqual([{ id: 'run-99', params: { runId: 99, companyId: HOVEN_COMPANY, steps: [{ type: 'wait', hours: 1 }], contact: { name: '', phone: '966551234567' } } }]);
+    expect(urls.find(u => u.includes('journeys?id=eq.7'))).toContain(`company_id=eq.${HOVEN_COMPANY}`);
     expect((await start.POST(req(8), env)).status).toBe(404);
   });
 });

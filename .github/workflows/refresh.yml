@@ -3,7 +3,7 @@ name: refresh
 # Phase 7: the full hourly run that replaces the old site's refresh-and-deploy at cutover: fetch the ad platforms
 # (connect-tab keys from Supabase Vault win over GitHub secrets), store in Supabase, suggestions, learning loop,
 # critic, the guarded executor (Meta ad pause, canary campaigns only), build, upload to the production bucket,
-# data health. Steps copied from well-ads-dashboard/.github/workflows/refresh-deploy.yml; Vercel replaced by R2.
+# data health. Steps from the original dashboard's refresh-deploy workflow; Vercel replaced by R2.
 #
 # Live since the cutover (2026-11-01): the old site's refresh-and-deploy is disabled, so this is the only
 # writer to Supabase. Never re-enable the old one while this schedule is on (rollback: docs/cutover.md).
@@ -203,6 +203,10 @@ jobs:
             pipeline/cache_ads.json
           key: ads-data-${{ github.run_id }}
 
+      # The built dash.json must be sane before anything is uploaded (required keys, types, plausible size, no negative
+      # spend, days inside the range). On failure the run stops with a message that carries no figures.
+      - name: Validate dash.json before upload
+        run: python pipeline/validate_dash.py pipeline/web/public/dash.json pipeline/web/public/data
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
@@ -226,6 +230,9 @@ jobs:
           put() { npx wrangler r2 object put "$BUCKET/site/$1" --file "$2" --content-type "$3" --remote >/dev/null; }
           put csp.txt csp.txt "text/plain; charset=utf-8"
           put control/ads.json public/control/ads.json "application/json"
+          # The parts dash.json leaves out go up first, so a new dash.json never points at missing files (pipeline/dash_split.py)
+          put dash-aud.json public/dash-aud.json "application/json"
+          put dash-organic.json public/dash-organic.json "application/json"
           put dash.json public/dash.json "application/json"
           # Phase 4.2: the same data as JSON per audience (full, creative, each department) for /api/dash/data
           for f in public/data/*.json public/data/dept/*.json; do put "${f#public/}" "$f" "application/json"; done

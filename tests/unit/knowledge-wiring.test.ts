@@ -23,7 +23,7 @@ function world() {
     const data = url.includes('/profiles?') ? [OWNER]
       : url.includes('/knowledge?') ? [{ id: 1, kind: 'forbidden', title: '', body: SECRET, price: null, modules: [], active: true }]
       : url.includes('/content_plans?') ? [{ id: 3, site: 'https://x.sa', competitors: [], items: [{ id: 'a1', kind: 'article', title: 'ت', why: 'و', priority: 1, status: 'approved' }] }]
-      : url.includes('/copy_projects?') ? [{ id: 5, name: 'محاليل', service: 'محاليل', audience: '', offer: '', voice: '', banned: [], competitors: [] }]
+      : url.includes('/copy_projects?') ? [{ id: 5, name: 'مفارش', service: 'مفارش', audience: '', offer: '', voice: '', banned: [], competitors: [] }]
       : url.includes('/companies?') ? [{ id: OWNER.id, name: 'Hoven', paperclip_company_id: PC }]
       : [];
     return new Response(JSON.stringify(data));
@@ -36,7 +36,10 @@ function ai() {
   const run = vi.fn(async (...args: [string, { messages?: { role: string; content: string }[] }]) => {
     const input = args[1];
     seen.push(JSON.stringify(input.messages || []));
-    return { response: input.messages?.some(m => m.content.includes('JSON فقط: {"head"')) ? '{"head":"عنوان","body":"نص الرسالة"}' : LONG };
+    // the copy skill asks for a JSON list of variants; the journeys writer for {head, body}
+    const reply = input.messages?.some(m => m.content.includes('JSON فقط: {"head"')) ? '{"head":"عنوان","body":"نص الرسالة"}'
+      : input.messages?.some(m => m.content.includes('"primary"')) ? '[{"angle":"أ","why":"ب","primary":"نص أساسي","headline":"عنوان","description":"وصف","cta":"احجز"}]' : LONG;
+    return { response: reply };
   });
   return { seen, run };
 }
@@ -44,10 +47,10 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 const CALLS: Record<(typeof AI_MODULES)[number], (env: A.AuthEnv) => Promise<Response>> = {
   content: async env => ROUTES.content.item.PATCH(await post('/api/content/item', { plan: 3, item: 'a1', action: 'draft' }, 'PATCH'), env),
-  copy: async env => ROUTES.copy.write.POST(await post('/api/copy/write', { project_id: 5, kind: 'ad', count: 2 }), env),
-  design: async env => ROUTES.design.brief.POST(await post('/api/design/brief', { type: 'ad', offer: 'محاليل' }), env),
+  copy: async env => ROUTES.copy.skill.POST(await post('/api/copy/skill', { project_id: 5, skill: 'ad', inputs: { platform: 'meta' }, count: 1 }), env),
+  design: async env => ROUTES.design.brief.POST(await post('/api/design/brief', { type: 'ad', offer: 'مفارش' }), env),
   voice: async env => ROUTES.voice.rewrite.POST(await post('/api/voice/rewrite', { text: 'نص', seconds: 30 }), env),
-  social: async env => ROUTES.social.suggest.POST(await post('/api/social/suggest', { brief: 'محاليل في البيت', platforms: ['facebook'] }), env),
+  social: async env => ROUTES.social.suggest.POST(await post('/api/social/suggest', { brief: 'مفارش للبيت', platforms: ['facebook'] }), env),
   maestro: async env => ROUTES.maestro.task.POST(await post('/api/maestro/task', { title: 'اكتب منشور' }), env),
   journeys: async env => ROUTES.journeys.write.POST(await post('/api/journeys/write', { type: 'email', idea: 'متابعة' }), env),
 };

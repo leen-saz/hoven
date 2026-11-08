@@ -1,7 +1,7 @@
 // SaaS isolation: a company owner sees and edits only their own company's users and log. No network.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
-import { WELL_COMPANY, companyOf, scoped } from '../../src/lib/tenant';
+import { HOVEN_COMPANY, companyOf, scoped } from '../../src/lib/tenant';
 import { users, log } from '../../src/api/routes/admin';
 
 const E: A.AuthEnv = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 'service', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'leen@example.com' };
@@ -16,11 +16,11 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('tenant', () => {
   it('defaults to Hoven and rejects junk company ids', () => {
-    expect(companyOf(undefined)).toBe(WELL_COMPANY);
-    expect(companyOf('x; drop table')).toBe(WELL_COMPANY);
+    expect(companyOf(undefined)).toBe(HOVEN_COMPANY);
+    expect(companyOf('x; drop table')).toBe(HOVEN_COMPANY);
     expect(companyOf(ACME.toUpperCase())).toBe(ACME);
     expect(A.sessionFor(acmeOwner, cfg).co).toBe(ACME);
-    expect(A.sessionFor({ id: acmeOwner.id, email: 'p@example.com' }, cfg).co).toBe(WELL_COMPANY);
+    expect(A.sessionFor({ id: acmeOwner.id, email: 'p@example.com' }, cfg).co).toBe(HOVEN_COMPANY);
   });
 
   it('scopes REST paths with or without a query', () => {

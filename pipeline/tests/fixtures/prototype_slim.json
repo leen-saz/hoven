@@ -14,7 +14,7 @@
 "goal": "lead"
 },
 "t1|meta": {
-"name": "محاليل وريدية تجربة",
+"name": "مفارش قطن تجربة",
 "campaign": "Test campaign A",
 "platform": "meta",
 "dept": "iv",
@@ -62,7 +62,7 @@
 "goal": "lead"
 },
 "t7|meta": {
-"name": "تقويم القدم تجربة",
+"name": "البطانيات تجربة",
 "campaign": "Sample C",
 "platform": "meta",
 "dept": "foot",
@@ -70,7 +70,7 @@
 "goal": "lead"
 },
 "t8|meta": {
-"name": "رينان تجربة",
+"name": "مفارش أطفال تجربة",
 "campaign": "Sample D",
 "platform": "meta",
 "dept": "renan",

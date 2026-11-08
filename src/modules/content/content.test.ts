@@ -70,11 +70,11 @@ describe('content agent', () => {
 describe('plan items say what they rest on', () => {
   it('marks an item as search only when its query came from Search Console', () => {
     const raw = JSON.stringify({ position: 'p', niche: 'n', items: [
-      { kind: 'article', title: 'فيتامين سي بالوريد في البيت', why: 'w', priority: 1, query: 'فيتامين سي بالوريد' },
+      { kind: 'article', title: 'مفرش قطن مزدوج للبيت', why: 'w', priority: 1, query: 'مفرش قطن مزدوج' },
       { kind: 'faq', title: 'أسئلة الحمل', why: 'w', priority: 2, query: 'كلمة مخترعة' },
       { kind: 'page', title: 'صفحة', why: 'w', priority: 3 }] });
-    const r = parsePlan(raw, [{ query: 'فيتامين سي بالوريد', clicks: 3, impressions: 90, position: 7 }])!;
+    const r = parsePlan(raw, [{ query: 'مفرش قطن مزدوج', clicks: 3, impressions: 90, position: 7 }])!;
     expect(r.items.map(i => i.basis)).toEqual(['search', 'idea', 'idea']);
-    expect(r.items[0]!.query).toBe('فيتامين سي بالوريد');
+    expect(r.items[0]!.query).toBe('مفرش قطن مزدوج');
   });
 });

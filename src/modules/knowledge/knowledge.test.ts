@@ -29,8 +29,8 @@ const e = (x: Partial<Entry>): Entry => ({ id: 1, kind: 'note', title: '', body:
 
 describe('knowledge input', () => {
   it('keeps known kinds and modules, prices for services only', () => {
-    expect(clean({ kind: 'service', title: 'محلول فيتامين', body: 'زيارة منزلية', price: '350', modules: ['content', 'hack', 'content'] }).row)
-      .toEqual({ kind: 'service', title: 'محلول فيتامين', body: 'زيارة منزلية', price: 350, modules: ['content'] });
+    expect(clean({ kind: 'service', title: 'طقم مفارش', body: 'توصيل للبيت', price: '350', modules: ['content', 'hack', 'content'] }).row)
+      .toEqual({ kind: 'service', title: 'طقم مفارش', body: 'توصيل للبيت', price: 350, modules: ['content'] });
     expect(clean({ kind: 'bogus', body: 'x' }).error).toBe('اختر النوع');
     expect(clean({ kind: 'voice', body: '   ' }).error).toBe('اكتب المحتوى');
     expect(clean({ kind: 'voice', body: 'x', price: 10 }).error).toBe('السعر للخدمات بس');
@@ -165,7 +165,7 @@ describe('training chat', () => {
   it('the AI asks only after the fixed questions, and answers save as training entries', async () => {
     const ed = member({ knowledge: 'edit' });
     const run = vi.fn(async () => ({ response: '{"done":false,"question":"كم مدة الجلسة؟","kind":"service"}' }));
-    stub(ed, () => [e({ topic: 'services', source: 'training', question: 'وش الخدمات؟', body: 'محاليل' })]);
+    stub(ed, () => [e({ topic: 'services', source: 'training', question: 'وش الخدمات؟', body: 'مفارش' })]);
     let r = (await (await train.GET(req('/api/knowledge/train', await cookieFor(ed)), { ...E, AI: { run } } as A.AuthEnv)).json()) as { next: { topic: string }; history: unknown[]; covered: number };
     expect(r.next.topic).toBe('prices');
     expect(r.covered).toBe(1);

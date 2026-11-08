@@ -45,7 +45,7 @@ const RULES = [
 <title>Apipeline · لوحة التسويق</title>
 <meta name="description" content="أرقام كل منصات إعلاناتك في لوحة وحدة، وإيجنتس تقترح وتنفّذ بعد موافقتك.">
 <link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&display=swap">
+<link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/app.css">
 <style is:global>
 .lp{--wrap:1120px;--gut:clamp(16px,4vw,40px)}
@@ -135,6 +135,8 @@ const RULES = [
 @media (max-width:640px){
   .lp-top nav{display:none}
   .lp-top .btn{margin-inline-start:auto}
+  .lp-top #lang{margin-inline-start:auto}
+  .lp-top #lang + .btn{margin-inline-start:0}
   .lp-sec{padding:72px 0}
   .lp-group.wide dl{grid-template-columns:1fr}
   .lp-rules{grid-template-columns:1fr}
@@ -154,6 +156,7 @@ const RULES = [
       <a href="#agents">الإيجنتس</a>
       <a href="#safety">الأمان</a>
     </nav>
+    <span id="lang"></span>
     <a class="btn sm primary" href="/login/">دخول</a>
   </div>
 </header>
@@ -264,5 +267,6 @@ const RULES = [
   </div>
 </footer>
 
+<script is:inline type="module" src="/assets/welcome.js"></script>
 </body>
 </html>

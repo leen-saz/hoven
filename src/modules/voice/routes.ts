@@ -3,7 +3,7 @@ import { json, readJson, handle, requireUser, notEnabled } from '../../lib/auth'
 import { AI_MODEL, type AiRun } from '../content/content';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { ACCENTS, GUIDE, TONES, TTS_MODEL, TTS_VOICES, analyze, rewritePrompt, ttsBody, ttsInput } from './voice';
-import { guard, meter } from '../../lib/usage';
+import { guard, meter } from '../../lib/quotas';
 
 type AiEnv = { AI?: { run: AiRun } };
 type TtsEnv = { GEMINI_API_KEY?: string; GEMINI_TTS_MODEL?: string };
