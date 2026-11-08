@@ -30,8 +30,8 @@ describe('the plan', () => {
   });
 
   it('builds v1 from a template without a model, spread over the voice, in brand colours', () => {
-    const s = templateSpec({ headline: 'المحاليل في بيتك', script: 'نجيك البيت. ممرضة مرخصة؟ احجز اليوم.', seconds: 12, ratio: '1:1', colors: ['#294036'] })!;
-    expect(s.scenes.map(x => x.text)).toEqual(['المحاليل في بيتك', 'نجيك البيت.', 'ممرضة مرخصة؟', 'احجز اليوم.']);
+    const s = templateSpec({ headline: 'المفارش في بيتك', script: 'نجيك البيت. قطن مصري؟ احجز اليوم.', seconds: 12, ratio: '1:1', colors: ['#294036'] })!;
+    expect(s.scenes.map(x => x.text)).toEqual(['المفارش في بيتك', 'نجيك البيت.', 'قطن مصري؟', 'احجز اليوم.']);
     expect(s.scenes.at(-1)!.to).toBeLessThanOrEqual(12);
     expect(s.cta?.text).toBe('احجز الحين');
     expect(s.colors.band).toBe('#294036');
@@ -120,7 +120,7 @@ function world(who: A.Profile) {
 }
 afterEach(() => { vi.unstubAllGlobals(); });
 
-const NEW = { title: 'محاليل', headline: 'المحاليل في بيتك', script: 'نجيك البيت. احجز اليوم.', ratio: '9:16', design_key: KEY('a', 'png'), design_mime: 'image/png', voice_key: KEY('b', 'wav'), voice_mime: 'audio/wav', voice_seconds: 10 };
+const NEW = { title: 'مفارش', headline: 'المفارش في بيتك', script: 'نجيك البيت. احجز اليوم.', ratio: '9:16', design_key: KEY('a', 'png'), design_mime: 'image/png', voice_key: KEY('b', 'wav'), voice_mime: 'audio/wav', voice_seconds: 10 };
 
 describe('video routes', () => {
   it('creates a project and v1 from ChatGPT, then an edit adds v2 and keeps v1 as it was', async () => {

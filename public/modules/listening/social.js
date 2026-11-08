@@ -43,11 +43,11 @@ export function filterMentions(mentions, f) {
 }
 
 // كلمات Hoven الجاهزة: تنعرض لما تكون "علامتنا" فاضية، وتنضاف بضغطة (ما تنضاف من نفسها)
-export const WELL_TERMS = ['هوفن يونيون', 'تطبيق هوفن', 'wellunion', 'wellcare'];
+export const BRAND_TERMS = ['هوفن', 'hoven', 'هوفن للمفارش', 'hoven.sa'];
 const low = s => String(s || '').trim().toLowerCase();
 
 // الاقتراحات اللي مو موجودة في علامتنا للحين
-export function brandSuggestions(watches, terms = WELL_TERMS) {
+export function brandSuggestions(watches, terms = BRAND_TERMS) {
   const have = new Set(watches.filter(w => w.kind === 'brand').flatMap(w => [w.name, ...(w.keywords || [])]).map(low));
   return terms.filter(t => !have.has(low(t)));
 }

@@ -23,12 +23,12 @@ cloudflared tunnel run --url http://localhost:3100 paperclip
 
 ## 3. board API token
 ```
-paperclipai token board create --name well-ads --never-expires
+paperclipai token board create --name upstream --never-expires
 ```
 ينطبع مرة وحدة. لا تحطه في الكود ولا في الشات.
 
 ## 4. أسرار الـ Worker (أنتِ تحطينها)
-Cloudflare ← Workers ← `well-ads` ← Settings ← Variables and Secrets ← Add (Secret):
+Cloudflare ← Workers ← `upstream` ← Settings ← Variables and Secrets ← Add (Secret):
 - `PAPERCLIP_URL` = `https://paperclip.<دومينك>`
 - `PAPERCLIP_TOKEN` = التوكن من الخطوة 3
 

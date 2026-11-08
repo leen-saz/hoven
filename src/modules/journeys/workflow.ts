@@ -2,7 +2,7 @@
 // without a server running, and each send is its own durable step: retried on failure, never sent twice.
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
 import { env as cfgOf, sb, type AuthEnv } from '../../lib/auth';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 import { send, type Contact, type Step } from './journeys';
 
 export interface JourneyParams { runId: number; companyId: string; steps: Step[]; contact: Contact }
@@ -16,7 +16,7 @@ export class JourneyRun extends WorkflowEntrypoint<AuthEnv, JourneyParams> {
       if (s.type === 'wait') { await step.sleep(`wait-${i}`, `${s.hours} hours`); continue; }
       const r = await step.do(`send-${i}`, { retries: { limit: 3, delay: '1 minute', backoff: 'exponential' } }, async () => {
         // Platform tokens: the vault holds Hoven's today; per-company vault names come with ADR-0006's next step
-        const v = companyId === WELL_COMPANY ? await sb<{ name: string; value: string }[]>(cfg, '/rest/v1/rpc/connector_env', { method: 'POST', admin: true, body: {} }) : null;
+        const v = companyId === HOVEN_COMPANY ? await sb<{ name: string; value: string }[]>(cfg, '/rest/v1/rpc/connector_env', { method: 'POST', admin: true, body: {} }) : null;
         const t = Object.fromEntries((v?.ok && Array.isArray(v.data) ? v.data : []).map(x => [x.name, x.value]));
         return send(s, contact, t);
       });

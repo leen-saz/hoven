@@ -5,9 +5,9 @@
 **السياق:** لين تبي النظام (الإعلانات + الإيجنتس بالتابات) يخدم أكثر من 5000 شركة، وكل شركة بياناتها معزولة، والتعامل سهل، ويشتغل على سيرفر Cloudflare.
 
 **القرار:**
-- **الشركات:** جدول `companies`، وكل يوزر ينتمي لشركة وحدة (`profiles.company_id`). Well هي الشركة الأولى (`00000000-…-0001`). الـ owner يدير يوزرز شركته بس. السيرفر يستخدم service_role (يتخطى RLS)، فكل استعلام يمر على `scoped()` في `src/lib/tenant.ts`.
+- **الشركات:** جدول `companies`، وكل يوزر ينتمي لشركة وحدة (`profiles.company_id`). upstream هي الشركة الأولى (`00000000-…-0001`). الـ owner يدير يوزرز شركته بس. السيرفر يستخدم service_role (يتخطى RLS)، فكل استعلام يمر على `scoped()` في `src/lib/tenant.ts`.
 - **جداول جديدة:** كل جدول جديد فيه `company_id not null` من أول يوم.
-- **الجداول القديمة:** `ads` و`connections` و`audit_log` أخذت `company_id` بقيمة Well الافتراضية. تحويل مفتاح `connections` إلى `(company_id, platform)` وأسماء الخزنة إلى `conn:<company>:NAME` وسحب البيانات لكل شركة خطوة لاحقة، لأنها تلمس السحب كامل.
+- **الجداول القديمة:** `ads` و`connections` و`audit_log` أخذت `company_id` بقيمة upstream الافتراضية. تحويل مفتاح `connections` إلى `(company_id, platform)` وأسماء الخزنة إلى `conn:<company>:NAME` وسحب البيانات لكل شركة خطوة لاحقة، لأنها تلمس السحب كامل.
 - **التشغيل على Cloudflare:**
   - الواجهة والـ API: الـ Worker الحالي (Astro + Hono).
   - الجدولة (سوشال، رحلات، خطط المحتوى): Cron Triggers + Queues + Workflows. ما نحتاج سيرفر يشتغل دايم.

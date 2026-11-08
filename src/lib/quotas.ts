@@ -16,7 +16,7 @@ type Row = { module: string; unit: string; qty: number };
 const rows = <T>(d: unknown): T[] => (Array.isArray(d) ? (d as T[]) : []);
 
 export async function used(cfg: Cfg, co: string, now = Date.now()): Promise<Row[]> {
-  const r = await sb<Row[]>(cfg, scoped(`/rest/v1/usage_daily?select=module,unit,qty&day=gte.${monthStart(now)}&limit=5000`, co), { admin: true });
+  const r = await sb<Row[]>(cfg, scoped(`/rest/v1/usage_daily?select=module,unit,qty&day=gte.${monthStart(now)}&limit=1000`, co), { admin: true });
   return rows<Row>(r.data).map(x => ({ ...x, qty: Number(x.qty) || 0 }));
 }
 export async function limits(cfg: Cfg, co: string): Promise<Partial<Record<Unit, number>>> {

@@ -6,15 +6,14 @@ import { styleCard, type Project } from './copy';
 import * as A from '../../lib/auth';
 import { ROUTES } from '../routes';
 
-// The spec files, read through Vite (the typecheck has no Node types)
-const DOCS = Object.keys(import.meta.glob('../../../docs/copywriter-skills/*.md')).map(f => f.split('/').pop());
-const P = (x: Partial<Project> = {}): Project => ({ name: 'محاليل في البيت', service: 'محاليل وريدية', audience: 'الرياض', offer: '', cta: 'احجز', voice: 'دافي وواثق', banned: ['رخيص'], competitors: [], ...x });
+const P = (x: Partial<Project> = {}): Project => ({ name: 'مفارش للبيت', service: 'مفارش قطن', audience: 'الرياض', offer: '', cta: 'احجز', voice: 'دافي وواثق', banned: ['رخيص'], competitors: [], ...x });
 
 describe('catalogue', () => {
   it('has every request type, each with its spec file, inputs, steps, checks and output fields', () => {
     expect(SKILLS.map(k => k.key)).toEqual(['ad', 'hooks', 'video', 'landing', 'whatsapp', 'sms', 'email', 'caption', 'offer', 'naming', 'service', 'seo', 'rewrite', 'localize', 'claims']);
     for (const k of SKILLS) {
-      expect(DOCS, k.doc).toContain(k.doc);
+      // Hoven: the upstream spec files (health examples) are not kept; the skill itself is the spec (overlay copy_skills_store)
+      expect(k.doc).toMatch(/^\d{2}-[a-z-]+\.md$/);
       expect(k.steps.length).toBeGreaterThan(2);
       expect(k.checks.length).toBeGreaterThan(0);
       expect(partsOf(k, {}).length).toBeGreaterThan(0);
@@ -45,15 +44,15 @@ describe('inputs', () => {
 describe('prompt', () => {
   it('carries the project, the request, the steps, the style references without copying, our hooks and the MOH bans', () => {
     const card = styleCard(['وش رايك تجرب جلسة؟ احجز'])!;
-    const t = skillPrompt(SKILL.ad!, cleanInputs(SKILL.ad!, { platform: 'google', keyword: 'محاليل في البيت' }), P(), 2, [{ name: 'أكمي', card }], ['جلسة في بيتك']);
+    const t = skillPrompt(SKILL.ad!, cleanInputs(SKILL.ad!, { platform: 'google', keyword: 'مفارش للبيت' }), P(), 2, [{ name: 'أكمي', card }], ['جلسة في بيتك']);
     expect(t).toContain('2 نسخ');
     expect(t).toContain('قوقل (بحث)');
-    expect(t).toContain('محاليل في البيت');
+    expect(t).toContain('مفارش للبيت');
     expect(t).toContain('أكمي');
     expect(t).toContain('لا تنسخ جملهم ولا ادعاءاتهم');
     expect(t).toContain('«جلسة في بيتك»');
     expect(t).toContain('«الأفضل»');
-    expect(t).toContain('شهادات مرضى');
+    expect(t).toContain('آراء عملاء');   // Hoven: store rules, not health testimonials
     expect(t).toContain('رخيص');
     expect(t).toContain('قائمة لين 15 (كل وحدة أقل من 30 حرف)');
     expect(t).toContain('"headlines":["…"]');
@@ -77,10 +76,10 @@ describe('parsing', () => {
   });
   it('reads a bare array, turns lines into lists, drops empty variants and unknown fields, keeps the count', () => {
     const g = partsOf(SKILL.ad!, { platform: 'google' });
-    const raw = JSON.stringify([{ headlines: 'عنوان 1\nعنوان 2', descriptions: ['وصف'], path: ['محاليل', ''], extra: 'x' }, {}, { headlines: ['ثاني'] }, { headlines: ['ثالث'] }]);
+    const raw = JSON.stringify([{ headlines: 'عنوان 1\nعنوان 2', descriptions: ['وصف'], path: ['مفارش', ''], extra: 'x' }, {}, { headlines: ['ثاني'] }, { headlines: ['ثالث'] }]);
     const v = parseVariants(raw, g, 2);
     expect(v.length).toBe(2);
-    expect(v[0]!.parts).toEqual({ headlines: ['عنوان 1', 'عنوان 2'], descriptions: ['وصف'], path: ['محاليل'] });
+    expect(v[0]!.parts).toEqual({ headlines: ['عنوان 1', 'عنوان 2'], descriptions: ['وصف'], path: ['مفارش'] });
     expect(v[1]!.parts.headlines).toEqual(['ثاني']);
   });
   it('returns nothing for an answer without JSON or with broken JSON', () => {

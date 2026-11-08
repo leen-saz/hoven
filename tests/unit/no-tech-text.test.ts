@@ -4,14 +4,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
 import { api, GROUPS } from '../../src/api/index';
-import { WELL_COMPANY } from '../../src/lib/tenant';
+import { HOVEN_COMPANY } from '../../src/lib/tenant';
 import { TECH_WORDS } from '../shared/tech-words';
 
 // No optional key is set, so every "not enabled" branch is taken
 const E: A.AuthEnv = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'owner@example.com' };
 const cfg = A.env(E);
 const ALL = Object.fromEntries(Object.keys(A.DASHBOARDS).map(k => [k, 'approve']));
-const member: A.Profile = { id: '33333333-3333-3333-3333-333333333333', email: 'member@example.com', role: 'member', active: true, access: ALL, company_id: WELL_COMPANY };
+const member: A.Profile = { id: '33333333-3333-3333-3333-333333333333', email: 'member@example.com', role: 'member', active: true, access: ALL, company_id: HOVEN_COMPANY };
 
 const DENY = TECH_WORDS;
 // Allowed to be technical: the Connectors page and the owner-only pages (a member cannot open them)

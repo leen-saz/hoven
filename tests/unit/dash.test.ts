@@ -3,7 +3,7 @@ import { api } from '../../src/api/index';
 import { dataKey } from '../../src/lib/dash';
 import { need } from '../../src/lib/gate';
 import { sign, SESSION, type AuthEnv } from '../../src/lib/auth';
-import { WELL_COMPANY } from '../../src/lib/tenant';
+import { HOVEN_COMPANY } from '../../src/lib/tenant';
 
 const SECRET = 's'.repeat(32);
 const ORIGIN = 'https://hoven.test';
@@ -12,7 +12,7 @@ const OTHER = '22222222-2222-2222-2222-222222222222';
 type Who = { role?: string; dash?: string[]; depts?: string[]; co?: string };
 type Profile = { id: string; email: string; role: string; dashboards: string[]; departments: string[]; company_id: string; active: boolean };
 const profile = (w: Who): Profile => ({ id: 'u1', email: w.role === 'owner' ? 'leen@x.co' : 'm@x.co', role: w.role || 'member',
-  dashboards: w.dash || [], departments: w.depts || [], company_id: w.co || WELL_COMPANY, active: true });
+  dashboards: w.dash || [], departments: w.depts || [], company_id: w.co || HOVEN_COMPANY, active: true });
 
 // R2 stand-in: only the keys given exist; If-None-Match on the current etag gives the bodiless object R2 returns
 function bucket(keys: string[]) {
@@ -77,7 +77,7 @@ describe('/api/dash/data', () => {
     const res = await call({ role: 'owner', co: OTHER }, b);
     expect(res.status).toBe(404);
     expect(b.asked).toEqual([`companies/${OTHER}/data/all.json`]);
-    expect(dataKey(WELL_COMPANY, 'c.json')).toBe('site/data/c.json');
+    expect(dataKey(HOVEN_COMPANY, 'c.json')).toBe('site/data/c.json');
   });
 
   it('an unchanged copy is a 304', async () => {

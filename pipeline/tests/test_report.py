@@ -23,16 +23,16 @@ EXPECTED = {
 
 
 class ClassifyTests(unittest.TestCase):
-    @unittest.skip("Well departments; Hoven has one department until Leen sets categories")
+    @unittest.skip("Department split not used yet; Hoven has one department until Leen sets categories")
     def test_ad_name_beats_campaign(self):
         self.assertEqual(classify_pair("V| HAIR TONIC", r"META_WP_IV_8\10"), ("iv", "campaign"))
         self.assertEqual(classify_pair("قابلة هوفن", "IV campaign"), ("midwife", "ad"))
         self.assertEqual(classify_pair("IMG| Foot Alignment", "IV campaign"), ("foot", "ad"))
         self.assertEqual(classify_pair("Retargeting", "Brand"), ("brand", "ad"))
-        self.assertEqual(classify_pair("محاليل وريدية في منزلك", "Competitor"), ("iv", "ad"))
+        self.assertEqual(classify_pair("مفارش قطن لبيتك", "Competitor"), ("iv", "ad"))
         self.assertEqual(classify_pair("no signal", "nope"), ("brand", "default"))
 
-    @unittest.skip("Well departments; Hoven has one department until Leen sets categories")
+    @unittest.skip("Department split not used yet; Hoven has one department until Leen sets categories")
 
     def test_hair_vitality_joins_iv(self):
         self.assertEqual(classify_pair("Hair-Vitality serum", "awareness"), ("iv", "ad"))
@@ -41,7 +41,7 @@ class ClassifyTests(unittest.TestCase):
         self.assertNotEqual(classify_pair("giveaway vitality", "nope")[0], "iv")
         self.assertNotIn("hair", json.load(open(os.path.join(ROOT, "config", "departments.json"), encoding="utf-8"))["departments"])
 
-    @unittest.skip("Well departments; Hoven has one department until Leen sets categories")
+    @unittest.skip("Department split not used yet; Hoven has one department until Leen sets categories")
 
     def test_prototype_window(self):
         data = json.load(open(FIXTURE, encoding="utf-8"))
@@ -336,7 +336,7 @@ class BillingTests(unittest.TestCase):
                 open(data_path, "w", encoding="utf-8").write(previous)
 
 
-@unittest.skip("Well-only: excluded TikTok account (Spring Rose); Hoven excludes none")
+@unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 class SpringRoseTests(unittest.TestCase):
     def test_account_and_named_ads_drop_out_of_spend(self):
         from tiktok.merge import is_spring_rose_account, without_spring_rose

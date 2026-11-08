@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
 import { gate } from '../../src/lib/gate';
-import { WELL_COMPANY } from '../../src/lib/tenant';
+import { HOVEN_COMPANY } from '../../src/lib/tenant';
 import { api } from '../../src/api/index';
 import * as control from '../../src/api/routes/control';
 import * as connectors from '../../src/api/routes/connectors';
@@ -31,7 +31,7 @@ describe('gate: Hoven pages and data', () => {
     expect(d instanceof Response ? d.status : 'pass').toBe(403);
   });
   it("still opens them for Hoven's users, and the other company keeps its own tabs", async () => {
-    const well = await cookieOf(profile(WELL_COMPANY));
+    const well = await cookieOf(profile(HOVEN_COMPANY));
     for (const p of ['/', '/dash.json', '/control/', '/api/control/suggestions']) expect(await gate(new Request('https://x.test' + p, { headers: { cookie: well } }), E), p).toEqual({ pass: true });
     const other = await cookieOf(profile(OTHER));
     for (const p of ['/design/', '/api/design/options', '/today/', '/api/dash/data', '/api/today/state']) expect(await gate(new Request('https://x.test' + p, { headers: { cookie: other } }), E), p).toEqual({ pass: true });
@@ -60,8 +60,8 @@ describe("handlers refuse another company's users themselves (the gate is not th
     });
   }
   it('Hoven still reads the board', async () => {
-    expect((await call('/api/control/suggestions', 'GET', WELL_COMPANY)).status).toBe(200);
-    expect((await call('/api/connectors/list', 'GET', WELL_COMPANY)).status).toBe(200);
+    expect((await call('/api/control/suggestions', 'GET', HOVEN_COMPANY)).status).toBe(200);
+    expect((await call('/api/connectors/list', 'GET', HOVEN_COMPANY)).status).toBe(200);
   });
   it('the start page shows no decisions or setup of Hoven to another company', async () => {
     const r = await call('/api/today/state', 'GET', OTHER);
@@ -82,6 +82,6 @@ describe("handlers refuse another company's users themselves (the gate is not th
     expect(other.body).toContain('err=access');
     expect(other.calls.filter(u => !u.includes('/profiles?id=eq.'))).toEqual([]);
     // the same request from Hoven gets past the company check (the platform's answer is stubbed to fail: err=exchange)
-    expect((await callback(WELL_COMPANY)).body).toContain('err=exchange');
+    expect((await callback(HOVEN_COMPANY)).body).toContain('err=exchange');
   });
 });

@@ -4,7 +4,7 @@ import {
   env, sb, json, html, readJson, handle, requireUser, audit, sign, verify, readCookie, loadProfile, sessionFor, can,
   type AuthEnv, type Cfg, type Session,
 } from '../../lib/auth';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 import { saveValues } from '../../lib/vault';
 import { TIKTOK_MCP_DAYS, pkce, registerClient, authorizeUrl as mcpAuthorizeUrl, exchangeCode } from '../../lib/mcp-oauth';
 import { PLATFORMS, OAUTH, byId, appCreds, authorizeUrl, exchange, oauth1, check, pullState, type Platform, type Values, type Exchanged, CORE } from '../../lib/connectors';
@@ -173,7 +173,7 @@ export const callback = {
     if (q.get('error') || q.get('denied') || !(v1 ? q.get('oauth_verifier') : code)) return back(`/connectors/?err=denied&p=${encodeURIComponent(st.p)}`, true);
     const profile = await loadProfile(cfg, st.uid);
     const user = profile && profile.active !== false ? sessionFor(profile, cfg) : null;
-    if (!user || user.co !== WELL_COMPANY || !p || !o || !can(user, 'connectors', cfg)) return back('/connectors/?err=access', true);
+    if (!user || user.co !== HOVEN_COMPANY || !p || !o || !can(user, 'connectors', cfg)) return back('/connectors/?err=access', true);
     if (o.mcpOAuth) {
       // TikTok MCP: the code + the PKCE verifier from the nonce cookie + the client id from the signed state
       try {

@@ -60,7 +60,7 @@ const patch = (h: Parameters<typeof call>[0], who: A.Profile, body: unknown) => 
 };
 const BAD = 'علاج نهائي ومضمون بسعر رخيص';
 const save = async (who: A.Profile, extra: Record<string, unknown> = {}) =>
-  (await call(root.POST, who, { module: 'copy', kind: 'text', title: 'عنوان', content: BAD, platform: 'meta', service: 'محاليل', ...extra })).json() as Promise<{ ok?: boolean; error?: string; item: { id: number; starred: boolean; review_status: string; compliance_result: { hits: { rule: string }[] } } }>;
+  (await call(root.POST, who, { module: 'copy', kind: 'text', title: 'عنوان', content: BAD, platform: 'meta', service: 'مفارش', ...extra })).json() as Promise<{ ok?: boolean; error?: string; item: { id: number; starred: boolean; review_status: string; compliance_result: { hits: { rule: string }[] } } }>;
 
 describe('cleaning', () => {
   it('needs a known tab, kind and text; the title falls back to the start of the text; fields are cut', () => {
@@ -90,7 +90,7 @@ describe('saving', () => {
     const r = await save(writer);
     expect(r.ok).toBe(true);
     expect(r.item).toMatchObject({ review_status: 'draft', starred: false });
-    expect(r.item.compliance_result.hits.map(h => h.rule)).toEqual(expect.arrayContaining(['cure', 'guarantee']));
+    expect(r.item.compliance_result.hits.map(h => h.rule)).toEqual(expect.arrayContaining(['guarantee']));   // Hoven: store rules, no health 'cure' rule
     expect(items[0]).toMatchObject({ company_id: CO_A, module: 'copy', kind: 'text', created_by: 'w@example.com', created_by_id: uid(2), approved_by: null });
     expect(audits).toEqual([{ user_id: uid(2), email: 'w@example.com', company_id: CO_A, action: 'library_saved', target: { id: 1, module: 'copy', kind: 'text' } }]);
     expect(JSON.stringify(audits)).not.toContain('مضمون');

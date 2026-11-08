@@ -16,7 +16,7 @@ describe('scene prompt', () => {
     expect(p).toMatch(/dallah, sadu, lanterns, crescent/);
     expect(p).toMatch(/No text, letters, numbers, logos/);
     expect(p).toMatch(/new scene/);
-    expect(p).not.toMatch(/healthcare|syringe|before\/after/i);        // nothing left from the Well prompt
+    expect(p).not.toMatch(/healthcare|syringe|before\/after/i);        // nothing left from the old health prompt
   });
   it('without a product photo it does not claim one, and the frame follows the size', () => {
     expect(scenePrompt('kids', 'story', false)).not.toContain('exactly as it is');

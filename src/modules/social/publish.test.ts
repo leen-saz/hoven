@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { publishPost, publishOne, retryPlan, checkConnection, validate, stale, VIDEO_WAIT_MS, type Draft, type Results } from './social';
 import { runSocial } from './cron';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 import { graphMock } from './graph-mock';
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
@@ -208,7 +208,7 @@ describe('retry of the failed platforms', () => {
 
 describe('runSocial: claiming, pending videos, recovery', () => {
   const ENV = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'l@x' };
-  const base = { company_id: WELL_COMPANY, platforms: ['instagram'], body: 'v', media: [vid], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } };
+  const base = { company_id: HOVEN_COMPANY, platforms: ['instagram'], body: 'v', media: [vid], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } };
   // a tiny table: social_posts rows, claims honoured by the filters the cron sends
   function db(rows: Record<string, unknown>[]) {
     const patches: Record<string, unknown>[] = [];

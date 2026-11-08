@@ -3,7 +3,7 @@
 // disagreement to the audit log as ids and counts, never a figure. The critique (Claude, paid, needs ANTHROPIC_API_KEY) is a
 // draft on top; the audit works without any key.
 import { json, handle, requireUser, audit as logAudit, sb, notEnabled, type AuthEnv } from '../../lib/auth';
-import { scoped, WELL_COMPANY } from '../../lib/tenant';
+import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { usageCtx } from '../../lib/usage';
 import type { Dash } from '../overview/numbers';
 import { audit } from './audit';
@@ -34,7 +34,7 @@ async function load(e: Env, url: URL): Promise<{ d: Dash & Raw; from: string; to
 export const auditRoute = { GET: handle(async (request, e: Env) => {
   const { cfg, user } = await requireUser(request, e, 'owner');
   // dash.json is Hoven's own numbers: another company's owner gets nothing
-  if (user.co !== WELL_COMPANY) return json(404, { error: 'ما فيه أرقام لشركتك للحين' });
+  if (user.co !== HOVEN_COMPANY) return json(404, { error: 'ما فيه أرقام لشركتك للحين' });
   const url = new URL(request.url), L = await load(e, url);
   if (L instanceof Response) return L;
   const { d, from, to, plat, by } = L;
@@ -61,7 +61,7 @@ export const auditRoute = { GET: handle(async (request, e: Env) => {
 
 export const critiqueRoute = { POST: handle(async (request, e: Env) => {
   const { cfg, user } = await requireUser(request, e, 'owner', { write: true });
-  if (user.co !== WELL_COMPANY) return json(404, { error: 'ما فيه أرقام لشركتك للحين' });
+  if (user.co !== HOVEN_COMPANY) return json(404, { error: 'ما فيه أرقام لشركتك للحين' });
   if (!e.ANTHROPIC_API_KEY) return json(503, { error: notEnabled(user, 'مراجعة Claude', 'ANTHROPIC_API_KEY') });
   const L = await load(e, new URL(request.url));
   if (L instanceof Response) return L;

@@ -1,7 +1,7 @@
 // Routes of the Social tab that touch the platform connection: retry (approver only), what each role sees of a failure,
 // choosing the page, and the dry-run check. The database is a small stub; the Graph API is graph-mock.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 import { graphMock } from './graph-mock';
 import { META_PENDING } from '../../lib/connectors';
 
@@ -14,7 +14,7 @@ type Db = { post?: Record<string, unknown>; approvers?: string[]; vault?: { name
 async function call(method: string, path: string, who: { email: string; role: string }, db: Db, body: unknown = {}) {
   const { api } = await import('../../api/index');
   const { sign, SESSION } = await import('../../lib/auth');
-  const p = { id: 'u1', email: who.email, role: who.role, dashboards: ['social'], access: { social: 'approve' }, departments: [], company_id: WELL_COMPANY, active: true };
+  const p = { id: 'u1', email: who.email, role: who.role, dashboards: ['social'], access: { social: 'approve' }, departments: [], company_id: HOVEN_COMPANY, active: true };
   const writes: { url: string; body: unknown }[] = [], rpc: { fn: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
     if (url.startsWith('https://graph.facebook.com') && db.graph) return db.graph(url, init);
@@ -31,7 +31,7 @@ async function call(method: string, path: string, who: { email: string; role: st
     return new Response('null');
   }));
   const now = Date.now();
-  const token = await sign({ uid: p.id, email: who.email, name: '', role: who.role, dash: ['social'], lvl: { social: 'approve' }, depts: [], co: WELL_COMPANY, exp: now + 3600e3, chk: now }, SECRET);
+  const token = await sign({ uid: p.id, email: who.email, name: '', role: who.role, dash: ['social'], lvl: { social: 'approve' }, depts: [], co: HOVEN_COMPANY, exp: now + 3600e3, chk: now }, SECRET);
   const res = await api.request('https://hoven.test' + path, { method, headers: { cookie: `${SESSION}=${token}`, origin: 'https://hoven.test', 'content-type': 'application/json' }, ...(method === 'GET' ? {} : { body: JSON.stringify(body) }) }, ENV);
   return { status: res.status, json: await res.json().catch(() => null) as Json | null, writes, rpc };
 }

@@ -426,7 +426,7 @@ const D = await (async () => {
   if (d.rows_cols) { d.rows = decodeRows(d.rows_cols); delete d.rows_cols; }
   return d;
 })();
-// Well excluded one TikTok account here; Hoven excludes none.
+// No TikTok account is excluded in Hoven.
 function ttExcludedAccount(){ return false; }
 function ttExcludedAd(){ return false; }
 const ORG_FB_HIDDEN = new Set(['Hoven Home Care','Hoven Women Health']);

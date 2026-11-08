@@ -96,7 +96,7 @@ export default async function mount() {
         const d = await api('/api/listening/watch');
         const off = d.missing ? [] : LISTEN.filter(k => !d.sources?.[k.src]);
         lbox.innerHTML = d.missing ? `<section class="card pad"><h2 style="margin:0 0 6px">الرصد: ما اكتمل تجهيزه</h2><p class="muted" style="margin:0">جداول الرصد ناقصة. شغّل <code>013_listening.sql</code> من مجلد supabase/migrations في Supabase ← SQL Editor، وبعدها ارجع هنا.</p></section>`
-          : off.length ? `<section class="card pad"><h2 style="margin:0 0 6px">الرصد: مصادر ما انفعّلت</h2><p class="muted" style="margin:0 0 8px">أسرار في Cloudflare: Workers ← well-ads ← Settings ← Variables and Secrets ← Add ← Secret.</p>
+          : off.length ? `<section class="card pad"><h2 style="margin:0 0 6px">الرصد: مصادر ما انفعّلت</h2><p class="muted" style="margin:0 0 8px">أسرار في Cloudflare: Workers ← hoven ← Settings ← Variables and Secrets ← Add ← Secret.</p>
             <ul>${off.map(k => `<li><b>${esc(k.label)}</b>: <code>${esc(k.keys)}</code> · من ${esc(k.where)}</li>`).join('')}</ul></section>` : '';
       } catch (err) { failure(lbox, err, loadListen); }
     };

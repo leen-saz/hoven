@@ -65,7 +65,7 @@ describe('main dashboard: customer journey', () => {
   it('a step under its floor is the bottleneck before one only weaker than usual', () => {
     const f = page({ crm: { rows: [], paid_all: [] } });
     const steps = f.funSteps({ ...base, cpl: 81.5 }, { ...base, cpl: 66.5 }, { click: null, lead: null, cpl: null }, 1.43, 1.72, null) as Step[];
-    expect(f.funVerdict(steps)).toMatchObject({ step: 'lead', level: 'bad', title: 'النقرات ما تصير ليدز' });
+    expect(f.funVerdict(steps)).toMatchObject({ step: 'lead', level: 'bad', title: 'النقرات ما تصير طلبات' });   // Hoven counts orders (ADR-0007)
   });
 
   it("small gaps are not a problem: Leen's 1.71% vs a usual 1.84% stays fine, «لا توجد مشكلة واضحة»", () => {

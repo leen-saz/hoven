@@ -29,7 +29,7 @@ const PLATFORM_EN: Record<string, string> = {
   google_shopping: 'Google · Shopping', google_app: 'Google · App', google_smart: 'Google · Smart', google_local: 'Google · Local',
 };
 // The department names when dash.json has none (pipeline/config/departments.json), and the main dashboard's English ones
-export const DEP_AR: Record<string, string> = { iv: 'المحاليل الوريدية', midwife: 'القبالة / رعاية الحمل', foot: 'تقويم القدم', renan: 'رينان لصحة الطفل', brand: 'العلامة التجارية / الوعي' };
+export const DEP_AR: Record<string, string> = { hoven: 'هوفن', brand: 'العلامة التجارية / الوعي' };
 // (pipeline/dash/01-base.js DEP_EN)
 export const DEP_EN: Record<string, string> = { iv: 'IV Drips', midwife: 'Midwifery / Maternity', foot: 'Foot Alignment', renan: 'Renan Child Health', brand: 'Brand / Awareness' };
 // In the page language (lang.ts): every caller gets the right name, including .map(platformName)

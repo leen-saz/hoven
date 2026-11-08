@@ -7,10 +7,10 @@ const post = (caption: string, likes: number, comments = 0, date = '2026-10-20',
 
 describe('listening', () => {
   it('normalises Arabic spelling and drops stop words', () => {
-    expect(norm('المحاليلُ الوريديّة')).toBe('المحاليل الوريديه');
-    expect(tokens('جلسة #محاليل في البيت مع فريق هوفن')).toEqual(expect.arrayContaining(['#محاليل', 'جلسه', 'البيت', 'فريق']));
+    expect(norm('المفارشُ القطنيّة')).toBe('المفارش القطنيه');
+    expect(tokens('جلسة #مفارش في البيت مع فريق هوفن')).toEqual(expect.arrayContaining(['#مفارش', 'جلسه', 'البيت', 'فريق']));
     expect(tokens('في من على')).toEqual([]);
-    expect(bare('الرعاية المنزلية والمحاليل')).toBe('رعايه منزليه محاليل');
+    expect(bare('الرعاية المنزلية والمفارش')).toBe('رعايه منزليه مفارش');
     expect(bare('رعاية منزلية')).toBe('رعايه منزليه');
   });
 
@@ -22,12 +22,12 @@ describe('listening', () => {
 
   it('ranks topics that beat the average, scores watched keywords and finds standouts', () => {
     const posts = postsOf({ instagram: [{ name: '@w', posts: [
-      post('فيتامين سي للمناعة', 120, 30), post('فيتامين سي بالوريد', 100, 2), post('عرض المحاليل', 10, 1), post('عرض الشتاء', 12, 0), post('رعاية الأم', 11, 1),
+      post('مفرش قطن للشتاء', 120, 30), post('مفرش قطن مزدوج', 100, 2), post('عرض المفارش', 10, 1), post('عرض الشتاء', 12, 0), post('رعاية الأم', 11, 1),
     ] }] });
-    const r = analyze(posts, ['فيتامين', 'ولادة'], 90, '2026-11-02');
+    const r = analyze(posts, ['مفرش', 'ستائر'], 90, '2026-11-02');
     expect(r.posts).toBe(5);
-    expect(r.topics[0]?.word).toBe('فيتامين');
-    expect(r.watch[0]).toMatchObject({ keyword: 'فيتامين', posts: 2 });
+    expect(r.topics[0]?.word).toBe('مفرش');
+    expect(r.watch[0]).toMatchObject({ keyword: 'مفرش', posts: 2 });
     expect(r.watch[0]?.lift).toBeGreaterThan(1.5);
     expect(r.watch[1]).toMatchObject({ posts: 0, lift: null });
     expect(r.standouts.length).toBe(2);

@@ -1,7 +1,7 @@
 // /api/social/*: the post calendar of the user's company. Reads need the `social` dashboard, writes are same-origin.
 // Publishing itself runs from the Worker cron (src/modules/social/cron.ts), never from the browser.
 import { sb, json, readJson, handle, requireUser, audit, isOwner, type Cfg } from '../../lib/auth';
-import { scoped, WELL_COMPANY } from '../../lib/tenant';
+import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { SOCIAL, readiness, validate, canApprove, cleanApprovers, suggestPrompt, cleanSuggestion, retryPlan, checkConnection, type SocialPlatform, type Results } from './social';
 import { saveValues } from '../../lib/vault';
 import { META_PENDING, pageValues, type PageCand } from '../../lib/connectors';
@@ -24,7 +24,7 @@ const day = (s: string | null, fallback: number) => { const t = Date.parse(s || 
 
 // The connected accounts, as the publisher sees them (src/modules/social/cron.ts): Hoven's vault today
 async function tokensFor(cfg: Cfg, co: string): Promise<Record<string, string>> {
-  if (co !== WELL_COMPANY) return {};
+  if (co !== HOVEN_COMPANY) return {};
   const v = await sb<{ name: string; value: string }[]>(cfg, '/rest/v1/rpc/connector_env', { method: 'POST', admin: true, body: {} });
   return Object.fromEntries((v.ok && Array.isArray(v.data) ? v.data : []).map(x => [x.name, x.value]));
 }
@@ -42,7 +42,7 @@ function shownResults(v: unknown, owner: boolean): Results {
 }
 // The connected Facebook page and Instagram account: names only (never a token). Hoven's connection today.
 async function accountOf(cfg: Cfg, co: string): Promise<{ page: string | null; instagram: string | null; pick: boolean } | null> {
-  if (co !== WELL_COMPANY) return null;
+  if (co !== HOVEN_COMPANY) return null;
   const r = await sb<{ shown?: Record<string, string>; names?: string[] }[]>(cfg, '/rest/v1/connections?platform=eq.meta_pages&select=shown,names', { admin: true });
   const c = r.ok && Array.isArray(r.data) ? r.data[0] : undefined;
   if (!c) return { page: null, instagram: null, pick: false };

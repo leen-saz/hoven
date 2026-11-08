@@ -112,17 +112,17 @@ describe('fetch flow', () => {
     const f = (async (u: string) => { seen.push(decodeURIComponent(String(u)));
       if (String(u).includes('news.google')) return new Response(seen.length === 1 ? RSS : '<rss></rss>', { status: 200 });
       return new Response('', { status: 500 }); }) as unknown as typeof fetch;
-    const r = await collect({ id: 9, kind: 'brand', name: 'هوفن يونيون', keywords: ['wellcare', 'تطبيق هوفن', 'رابع'] }, {} as never, f);
+    const r = await collect({ id: 9, kind: 'brand', name: 'هوفن للمفارش', keywords: ['hovenhome', 'تطبيق هوفن', 'رابع'] }, {} as never, f);
     expect(r.bySource).toEqual({ google: 1 });
-    expect(seen.map(u => u.match(/q=([^&]*)/)![1])).toEqual(['"هوفن يونيون"', 'wellcare', '"تطبيق هوفن"', 'رابع']);
+    expect(seen.map(u => u.match(/q=([^&]*)/)![1])).toEqual(['"هوفن للمفارش"', 'hovenhome', '"تطبيق هوفن"', 'رابع']);
   });
   it('searches every term of a 4-term brand watch, and Refresh keeps its calls under the Worker limit', async () => {
     const seen: string[] = [];
     const f = (async (u: string) => { seen.push(decodeURIComponent(String(u)));
-      return new Response(String(u).includes('wellcare') ? RSS : '<rss></rss>', { status: 200 }); }) as unknown as typeof fetch;
-    const brand = { id: 1, kind: 'brand' as const, name: 'هوفن يونيون', keywords: ['تطبيق هوفن', 'wellunion', 'wellcare'] };
+      return new Response(String(u).includes('hovenhome') ? RSS : '<rss></rss>', { status: 200 }); }) as unknown as typeof fetch;
+    const brand = { id: 1, kind: 'brand' as const, name: 'هوفن للمفارش', keywords: ['تطبيق هوفن', 'hovensa', 'hovenhome'] };
     const r = await collect(brand, {} as never, f);
-    expect(seen.filter(u => u.includes('news.google')).map(u => u.match(/q=([^&]*)/)![1])).toEqual(['"هوفن يونيون"', '"تطبيق هوفن"', 'wellunion', 'wellcare']);
+    expect(seen.filter(u => u.includes('news.google')).map(u => u.match(/q=([^&]*)/)![1])).toEqual(['"هوفن للمفارش"', '"تطبيق هوفن"', 'hovensa', 'hovenhome']);
     expect(r.bySource).toEqual({ google: 1 });
     expect(cost(brand)).toBe(18);
     const big = (id: number) => ({ id, kind: 'competitor' as const, name: `c${id}`, keywords: ['a', 'b', 'c', 'd', 'e', 'f'] }); // 5 terms searched: 20 calls
@@ -206,14 +206,15 @@ describe('parseTikTok', () => {
 
 describe('our brand and missing keys (page)', () => {
   it('suggests Hoven terms that are not watched yet and adds them in one request', async () => {
-    const { brandSuggestions, brandAdd, missingKeys, WELL_TERMS } = await import('../../../public/modules/listening/social.js');
+    const { brandSuggestions, brandAdd, missingKeys, BRAND_TERMS } = await import('../../../public/modules/listening/social.js');
     const comp = { id: 1, kind: 'competitor', name: 'ايفر كير', keywords: [] };
-    expect(brandSuggestions([comp])).toEqual(WELL_TERMS);
-    expect(brandAdd([comp], WELL_TERMS)).toEqual({ kind: 'brand', name: 'هوفن يونيون', keywords: ['تطبيق هوفن', 'wellunion', 'wellcare'], links: {} });
-    const brand = { id: 2, kind: 'brand', name: 'هوفن يونيون', keywords: ['WellUnion'], links: { x: '@well' } };
-    expect(brandSuggestions([comp, brand])).toEqual(['تطبيق هوفن', 'wellcare']);
-    expect(brandAdd([comp, brand], ['wellcare'])).toEqual({ id: 2, kind: 'brand', name: 'هوفن يونيون', keywords: ['WellUnion', 'wellcare'], links: { x: '@well' } });
-    expect(brandAdd([comp, brand], ['wellunion'])).toBeNull();
+    expect(brandSuggestions([comp])).toEqual(BRAND_TERMS);
+    // Hoven's own terms (overlay listening_terms)
+    expect(brandAdd([comp], BRAND_TERMS)).toEqual({ kind: 'brand', name: 'هوفن', keywords: ['hoven', 'هوفن للمفارش', 'hoven.sa'], links: {} });
+    const brand = { id: 2, kind: 'brand', name: 'هوفن', keywords: ['HOVEN'], links: { x: '@hoven' } };
+    expect(brandSuggestions([comp, brand])).toEqual(['هوفن للمفارش', 'hoven.sa']);
+    expect(brandAdd([comp, brand], ['hoven.sa'])).toEqual({ id: 2, kind: 'brand', name: 'هوفن', keywords: ['HOVEN', 'hoven.sa'], links: { x: '@hoven' } });
+    expect(brandAdd([comp, brand], ['hoven'])).toBeNull();
     expect(missingKeys({ news: true, youtube: true }).map(k => k.src)).toEqual(['x', 'reddit']);
   });
 });

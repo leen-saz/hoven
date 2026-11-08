@@ -44,6 +44,13 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `ads` | 000 (+006) | pipeline (`supabase_store`) → analytics, debugger | yes, no FK | ad_key PK, platform, name, campaign, ad_group, format, status, live, goal, preview_url, video, link, doc, updated_at | Forever. Ads that stopped delivering stay for history. |
 | `ad_metrics` | 000 | pipeline | no (global; keyed by ad_key, cascades with the ad) | ad_key, day, spend, impressions, clicks, leads, conversations | Forever (small: one row per ad per day). Revisit past ~2M rows. |
 | `dashboard_state` | 000 | pipeline | no | id=1, doc, updated_at | Single row, overwritten. |
+| `salla_orders` | 012 | pipeline (`salla.py`) | no (one store) | id PK, day, status, total, draft, pending_payment, amounts | Forever. Per-order cache so each hour fetches only what changed. Hoven only. |
+| `salla_orders_daily` | 012 | pipeline (`salla.py`, seed from the old dashboard) → sales | no (one store) | day PK, orders, net_sales_sar, gross_sales_sar, discounts_sar, shipping_sar, refunds_sar, vat_sar, canceled_*, pending_review_*, source, fetched_at | Forever (history from 2023-08-29). Hoven only. |
+| `library_templates` | 023 | library (Hoven) | yes (FK) | id, kind, category, name, description, body, fields, lang, favorite, source, archived_at | Forever; archive, never delete. Hoven only. |
+| `library_folders` | 023 | library (Hoven) | yes (FK) | id, name, created_by | Forever. Hoven only. |
+| `library_documents` | 023 | library (Hoven) | yes (FK) | id, folder_id, template_id, title, kind, body, status, source, archived_at | Forever; archive, never delete. Hoven only. |
+| `usage_daily` | 024 | usage meter (Hoven quotas) | yes (FK) | company_id, day, module, unit, qty | 24 months. Hoven only. |
+| `usage_quotas` | 024 | admin (Hoven quotas) | yes (FK) | company_id, unit, monthly_limit | One row per company and unit. Hoven only. |
 | `profiles` | 001 (+002, 006, 012) | auth / admin | yes (FK) | id, email, name, role, dashboards, departments, access, active, created_at | Forever. Deactivate (`active=false`), never delete. |
 | `audit_log` | 001 (+006) | auth, every module | yes, no FK | id, at, user_id, email, action, target, before, after, note, result | Append-only, never edited. Keep 24 months, then archive; do not delete earlier. |
 | `suggestions` | 001 (+003) | control | no (Hoven-only) | id, created_at, platform, level, target_id, kind, params, status, decided_by, result, before, after, risk, expect, critic … | Forever (the learning loop reads them). Expire `open` ones (`status=expired` is already a state). |

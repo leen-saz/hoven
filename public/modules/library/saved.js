@@ -1,5 +1,5 @@
-// المكتبة · المحفوظات من التابات (من وِل، saved.js): قائمة بفلتر وبحث، نجمة المفضلة، وللمالكة (أو اللي حفظ العنصر قبل التعميد) تعديل، وللمالكة تعميد.
-import { $, api, say, esc, shell, busy, when } from '/assets/common.js';
+// المكتبة · المحفوظات من التابات (saved.js): قائمة بفلتر وبحث، نجمة المفضلة، وللمالكة (أو اللي حفظ العنصر قبل التعميد) تعديل، وللمالكة تعميد.
+import { $, api, say, esc, busy, when } from '/assets/common.js';
 
 // Runs on every visit of this page (assets/router.js calls it after each ClientRouter navigation).
 // Hoven: mounted by client.js on the same Library page, after the shell is drawn (so no second shell() call).

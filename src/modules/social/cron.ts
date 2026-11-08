@@ -6,14 +6,14 @@
 //    what went out is never repeated, what never started starts, what may have gone out is marked 'unconfirmed' for a person to decide;
 //  - a retry of the failed platforms (routes.ts) goes through the same path with the failed entries cleared.
 import { env, sb, type AuthEnv, type Cfg } from '../../lib/auth';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 import { due, publishPost, stale, type Draft, type Results } from './social';
 
 type Row = Draft & { id: number; company_id: string; status: string; claimed_at?: string | null; results?: Results | null; approved_at?: string | null; approved_by?: string | null; company?: { social_approvers?: string[] | null } | null };
 
 async function work(cfg: Cfg, p: Row, tokens: Record<string, string>, f: typeof fetch, now: number): Promise<void> {
   const patch = (body: Record<string, unknown>) => sb(cfg, `/rest/v1/social_posts?id=eq.${p.id}`, { method: 'PATCH', admin: true, body });
-  const out = await publishPost(p, p.company_id === WELL_COMPANY ? tokens : {}, f, p.results || {}, { now, save: async results => { await patch({ results }); } });
+  const out = await publishPost(p, p.company_id === HOVEN_COMPANY ? tokens : {}, f, p.results || {}, { now, save: async results => { await patch({ results }); } });
   // pending = Instagram is still preparing a video: back to 'scheduled' (still approved, still due) and the next run goes on
   await patch({ status: out.status === 'pending' ? 'scheduled' : out.status, results: out.results, claimed_at: null });
 }

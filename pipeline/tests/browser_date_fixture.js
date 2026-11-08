@@ -179,7 +179,7 @@ async function main() {
     await expectKpi(page, 'الصرف', '15.00', 'department and one day');
     await expectKpi(page, 'الطلبات', '3', 'department leads');
     const card = await page.evaluate(() => {
-      const el = [...document.querySelectorAll('#deptCards button')].find(b => b.textContent.includes('المحاليل'));
+      const el = [...document.querySelectorAll('#deptCards button')].find(b => b.textContent.includes('المفارش'));
       return el ? el.textContent.replace(/\s+/g, ' ') : '';
     });
     check(card.includes('15 أكتوبر') && !card.includes('16 أكتوبر') && !card.includes('17 أكتوبر'), 'last spend stays inside the range', card);

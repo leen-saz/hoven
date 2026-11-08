@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { validate, due, publishPost, canApprove, cleanApprovers } from './social';
 import { runSocial } from './cron';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const later = '2026-11-02T09:00:00Z';
@@ -10,8 +10,8 @@ afterEach(() => { vi.unstubAllGlobals(); });
 
 describe('validate', () => {
   it('accepts a good post, keeps the Riyadh time as ISO, and never takes auto mode', () => {
-    const v = validate({ platforms: ['facebook', 'facebook', 'nope'], body: 'جلسة تغذية وريدية', publish_at: later, mode: 'auto' }, NOW);
-    expect(v.draft).toEqual({ platforms: ['facebook'], body: 'جلسة تغذية وريدية', media: [], publish_at: '2026-11-02T09:00:00.000Z', mode: 'manual' });
+    const v = validate({ platforms: ['facebook', 'facebook', 'nope'], body: 'طقم مفارش قطنية', publish_at: later, mode: 'auto' }, NOW);
+    expect(v.draft).toEqual({ platforms: ['facebook'], body: 'طقم مفارش قطنية', media: [], publish_at: '2026-11-02T09:00:00.000Z', mode: 'manual' });
   });
   it('refuses past times, empty posts, over-long text and Instagram without media', () => {
     expect(validate({ platforms: ['facebook'], body: 'x', publish_at: '2026-10-01T00:00:00Z' }, NOW).error).toBe('وقت النشر راح');
@@ -78,10 +78,10 @@ describe('runSocial', () => {
   it('claims each due post once and never uses Hoven tokens for another company', async () => {
     const OTHER = '22222222-2222-2222-2222-222222222222';
     const posts = [
-      { id: 1, company_id: WELL_COMPANY, platforms: ['facebook'], body: 'a', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } },
+      { id: 1, company_id: HOVEN_COMPANY, platforms: ['facebook'], body: 'a', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } },
       { id: 2, company_id: OTHER, platforms: ['facebook'], body: 'b', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled', approved_at: '2026-11-01T10:00:00Z', approved_by: 'boss@other.co', company: { social_approvers: [] } },
-      { id: 3, company_id: WELL_COMPANY, platforms: ['facebook'], body: 'c', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled' },
-      { id: 4, company_id: WELL_COMPANY, platforms: ['facebook'], body: 'd', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled', approved_at: '2026-11-01T10:00:00Z', approved_by: 'fahad@x.co', company: { social_approvers: ['sara@x.co'] } },
+      { id: 3, company_id: HOVEN_COMPANY, platforms: ['facebook'], body: 'c', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled' },
+      { id: 4, company_id: HOVEN_COMPANY, platforms: ['facebook'], body: 'd', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', status: 'scheduled', approved_at: '2026-11-01T10:00:00Z', approved_by: 'fahad@x.co', company: { social_approvers: ['sara@x.co'] } },
     ];
     const saved: Record<number, { status: string }> = {};
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
@@ -107,7 +107,7 @@ describe('PATCH /api/social/posts approve', () => {
   async function approve(email: string, role: string, approvers: string[]) {
     const { api } = await import('../../api/index');
     const { sign, SESSION } = await import('../../lib/auth');
-    const p = { id: 'u1', email, role, dashboards: ['social'], access: { social: 'approve' }, departments: [], company_id: WELL_COMPANY, active: true };
+    const p = { id: 'u1', email, role, dashboards: ['social'], access: { social: 'approve' }, departments: [], company_id: HOVEN_COMPANY, active: true };
     const patched: string[] = [];
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
       if (url.includes('/rest/v1/profiles')) return new Response(JSON.stringify([p]));
@@ -116,7 +116,7 @@ describe('PATCH /api/social/posts approve', () => {
       return new Response('null');
     }));
     const now = Date.now();
-    const token = await sign({ uid: p.id, email, name: '', role, dash: ['social'], lvl: { social: 'approve' }, depts: [], co: WELL_COMPANY, exp: now + 3600e3, chk: now }, SECRET);
+    const token = await sign({ uid: p.id, email, name: '', role, dash: ['social'], lvl: { social: 'approve' }, depts: [], co: HOVEN_COMPANY, exp: now + 3600e3, chk: now }, SECRET);
     const res = await api.request('https://hoven.test/api/social/posts', { method: 'PATCH', headers: { cookie: `${SESSION}=${token}`, origin: 'https://hoven.test', 'content-type': 'application/json' }, body: JSON.stringify({ id: 7, action: 'approve' }) }, ENV);
     return { status: res.status, patched };
   }

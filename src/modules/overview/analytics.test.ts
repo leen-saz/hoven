@@ -5,7 +5,7 @@ import type { Dash } from './numbers';
 // Made-up numbers: a lead ad (Instagram, IV), a WhatsApp ad (Snap, midwife), and a hidden platform counted in totals only
 const D = {
   range: { start: '2026-09-01', end: '2026-10-10', today: '2026-10-11' },
-  departments: { order: ['iv', 'midwife', 'foot', 'brand'], departments: { iv: { ar: 'محاليل' }, midwife: { ar: 'قبالة' }, foot: { ar: 'قدم' }, brand: { ar: 'علامة' } } },
+  departments: { order: ['iv', 'midwife', 'foot', 'brand'], departments: { iv: { ar: 'مفارش' }, midwife: { ar: 'قبالة' }, foot: { ar: 'قدم' }, brand: { ar: 'علامة' } } },
   ads: {
     a: { name: 'ليدز', campaign: 'x', platform: 'instagram', goal: 'lead', dept: 'iv' },
     b: { name: 'واتساب', campaign: 'y', platform: 'snap', goal: 'messages', dept: 'midwife' },
@@ -55,7 +55,7 @@ describe('overview: the rest of the analytics page', () => {
   it('departments in order, brand left out, cost per lead from lead ads', () => {
     const d = depts(D, F, T);
     expect(d.map(x => x.key)).toEqual(['iv', 'midwife', 'foot']);
-    expect(d[0]).toMatchObject({ name: 'محاليل', spend: 220, leads: 7 });
+    expect(d[0]).toMatchObject({ name: 'مفارش', spend: 220, leads: 7 });
     expect(d[0]!.cpl).toBeCloseTo(220 / 7, 6);
     expect(d[1]).toMatchObject({ spend: 80, leads: 0, cpl: null });
     expect(d[2]).toMatchObject({ spend: 0, cpl: null });

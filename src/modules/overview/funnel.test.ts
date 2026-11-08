@@ -40,7 +40,7 @@ describe('overview: funnel rules', () => {
 
   it('clicks that stop becoming leads point at the form, the page and the WhatsApp entry', () => {
     const v = verdict(steps(as({ clickToResult: 2 }), base, usual));
-    expect(v).toMatchObject({ step: 'lead', where: 'من النقرة لليد' });
+    expect(v).toMatchObject({ step: 'lead', where: 'من النقرة للطلب' });   // Hoven counts orders (ADR-0007)
     expect(v.why).toContain('النموذج');
     expect(v.why).toContain('الواتساب');
   });

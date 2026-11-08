@@ -1,4 +1,4 @@
-// Port of well-ads-dashboard tests/test_auth.mjs: same cases. No network: Supabase is stubbed.
+// Port of the original dashboard's auth tests: same cases. No network: Supabase is stubbed.
 // The old middleware signalled pass/rewrite with x-middleware-* headers; the gate returns { pass, rewrite } instead.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';

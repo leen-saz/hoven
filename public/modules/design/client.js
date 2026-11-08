@@ -9,11 +9,11 @@ const C = { ink: '#293342', accent: '#294036', white: '#FFFFFF' };
 
 let fontReady = null;
 const font = () => (fontReady ||= Promise.all([
-  new FontFace('ThmanyahDesign', 'url(/assets/fonts/ibmplexsansarabic-bold.woff2)', { weight: '700' }).load(),
-  new FontFace('ThmanyahDesign', 'url(/assets/fonts/ibmplexsansarabic-regular.woff2)', { weight: '400' }).load(),
+  new FontFace('HovenDesign', 'url(/assets/fonts/ibmplexsansarabic-bold.woff2)', { weight: '700' }).load(),
+  new FontFace('HovenDesign', 'url(/assets/fonts/ibmplexsansarabic-regular.woff2)', { weight: '400' }).load(),
 ]).then(fs => fs.forEach(f => document.fonts.add(f))).catch(() => {}));
 
-const FF = brand => (brand && brand.font) || 'ThmanyahDesign';
+const FF = brand => (brand && brand.font) || 'HovenDesign';
 
 function lines(ctx, text, max) {
   const words = String(text || '').split(/\s+/).filter(Boolean), out = [];

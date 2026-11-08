@@ -1,6 +1,6 @@
 // Email + password via Supabase Auth, session in an HMAC-signed cookie. Web Crypto only.
 
-import { companyOf, WELL_COMPANY } from './tenant';
+import { companyOf, HOVEN_COMPANY } from './tenant';
 import { MODULES, LIVE, isModule } from '../modules/registry';
 
 export const SESSION = '__Host-hoven_session';
@@ -17,7 +17,7 @@ export const VIEW_ONLY = 'صلاحيتك هنا مشاهدة بس';
 export const NO_APPROVE = 'الموافقة تحتاج صلاحية موافقة';
 // Control (decisions, learning) and Connectors (ad-platform keys in the Vault) have no company column yet (ADR-0006):
 // they are Hoven's alone, so another company's users are refused instead of reading or overwriting Hoven's data.
-export const WELL_ONLY = 'هالقسم مو متاح لشركتك للحين';
+export const HOVEN_ONLY = 'هالقسم مو متاح لشركتك للحين';
 
 export type Dashboard = string;
 // Per dashboard/module: view < edit < approve. Owners have approve everywhere.
@@ -195,7 +195,7 @@ export const notApplied = (user: { role: string } | null | undefined, file: stri
 
 // A feature waiting for a key: the owner gets the exact step, everyone else a plain sentence
 export const notEnabled = (user: { role: string } | null | undefined, what: string, key: string) =>
-  user?.role === 'owner' ? `${what} يحتاج تفعيل: أضف ${key} في Cloudflare ← Workers ← well-ads ← Settings ← Variables and Secrets.`
+  user?.role === 'owner' ? `${what} يحتاج تفعيل: أضف ${key} في Cloudflare ← Workers ← hoven ← Settings ← Variables and Secrets.`
     : `${what} يحتاج تفعيل من الإدارة. بلّغ مالك الحساب.`;
 
 // Diagnostics: the kind of key in use, never the key. JWT keys expose only their role claim.
@@ -268,7 +268,7 @@ export async function requireUser(request: Request, e: AuthEnv, need: Need, { wr
   if (!profile || profile.active === false) throw json(401, { error: 'الحساب موقوف' }, { 'set-cookie': clearCookie() });
   const user = sessionFor(profile, cfg);
   if (locked(user, need)) throw json(403, { error: LOCKED });
-  if (well && user.co !== WELL_COMPANY) throw json(403, { error: WELL_ONLY });
+  if (well && user.co !== HOVEN_COMPANY) throw json(403, { error: HOVEN_ONLY });
   if (!can(user, need, cfg)) throw json(403, { error: 'ما عندك صلاحية' });
   // Writes need edit and approvals need approve on that dashboard (owner/any/media checks stay as they are)
   if (need in DASHBOARDS && approve && !atLeast(user, need, 'approve', cfg)) throw json(403, { error: NO_APPROVE });

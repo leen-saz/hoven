@@ -12,7 +12,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../src/lib/auth';
 import { need } from '../../src/lib/gate';
-import { WELL_COMPANY } from '../../src/lib/tenant';
+import { HOVEN_COMPANY } from '../../src/lib/tenant';
 import { api } from '../../src/api/index';
 import { LIVE } from '../../src/modules/registry';
 
@@ -38,13 +38,13 @@ const READ_ONLY_VERBS = new Set(['control/compliance:POST', 'vitals/report:POST'
 // Handlers that need no module level (any signed-in user): the level checks do not apply, and nothing is company data
 const ANY = (g: string) => needOfGroup(g) === 'any';
 // Groups whose data is Hoven's alone until keys and decisions are per company (connections, control_settings, suggestions have no company column)
-const WELL_ONLY = ['control', 'connectors'];
+const HOVEN_ONLY = ['control', 'connectors'];
 // An empty body means "turn off", which only the owner may do
 const NEEDS_OWNER_TO_TURN_OFF = new Set(['control/kill:POST', 'overview/data:GET' /* also needs analytics (ceo) and no department scope */]);
 const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 const profile = (access: Record<string, string>, extra: Partial<A.Profile> = {}): A.Profile =>
-  ({ id: '33333333-3333-3333-3333-333333333333', email: 'member@example.com', role: 'member', active: true, access, company_id: WELL_COMPANY, ...extra });
+  ({ id: '33333333-3333-3333-3333-333333333333', email: 'member@example.com', role: 'member', active: true, access, company_id: HOVEN_COMPANY, ...extra });
 async function call(path: string, method: string, p: A.Profile | null, headers: Record<string, string> = {}) {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(p && String(url).includes('/profiles?id=eq.') ? [p] : []))));
   const cookie = p ? `${A.SESSION}=${encodeURIComponent(await A.sign(A.sessionFor(p, cfg), cfg.secret))}` : '';
@@ -142,7 +142,7 @@ describe('route table', () => {
   });
 
   it("Hoven-only groups refuse another company's users (their keys, decisions and numbers are Hoven's)", async () => {
-    expect(await offenders(secured.filter(x => WELL_ONLY.includes(x.group)), async r => {
+    expect(await offenders(secured.filter(x => HOVEN_ONLY.includes(x.group)), async r => {
       const s = await call(r.path, r.method, profile({ [needOfGroup(r.group)]: 'approve' }, { company_id: OTHER_CO }));
       return s === 403 || s === 404 ? null : `got ${s}`;
     })).toEqual([]);

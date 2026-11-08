@@ -3,11 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanProject, cleanCompetitor, platformOf, styleCard, writePrompt, parseDrafts, fallbackDrafts, review, type Project } from './copy';
 import * as A from '../../lib/auth';
 import { ROUTES } from '../routes';
-import { WELL_COMPANY } from '../../lib/tenant';
+import { HOVEN_COMPANY } from '../../lib/tenant';
 
 afterEach(() => { vi.unstubAllGlobals(); });
 
-const P = (x: Partial<Project> = {}): Project => ({ name: 'محاليل في البيت', service: 'محاليل وريدية', audience: 'الرياض', offer: '', cta: 'احجز', voice: '', banned: ['رخيص'], competitors: [], ...x });
+const P = (x: Partial<Project> = {}): Project => ({ name: 'مفارش للبيت', service: 'مفارش قطن', audience: 'الرياض', offer: '', cta: 'احجز', voice: '', banned: ['رخيص'], competitors: [], ...x });
 
 describe('setup', () => {
   it('needs a name, trims everything, dedupes banned words, keeps 10 competitors', () => {
@@ -21,7 +21,7 @@ describe('setup', () => {
   });
   it('keeps the previous values on a partial update', () => {
     const p = cleanProject({ offer: 'خصم الخريف' }, P());
-    expect(p).toMatchObject({ name: 'محاليل في البيت', offer: 'خصم الخريف', banned: ['رخيص'] });
+    expect(p).toMatchObject({ name: 'مفارش للبيت', offer: 'خصم الخريف', banned: ['رخيص'] });
   });
   it('competitor: https public links only, platform from the host, short texts dropped', () => {
     expect(platformOf('https://www.instagram.com/acme')).toBe('instagram');
@@ -93,7 +93,7 @@ describe('routes', () => {
     expect(r.status).toBe(200);
     const j = await r.json() as { projects: { competitors: { card: { samples: number } }[] }[] };
     expect(j.projects[0]!.competitors[0]!.card.samples).toBe(1);
-    expect(calls.find(c => c.url.includes('copy_projects'))!.url).toContain(`company_id=eq.${WELL_COMPANY}`);
+    expect(calls.find(c => c.url.includes('copy_projects'))!.url).toContain(`company_id=eq.${HOVEN_COMPANY}`);
   });
 
   it('view cannot save, and the unused write route is gone', async () => {
@@ -117,7 +117,7 @@ describe('review with the company rules', () => {
 describe('ad copy per platform', () => {
   it('asks for the placement fields and flags what the platform would cut', async () => {
     const { overLimits, fitDraft } = await import('./copy');
-    const p = { name: 'المحاليل', service: 'فيتامين سي', audience: '', offer: '', cta: '', voice: '', banned: [], competitors: [] };
+    const p = { name: 'المفارش', service: 'مفرش قطن', audience: '', offer: '', cta: '', voice: '', banned: [], competitors: [] };
     const prompt = writePrompt(p as never, 'google', 3, [], []);
     expect(prompt).toContain('عنوان أقل من 30 حرف');
     expect(prompt).toContain('وصف أقل من 90 حرف');

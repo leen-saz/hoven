@@ -90,11 +90,11 @@ describe('brand files', () => {
     stub(v, url => (url.includes('/brand_assets') ? [
       { id: 1, kind: 'colors', title: '', value: '#293342 #294036', description: null },
       { id: 2, kind: 'logo', title: 'شعار', value: null, description: null },
-      { id: 3, kind: 'reference', title: '', value: null, description: 'صورة ممرضة في بيت بألوان بنفسجية' },
-      { id: 4, kind: 'font', title: 'Thmanyah', value: null, description: null },
+      { id: 3, kind: 'reference', title: '', value: null, description: 'صورة غرفة نوم بألوان بنفسجية' },
+      { id: 4, kind: 'font', title: 'Hoven Brand', value: null, description: null },
     ] : []));
     const o = (await (await options.GET(req('/api/design/options', await cookieFor(v)), E)).json()) as { brand: Awaited<ReturnType<typeof brandFor>> };
-    expect(o.brand).toEqual({ colors: ['#293342', '#294036'], logo: 2, fonts: [{ id: 4, title: 'Thmanyah' }], refs: [{ id: 3, description: 'صورة ممرضة في بيت بألوان بنفسجية' }], notes: ['صورة ممرضة في بيت بألوان بنفسجية'] });
+    expect(o.brand).toEqual({ colors: ['#293342', '#294036'], logo: 2, fonts: [{ id: 4, title: 'Hoven Brand' }], refs: [{ id: 3, description: 'صورة غرفة نوم بألوان بنفسجية' }], notes: ['صورة غرفة نوم بألوان بنفسجية'] });
   });
   it('no table yet = no brand, not an error', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"message":"relation does not exist"}', { status: 404 })));

@@ -11,7 +11,7 @@ Production is deployed by hand (ADR-0005): Actions → **deploy** → Run workfl
 3. **Database migrations.** If the release adds files under `supabase/migrations/`, apply them to the production Supabase project
    (SQL Editor) **before** deploying, and only if the *previous* version still works with the new schema (add columns and tables,
    never drop or rename in the same release). Migrations are not rolled back with the Worker.
-4. **Secrets and variables.** A new secret named in the release goes into Cloudflare → Workers → well-ads → Settings first
+4. **Secrets and variables.** A new secret named in the release goes into Cloudflare → Workers → upstream → Settings first
    (`docs/secrets/worker.env.example` lists them). `/api/health` shows `supabase: down` if the Supabase ones are wrong.
 5. Write down the current version for a rollback: `npx wrangler deployments list --env production` (top line = live version id), or the
    last "deploy" run's summary.
@@ -25,7 +25,7 @@ and every dependency `up`. A red health step means the version is live but wrong
 ## After you deploy (3 minutes)
 - `/api/health`: `version` = the commit, `env` = `production`, `checks.supabase` / `checks.storage` = `up`.
 - Sign in as the owner: start page loads, sidebar shows every tab, open two tabs you did not change.
-- Cloudflare → Workers → well-ads → Logs: no burst of errors after the deploy time.
+- Cloudflare → Workers → upstream → Logs: no burst of errors after the deploy time.
 - Cron: the next `*/5` run is not erroring (`scheduled` events in the same logs).
 
 ## Roll back (under 5 minutes)

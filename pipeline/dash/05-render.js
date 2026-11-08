@@ -306,7 +306,7 @@ function funnelHTML(a,b){
      cost:[tr('تكلفة النقرة'),rs(a.cpc)], sub:[kpi(tr('تكلفة النقرة'),`${sar(a.cpc)} <small>${money()}</small>`,delta(a.cpc,b.cpc,true),'sub')],
      rate:[tr('نسبة النقر'),pct(a.ctr),delta(a.ctr,b.ctr,false)]},
     {n:'التحويل', hint:'كم واحد اشترى', vol:a.leads||0, val:qty(a.leads), main:kpi(tr('الطلبات'),qty(a.leads),delta(a.leads,b.leads,false)),
-     cost:[tr('تكلفة الطلب'),rs(a.cpl)], sub:[kpi(tr('تكلفة الطلب'),`${sar(a.cpl)} <small>${money()}</small>`,delta(a.cpl,b.cpl,true),'sub'), kpi(tr('الإيراد واتساب وماسنجر'),fmt(a.conv),delta(a.conv,b.conv,false),'sub')],
+     cost:[tr('تكلفة الطلب'),rs(a.cpl)], sub:[kpi(tr('تكلفة الطلب'),`${sar(a.cpl)} <small>${money()}</small>`,delta(a.cpl,b.cpl,true),'sub'), kpi(tr('الإيراد (ر.س)'),sar(a.conv),delta(a.conv,b.conv,false),'sub')],
      rate:[tr('من نقرة إلى طلب'),pct(clickToLead),delta(clickToLead,clickToLeadB,false)]},
     {n:'البيع', hint:D.crm?'كم واحد دفع':'نظام العملاء مو موصول بهالأرقام', vol:saleN, val:saleN==null?'—':fmt(saleN),
      main:kpi(tr('اقفالات مدفوعة'),saleN==null?'—':fmt(saleN),D.crm?delta(saleN,crm?b.allPaidN:b.booked,false):''),

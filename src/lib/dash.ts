@@ -1,7 +1,7 @@
 // Phase 4.2 (docs/phase-4.md): which copy of the dashboard data a user may read (build.py writes them) and where
 // it sits in R2. Used by /api/dash/data.
 import { can, type Session, type Cfg } from './auth';
-import { WELL_COMPANY } from './tenant';
+import { HOVEN_COMPANY } from './tenant';
 
 const DEPT = /^[a-z]+$/;
 
@@ -20,4 +20,4 @@ export function dataCopy(s: Session, cfg: Cfg, pick: string | null): string | nu
 // Hoven's copies are where the pipeline uploads them today; other companies get their own prefix once the pull runs
 // per company, and until then simply have no data (never Hoven's).
 export const dataKey = (company: string, copy: string): string =>
-  company === WELL_COMPANY ? `site/data/${copy}` : `companies/${company}/data/${copy}`;
+  company === HOVEN_COMPANY ? `site/data/${copy}` : `companies/${company}/data/${copy}`;
