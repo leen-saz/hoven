@@ -28,6 +28,9 @@ for (const [p, m] of Object.entries(import.meta.glob('../../src/modules/*/routes
 // group -> what the gate and the handlers must ask for. Module groups ask for their own key.
 const CORE_NEED: Record<string, string> = { auth: 'public', admin: 'owner', account: 'any', connectors: 'connectors', control: 'control', dash: 'any', lessons: 'any', library: 'any', today: 'any', vitals: 'any' };
 const needOfGroup = (g: string) => CORE_NEED[g] ?? g;
+// Hoven: one /api/library group, the shared items open to any signed-in user, the templates and documents need 'library'
+const needOf = (r: { group: string; path: string }) =>
+  r.group === 'library' && !/\/library(\/(list|item|star|approve))?\/?$/.test(r.path) ? 'library' : needOfGroup(r.group);
 
 // Public on purpose (the gate lets them through without a session)
 const PUBLIC = new Set(['auth/login', 'auth/twofa', 'auth/logout', 'auth/refresh', 'auth/forgot', 'auth/reset', 'connectors/callback', 'listening/probe']);
@@ -95,8 +98,8 @@ describe('route table', () => {
     for (const r of routes) {
       const want = need(r.path, '');
       if (open(r)) { if (want !== null) bad.push(`${r.path} must be public in the gate, got ${want}`); }
-      else if (isOwnerOnly(r)) { if (!['owner', needOfGroup(r.group)].includes(want as string)) bad.push(`${r.path}: gate ${want}`); }
-      else if (want !== needOfGroup(r.group)) bad.push(`${r.path}: gate asks ${want}, group is ${needOfGroup(r.group)}`);
+      else if (isOwnerOnly(r)) { if (!['owner', needOf(r)].includes(want as string)) bad.push(`${r.path}: gate ${want}`); }
+      else if (want !== needOf(r)) bad.push(`${r.path}: gate asks ${want}, group is ${needOf(r)}`);
     }
     expect(bad).toEqual([]);
   });

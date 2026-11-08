@@ -437,7 +437,18 @@ def hoven_en(s):
     return s[:end + 1] + block + s[end + 1:]
 
 
+def library_gate(s):
+    """Hoven's Library tab needs its permission; only the shared-items API stays open to every signed-in user."""
+    return s.replace("""  // The shared library: the routes check each item's own tab
+  if (/^\\/(api\\/)?library(\\/|$)/.test(pathname)) return 'any';
+""", """  // The shared library API (save from any tab, list, star, approve): the routes check each item's own tab.
+  // Hoven: the Library page and its templates/documents need the library permission (module gate below).
+  if (/^\\/api\\/library(\\/(list|item|star|approve))?\\/?$/.test(pathname)) return 'any';
+""")
+
+
 RULES = {
+    "src/lib/gate.ts": [library_gate],
     "src/modules/overview/numbers.ts": [overview_results, clean_well_terms],
     "src/modules/journeys/journeys.ts": [clean_well_terms, lead_to_order],
     "src/modules/social/social.ts": [clean_well_terms, lead_to_order],
