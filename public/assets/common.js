@@ -1,22 +1,101 @@
 // أدوات مشتركة: الطلبات، والأيقونات، والتواريخ، وهيكل التطبيق (القائمة الجانبية والشريط العلوي)
 import { LANG, t, langSwitch, restoreDraft } from './i18n.js';
 import { sections, TIP } from './sidebar.js';
+import { ME_KEY, FRESH, readMe, slim } from './me-cache.js';
 export { LANG, t, langSwitch };
 // Pages switch with Astro's ClientRouter: listeners on document/window of one page are removed when it leaves
 let PAGE = new AbortController();
 document.addEventListener('astro:before-swap', () => { PAGE.abort(); PAGE = new AbortController(); });
+// Whatever a handler forgot to catch: the user is told, not left with a silent page
+let lastToast = 0;
+window.addEventListener('unhandledrejection', e => {
+  const r = e.reason;
+  if (r?.name === 'AbortError' || r?.status === 401 || Date.now() - lastToast < 3000) return;
+  lastToast = Date.now(); toast(r instanceof Error && r.status !== undefined ? r.message : 'صار خطأ، جرّب مرة ثانية', true);
+});
 export const pageSignal = () => PAGE.signal;
 export const $ = (s, el = document) => el.querySelector(s);
 export const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
-  let data = {};
-  try { data = await res.json(); } catch {}
-  if (res.status === 401 && !path.startsWith('/api/auth/')) { location.href = '/login/?next=' + encodeURIComponent(location.pathname + location.search); throw new Error(data.error || 'سجّل الدخول'); }
-  if (!res.ok) throw new Error(data.error || 'صار خطأ');
+// Every failure reaches the page as an Error with a message in Arabic: a dropped connection, a request that hangs
+// (stops after `timeout` ms, 90 s unless the caller says more), a reply that is not JSON (a gateway page), a 5xx.
+// err.status is the HTTP status (0 = no answer); err.retryable says trying again may help.
+export async function api(path, { method = 'GET', body, timeout = 90000 } = {}) {
+  let res;
+  try {
+    res = await fetch(path, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin',
+      signal: AbortSignal.timeout(timeout) });
+  } catch (e) {
+    const timedOut = e?.name === 'TimeoutError';
+    throw Object.assign(new Error(timedOut ? 'الطلب أخذ وقت طويل. جرّب مرة ثانية' : 'ما قدرت أوصل للخادم. تأكد من الاتصال وجرّب مرة ثانية'), { status: 0, retryable: true });
+  }
+  let data = {}, json = true;
+  try { data = await res.json(); } catch { json = false; }
+  if (res.status === 401 && !path.startsWith('/api/auth/')) { location.href = '/login/?next=' + encodeURIComponent(location.pathname + location.search); throw Object.assign(new Error(data.error || 'سجّل الدخول'), { status: 401 }); }
+  if (!res.ok) {
+    // A gateway or platform page instead of our JSON: say that the service is unavailable, not a bare "error"
+    const fallback = !json && res.status >= 500 ? 'الخدمة مو متاحة الحين، جرّب بعد شوي' : 'صار خطأ';
+    throw Object.assign(new Error(typeof data.error === 'string' && data.error ? data.error : fallback), { status: res.status, retryable: res.status >= 500 || res.status === 429 || res.status === 408 });
+  }
   return data;
+}
+
+// Streaming POST (the shared live-text component). The route answers JSON (a question or an error) or text/event-stream:
+// `delta` text, `reset` (the writer changed, drop what you showed), then `result` with the final payload. `onText(text)` gets the whole text so far.
+// Abort `signal` to stop. Returns the JSON, or the `result` event; a stopped run returns null.
+export async function apiStream(path, body, { onText = () => {}, signal } = {}) {
+  let res;
+  try { res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin', signal }); }
+  catch (err) { if (signal?.aborted) return null; throw Object.assign(new Error('ما قدرت أوصل للخادم. تأكد من الاتصال وجرّب مرة ثانية'), { status: 0, retryable: true }); }
+  if (!(res.headers.get('content-type') || '').includes('text/event-stream')) {
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (res.status === 401) { location.href = '/login/?next=' + encodeURIComponent(location.pathname + location.search); throw new Error(data.error || 'سجّل الدخول'); }
+    if (!res.ok) throw new Error(data.error || 'صار خطأ');
+    return data;
+  }
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', text = '', result = null, failed = false;
+  const take = block => {
+    const line = block.split('\n').find(l => l.startsWith('data:'));
+    if (!line) return;
+    let ev; try { ev = JSON.parse(line.slice(5)); } catch { return; }
+    if (ev.type === 'delta') { text += ev.text; onText(text); }
+    else if (ev.type === 'reset') { text = ''; onText(text); }
+    else if (ev.type === 'result') result = ev;
+    else if (ev.type === 'error') failed = true;
+  };
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (value) buf += dec.decode(value, { stream: !done }).replace(/\r\n/g, '\n');
+      for (let at = buf.indexOf('\n\n'); at >= 0; at = buf.indexOf('\n\n')) { take(buf.slice(0, at)); buf = buf.slice(at + 2); }
+      if (done) break;
+    }
+  } catch (err) { if (signal?.aborted) return null; throw err; }
+  if (signal?.aborted) return null;
+  if (failed || !result) throw new Error('ما طلع جواب أقدر أقراه، جرّب مرة ثانية');
+  return result;
+}
+// The readable part of a JSON answer still being written: its string values, one per line, keys left out
+export const liveText = raw => [...String(raw).matchAll(/"((?:[^"\\]|\\.)*)"(\s*:)?/g)].filter(m => !m[2]).map(m => { try { return JSON.parse('"' + m[1] + '"'); } catch { return m[1]; } }).join('\n');
+// One error state for a block that failed to load: the reason and a retry button, never a blank block or a spinner.
+// `retry` runs again the load that failed. Used by every tab's first load.
+export function failure(el, err, retry) {
+  if (!el) return;
+  el.innerHTML = `<div class="card empty failure" role="alert">${icon('alert')}<div>${esc(err?.message || 'صار خطأ')}</div>`
+    + (retry ? `<button class="btn secondary" type="button" data-retry style="margin-top:12px">${icon('refresh')}حاول مرة ثانية</button>` : '') + '</div>';
+  const b = $('[data-retry]', el);
+  if (b) b.onclick = () => { b.disabled = true; el.innerHTML = '<p class="muted">يحمّل…</p>'; Promise.resolve().then(retry).catch(e => failure(el, e, retry)); };
+}
+// The whole page could not start (the first request failed): a banner at the top of the content with a reload button
+export function pageFailure(err) {
+  const host = $('#content') || $('main') || document.body;
+  host.querySelector(':scope > .page-failure')?.remove();
+  const d = document.createElement('div'); d.className = 'page-failure';
+  host.prepend(d);
+  failure(d, err, () => location.reload());
 }
 
 // Lucide (خط 1.75)
@@ -65,23 +144,25 @@ export function say(el, text, ok = false) {
   el.className = 'msg ' + (text ? (ok ? 'ok' : 'err') : '');
   el.innerHTML = text ? (ok ? icon('check') : icon('alert')) + `<span>${esc(text)}</span>` : '';
 }
-export function toast(text) {
-  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
-  t.innerHTML = icon('check') + `<span>${esc(text)}</span>`; document.body.appendChild(t);
+export function toast(text, bad = false) {
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', bad ? 'alert' : 'status');
+  t.innerHTML = icon(bad ? 'alert' : 'check') + `<span>${esc(text)}</span>`; document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);
 }
 export function busy(btn, on) { if (!btn) return; btn.classList.toggle('loading', on); btn.disabled = on; }
 
-// The user's name and dashboards. Shared with nav.js (same key) so a full page load draws the sidebar at once
-// from this tab's last copy; a copy older than 5 minutes is refreshed in the background.
-const ME_KEY = 'hoven-me-2', FRESH = 5 * 60 * 1000;
+// The user's name and dashboards. Shared with nav.js (me-cache.js) so a full page load, also in a new tab, draws the
+// sidebar and starts the page at once from this browser's last copy (under 12 hours old, without the email); a copy
+// older than 5 minutes is refreshed in the background. Signing in (login.js) or out clears it.
 let ME = null;
-try { ME = JSON.parse(sessionStorage.getItem(ME_KEY) || 'null'); } catch { /* storage blocked */ }
+try { ME = readMe(localStorage.getItem(ME_KEY)); } catch { /* storage blocked */ }
 const fetchMe = () => api('/api/account/password').then(v => {
   ME = { t: Date.now(), v };
-  try { sessionStorage.setItem(ME_KEY, JSON.stringify(ME)); } catch { /* storage blocked */ }
+  try { localStorage.setItem(ME_KEY, JSON.stringify({ t: ME.t, v: slim(v) })); } catch { /* storage blocked */ }
   return v;
 });
+// The full copy from the server, email included (the account page shows it); the stored copy has no email
+export const freshMe = () => (ME?.v?.email ? Promise.resolve(ME.v) : fetchMe());
 // The dashboards (/ and /?view=…) are pipeline-built pages outside Astro: open them with a full load
 const FULL = h => (h === '/' || h.startsWith('/?')) ? ' data-astro-reload' : '';
 
@@ -89,13 +170,13 @@ const FULL = h => (h === '/' || h.startsWith('/?')) ? ' data-astro-reload' : '';
 // otherwise just move the highlight, so a click does not rebuild it.
 function drawSide(side, me, active) {
   const L = (ar, en) => (LANG === 'en' ? en : ar);
-  const sig = LANG + JSON.stringify(me);
+  const sig = LANG + JSON.stringify(slim(me));
   if (side.dataset.sig === sig) {
     side.querySelectorAll('[data-k]').forEach(a => a.dataset.k === active ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     return;
   }
   side.dataset.sig = sig;
-  const initials = (me.name || me.email).trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const initials = (me.name || me.email || '·').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   // كل الأقسام تطلع للكل: اللي ما له صلاحية عليه أو مقفل لشركته يطلع بقفل
   // Quick create (shadcn dashboard-01 'Quick Create'): only what this user can open
   const NEW = [['control', '/control/new/', 'قرار جديد', 'gavel'], ['social', '/social/', 'منشور جديد', 'calendar'], ['design', '/design/', 'تصميم جديد', 'image'], ['copy', '/copy/', 'نص إعلان جديد', 'pen']];
@@ -112,9 +193,9 @@ function drawSide(side, me, active) {
     <div class="grow"></div>
     <a class="navi" href="/settings/" data-k="settings"${active === 'settings' ? ' aria-current="page"' : ''}>${icon('settings')}<span>الإعدادات</span></a>
     <button class="me" id="meBtn" aria-haspopup="menu" aria-expanded="false"><span class="avatar">${esc(initials)}</span>
-      <span class="who"><b>${esc(me.name || me.email)}</b><span class="muted">${me.role === 'owner' ? 'المالكة' : (me.departments || []).length ? 'مدير قسم' : 'عضو'}</span></span></button>
+      <span class="who"><b>${esc(me.name || me.email || '')}</b><span class="muted">${me.role === 'owner' ? 'المالكة' : (me.departments || []).length ? 'مدير قسم' : 'عضو'}</span></span></button>
     <div class="menu" id="meMenu" role="menu" hidden><a href="/account/" role="menuitem">${icon('user')}حسابي</a><form method="post" action="/api/auth/logout" style="margin:0"><button type="submit" role="menuitem">${icon('out')}خروج</button></form></div>`;
-  side.querySelector('form')?.addEventListener('submit', () => { try { sessionStorage.removeItem(ME_KEY); } catch { /* storage blocked */ } });
+  side.querySelector('form')?.addEventListener('submit', () => { try { localStorage.removeItem(ME_KEY); } catch { /* storage blocked */ } });
   // Navigation labels as tooltips, used when the menu is folded to icons
   side.querySelectorAll('.navi').forEach(a => { const t = a.querySelector('span')?.textContent; if (t && !a.title) a.title = t; });
   const qb = $('#qcBtn', side), qm = $('#qcMenu', side);
@@ -140,7 +221,12 @@ function bindMe() {
 // الهيكل: قائمة جانبية بأيقونات + شريط علوي. tools = HTML لأدوات الشريط.
 export async function shell({ active, title, badge = '', tools = '' }) {
   const app = $('#app'), side = $('#side', app);
+  // The title bar needs nothing from the server: it goes up before the user is known
+  $('#top', app).innerHTML = `<div class="t"><button class="btn icon ghost burger" id="burger" aria-label="القائمة" aria-controls="side" aria-expanded="false">${icon('menu')}</button><h1>${esc(title)}</h1>${badge}</div><div class="tools"><span id="tools">${tools}</span>${langSwitch()}</div>`;
   let me;
+<<<<<<< well
+  if (!ME?.v) { try { me = await fetchMe(); } catch (err) { if (err.status !== 401) pageFailure(err); throw err; } }
+=======
   if (!ME?.v) {
     try { me = await fetchMe(); }
     catch (err) {
@@ -151,15 +237,15 @@ export async function shell({ active, title, badge = '', tools = '' }) {
       throw err;
     }
   }
+>>>>>>> hoven
   else {
     me = ME.v;
-    if (Date.now() - ME.t > FRESH) fetchMe().then(v => { if (JSON.stringify(v) !== JSON.stringify(me)) { drawSide(side, v, active); bindMe(); } }).catch(() => {});
+    if (Date.now() - ME.t > FRESH) fetchMe().then(v => { if (JSON.stringify(slim(v)) !== JSON.stringify(slim(me))) { drawSide(side, v, active); bindMe(); } }).catch(() => {});
   }
   drawSide(side, me, active);
   let mini = false; try { mini = localStorage.getItem('wl-mini') === '1'; } catch { /* storage blocked */ }
   app.classList.toggle('mini', mini); $('#sideFold')?.setAttribute('aria-pressed', String(mini));
   document.addEventListener('click', e => { const m = $('#qcMenu'); if (m && !m.hidden && !e.target.closest('.qc')) { m.hidden = true; $('#qcBtn')?.setAttribute('aria-expanded', 'false'); } }, { signal: pageSignal() });
-  $('#top', app).innerHTML = `<div class="t"><button class="btn icon ghost burger" id="burger" aria-label="القائمة" aria-controls="side" aria-expanded="false">${icon('menu')}</button><h1>${esc(title)}</h1>${badge}</div><div class="tools"><span id="tools">${tools}</span>${langSwitch()}</div>`;
   bindMe();
   drawer(app, side);
   restoreDraft();
