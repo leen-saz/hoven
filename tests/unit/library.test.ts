@@ -79,7 +79,7 @@ describe('cleaning', () => {
     expect(cleanEdit({})).toEqual({ error: 'ما فيه تعديل' });
   });
   it('the gate lets any signed-in user reach the library, and the routes check each tab', () => {
-    expect(need('/library/', '')).toBe('any');
+    expect(need('/library/', '')).toBe('library');   // Hoven: the Library tab needs its permission
     expect(need('/api/library', '')).toBe('any');
     expect(need('/api/library/star', '')).toBe('any');
   });

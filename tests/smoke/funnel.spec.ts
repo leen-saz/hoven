@@ -67,7 +67,7 @@ test('reduced motion: the new shape lands at once', async ({ page, request }) =>
 test('no CRM: the sale stage shows —, the link says «غير مربوط», and it is not called the bottleneck', async ({ page, request }) => {
   await open(page, request, fixture);
   await expect(page.locator('svg[role="group"] g[role="button"][aria-label^="البيع"]')).toHaveAttribute('aria-label', /—/);
-  await expect(page.locator('svg[role="group"] g[role="button"][aria-label^="من ليد إلى إقفالة"]')).toHaveAttribute('aria-label', /غير مربوط/);
+  await expect(page.locator('svg[role="group"] g[role="button"][aria-label^="من طلب إلى إقفالة"]')).toHaveAttribute('aria-label', /غير مربوط/);
   await expect(page.locator('svg[role="group"]')).not.toContainText('0.00%');
   await expect(page.getByText('مرحلة البيع غير مربوطة')).toBeVisible();
 });
@@ -76,7 +76,7 @@ test('paid closings with none tied to an ad: «غير مربوط», no 0% and no
   const d = withCrm() as { crm: { rows: unknown[][]; paid_all: unknown[] } };
   d.crm.rows = d.crm.rows.map(r => [r[0], r[1], '', false, 0]);
   await open(page, request, d);
-  const sale = page.locator('svg[role="group"] g[role="button"][aria-label^="من ليد إلى إقفالة"]');
+  const sale = page.locator('svg[role="group"] g[role="button"][aria-label^="من طلب إلى إقفالة"]');
   await expect(sale).toHaveAttribute('aria-label', /غير مربوط/);
   await expect(sale).not.toHaveAttribute('aria-label', /عنق الزجاجة/);
   await expect(page.locator('section[aria-labelledby="analysis-h"]')).toContainText('مو صفر');

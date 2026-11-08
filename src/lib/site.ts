@@ -59,7 +59,8 @@ export const clearSiteCache = () => { KEPT.clear(); BUSY.clear(); };
 
 async function fetchKept(bucket: R2Bucket, key: string, now: number): Promise<Kept | null> {
   const old = KEPT.get(key);
-  const obj = await bucket.get(key, old ? { onlyIf: { etagDoesNotMatch: old.etag } } : undefined);
+  // R2 wants the bare etag; httpEtag (kept for the response header) is quoted
+  const obj = await bucket.get(key, old ? { onlyIf: { etagDoesNotMatch: old.etag.replace(/^W\//, '').replace(/"/g, '') } } : undefined);
   if (!obj) { KEPT.delete(key); return null; }
   // Unchanged since the copy we have: R2 sends the object without a body
   if (old && !('body' in obj)) { const k = { ...old, at: now }; KEPT.set(key, k); return k; }

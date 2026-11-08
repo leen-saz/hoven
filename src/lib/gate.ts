@@ -40,8 +40,9 @@ export function need(pathname: string, search: string): Need | null {
   if (/^\/api\/dash\//.test(pathname)) return 'any';
   // Lessons of any tab: the route checks that tab's own level
   if (/^\/api\/lessons\//.test(pathname)) return 'any';
-  // The shared library: the routes check each item's own tab
-  if (/^\/(api\/)?library(\/|$)/.test(pathname)) return 'any';
+  // The shared library API (save from any tab, list, star, approve): the routes check each item's own tab.
+  // Hoven: the Library page and its templates/documents need the library permission (module gate below).
+  if (/^\/api\/library(\/(list|item|star|approve))?\/?$/.test(pathname)) return 'any';
   // Live modules: /<key>/ and /api/<key>/* need the module's own dashboard
   const mod = pathname.match(/^\/(?:api\/)?([a-z]+)(?:\/|$)/)?.[1];
   if (mod && LIVE.includes(mod)) return mod;
