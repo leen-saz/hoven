@@ -1087,7 +1087,6 @@ export const EN = {
   "فحص ورقة المصدر (محتوى الترند)": "Source sheet check (trend content)",
   "فعّل التحقق بخطوتين": "Turn on two-step verification",
   "قالب جديد": "New template",
-  "قبل أي محتوى جاذب للانتباه: الحقول الخمسة، والمرجع خلال 14 يوم، ورابط مباشر غير مكرر، والتصنيف «آمن تجاريا». الرفض نتيجة مكتملة. المرور يعني إن الورقة": "Before any attention-grabbing content: the five fields, a reference within 14 days, a direct unique link, and the «commercially safe» classification. A rejection is a complete result. Passing means the sheet",
   "قوالب جاهزة بمتغيرات مثل": "Ready templates with variables such as",
   "كل الأنواع": "All types",
   "كل المجلدات": "All folders",
@@ -1109,7 +1108,7 @@ export const EN = {
   "مثال: مفارش قطن": "Example: cotton bedding",
   "مثال: مفارش ومنسوجات منزلية": "Example: bedding and home textiles",
   "مثال: نومك يستاهل أنعم مفرش. قطن 100% يوصلك لين بيتك. اطلب الحين": "Example: your sleep deserves the softest sheets. 100% cotton delivered to your door. Order now",
-  "مثال: هوفن، hoven، مفارش هوفن": "Example: هوفن, hoven, Hoven bedding",
+  "مثال: هوفن، hoven، مفارش هوفن": "Example: Hoven, hoven, Hoven bedding",
   "مجلد جديد": "New folder",
   "مراجع الدفعات السابقة": "Previous batch references",
   "مفارش": "Bedding",
@@ -1122,6 +1121,7 @@ export const EN = {
   "هوفن": "Hoven",
   "وش أخذنا منه تحديداً": "What exactly we took from it",
   "وصف": "Description",
+  "قبل أي محتوى جاذب للانتباه: الحقول الخمسة، والمرجع خلال 14 يوم، ورابط مباشر غير مكرر، والتصنيف «آمن تجاريا». الرفض نتيجة مكتملة. المرور يعني إن الورقة كاملة بس، والتحقق من المنشور الأصلي عليك.": "Before any attention-grabbing content: the five fields, a reference within 14 days, a direct unique link, and the «commercially safe» classification. A rejection is a complete result. Passing only means the sheet is complete; checking the original post is up to you.",
   // HOVEN-EN end
 };
 // «الحملات والمواد الإعلانية ولوحة القرارات» → "campaigns, creatives and the decision board"
