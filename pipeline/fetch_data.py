@@ -351,9 +351,10 @@ def google(P):
         headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json",
                  **({"login-customer-id": E["GOOGLE_ADS_LOGIN_CUSTOMER_ID"].replace("-", "")} if E.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID") else {}),
                  **({"developer-token": E["GOOGLE_ADS_DEVELOPER_TOKEN"]} if E.get("GOOGLE_ADS_DEVELOPER_TOKEN") else {})}).get("results", [])
+    # A segment used in WHERE must also be in SELECT, or Google Ads answers 400 INVALID_ARGUMENT (old google_ads.py did this)
     buys = {}
     try:
-        for r in q("SELECT ad_group_ad.ad.id, segments.date, metrics.conversions, metrics.conversions_value FROM ad_group_ad "
+        for r in q("SELECT ad_group_ad.ad.id, segments.date, segments.conversion_action_category, metrics.conversions, metrics.conversions_value FROM ad_group_ad "
                    f"WHERE segments.date BETWEEN '{ds(FROM)}' AND '{ds(TO)}' AND segments.conversion_action_category = 'PURCHASE'"):
             k = ("g" + r["adGroupAd"]["ad"]["id"], r["segments"]["date"])
             b = buys.setdefault(k, [0.0, 0.0]); m = r.get("metrics", {})
@@ -363,7 +364,7 @@ def google(P):
     camp_buys = {}
     if not buys:   # the per-campaign query is the one the old Hoven dashboard used (google_ads.py)
         try:
-            for r in q("SELECT campaign.id, segments.date, metrics.conversions, metrics.conversions_value FROM campaign "
+            for r in q("SELECT campaign.id, segments.date, segments.conversion_action_category, metrics.conversions, metrics.conversions_value FROM campaign "
                        f"WHERE segments.date BETWEEN '{ds(FROM)}' AND '{ds(TO)}' AND segments.conversion_action_category = 'PURCHASE'"):
                 k = (str(r["campaign"]["id"]), r["segments"]["date"])
                 b = camp_buys.setdefault(k, [0.0, 0.0]); m = r.get("metrics", {})
@@ -440,12 +441,34 @@ def google(P):
 HOVEN_SNAP_ACCOUNTS = ("1669d1d8-825d-4c9e-90cb-4eca5a4632d7", "72f0b85a-9ef2-4c11-8396-ccb23115f86a", "aa65612c-c322-46b8-9e6a-5b6ad34e16a9")
 
 
+def snap_accounts():
+    """Every ad account the Snap login can see (all organizations), plus the three known Hoven accounts."""
+    tok = http("https://accounts.snapchat.com/login/oauth2/access_token", data=urllib.parse.urlencode({
+        "grant_type": "refresh_token", "client_id": E["SNAP_CLIENT_ID"], "client_secret": E["SNAP_CLIENT_SECRET"],
+        "refresh_token": E["SNAP_REFRESH_TOKEN"]}).encode())["access_token"]
+    found = []
+    try:
+        orgs = retry(http, "https://adsapi.snapchat.com/v1/me/organizations?with_ad_accounts=true",
+                     headers={"Authorization": f"Bearer {tok}"}).get("organizations", [])
+        for o in orgs:
+            for a in (o.get("organization") or {}).get("ad_accounts", []) or []:
+                if a.get("id") and a.get("status", "ACTIVE") != "DELETED":
+                    found.append((a["id"], a.get("name", "")))
+    except Exception as ex:
+        print("snap: تعذر جلب قائمة الحسابات", str(ex)[:160], file=sys.stderr)
+    print(f"snap: لقينا {len(found)} حساب: " + "، ".join(n or i[:8] for i, n in found), file=sys.stderr)
+    return list(dict.fromkeys([i for i, _ in found] + list(HOVEN_SNAP_ACCOUNTS)))
+
+
 def snap(P):
-    """Hoven runs three Snap ad accounts (old hoven-dashboard SNAP_ACCTS). SNAP_AD_ACCOUNT_ID may list several, comma-separated."""
+    """All Hoven Snap ad accounts. SNAP_AD_ACCOUNT_ID (comma-separated) pins the list; empty = every account the login sees."""
     ids = [x.strip() for x in str(E.get("SNAP_AD_ACCOUNT_ID") or "").replace("[", "").replace("]", "").replace("'", "").replace('"', "").split(",") if x.strip()]
-    for acc in ids or HOVEN_SNAP_ACCOUNTS:
+    for acc in ids or snap_accounts():
         E["SNAP_AD_ACCOUNT_ID"] = acc
-        snap_one(P)
+        try:
+            snap_one(P)
+        except Exception as ex:   # one account without access must not drop the others
+            print(f"snap: الحساب {acc[:8]} ما انسحب", str(ex)[:160], file=sys.stderr)
 
 
 def snap_one(P):
