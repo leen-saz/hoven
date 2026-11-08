@@ -1,7 +1,8 @@
 // The rest of the analytics overview page, for the overview tab: each platform's share, the month's pace and forecast,
 // cost per lead by weekday, and departments. Pure functions over /dash.json, same rules as pipeline/template.html
 // (renderBI, renderPace, renderDeptMini). rows = [key, day, spend, impr, clicks, leads, conv]
-import { type Ad, type Dash, HIDDEN, addDays, family, holes, platformName } from './numbers';
+import { type Ad, type Dash, DEP_AR, DEP_EN, HIDDEN, addDays, family, holes, platformName } from './numbers';
+import { type Lang, T, pageLang, pick } from './lang';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 // The main dashboard's platform order (channels.py), then any other platform present
@@ -106,7 +107,7 @@ export function depts(d: Dash, from: string, to: string): Dept[] {
     if (x.ad.goal === 'lead') { o.ls += x.spend; o.ln += x.leads; }
     by.set(k, o);
   }
-  return keys.map(k => { const o = by.get(k) ?? { spend: 0, leads: 0, ls: 0, ln: 0 }; return { key: k, name: names[k]!.ar || k, spend: o.spend, leads: o.leads, cpl: o.ln ? o.ls / o.ln : null }; });
+  return keys.map(k => { const o = by.get(k) ?? { spend: 0, leads: 0, ls: 0, ln: 0 }; return { key: k, name: (pageLang() === 'en' ? DEP_EN[k] : undefined) ?? names[k]!.ar ?? DEP_AR[k] ?? k, spend: o.spend, leads: o.leads, cpl: o.ln ? o.ls / o.ln : null }; });
 }
 
 // ---- The outcome and the customer journey (template.html agg + renderKpis). CRM rows from pipeline/crm/join.py:
@@ -115,45 +116,107 @@ export function depts(d: Dash, from: string, to: string): Dept[] {
 export type CrmBy = 'lead' | 'paid';
 export interface Outcome {
   spend: number; impr: number; clicks: number; leads: number; conv: number;
-  crm: boolean; crmLeads: number; booked: number; value: number; closings: number; paid: number;
+  crm: boolean; crmLinked: boolean; crmLeads: number; booked: number; value: number; closings: number; paid: number;
   cpm: number | null; cpc: number | null; ctr: number | null; cpl: number | null; clickToResult: number | null;
   closeRate: number | null; roas: number | null; mer: number | null; cac: number | null;
+  // The CRM as a whole in the period, whatever the platform filter: every paid closing, and those tied to an ad.
+  // A platform's 0 closings only means something when the CRM ties closings to ads at all.
+  closingsAll: number; bookedAll: number;
 }
 type CrmData = { rows?: unknown[][]; paid_all?: unknown[][] };
 const ratio = (a: number, b: number): number | null => (b ? a / b : null);
 
-export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead'): Outcome {
+// plat: one platform only (the funnel's filter). The CRM's paid_all has no ad, so then closings and paid are the ad-linked ones.
+export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead', plat?: string): Outcome {
   let spend = 0, impr = 0, clicks = 0, leads = 0, conv = 0, ls = 0, ln = 0;
   for (const r of d.rows ?? []) {
     const day = String(r[1]);
-    if (day < from || day > to || !d.ads?.[String(r[0])]) continue;
+    if (day < from || day > to || !d.ads?.[String(r[0])] || (plat && d.ads[String(r[0])]!.platform !== plat)) continue;
     const s = num(r[2]), l = num(r[5]);
     spend += s; impr += num(r[3]); clicks += num(r[4]); leads += l; conv += num(r[6]);
     if (d.ads[String(r[0])]!.goal === 'lead') { ls += s; ln += l; }
   }
   const crmData = (d as { crm?: CrmData }).crm;
-  let crmLeads = 0, booked = 0, value = 0, closings = 0, paid = 0;
+  let crmLeads = 0, booked = 0, value = 0, closings = 0, paid = 0, bookedAll = 0, closingsAll = 0;
   for (const [k, leadDay, paidDay, isPaid, amount] of (crmData?.rows ?? []) as [string, string, string, unknown, number][]) {
     if (!d.ads?.[k]) continue;
+    const day = by === 'paid' ? paidDay : leadDay, inPeriod = isPaid && day && day >= from && day <= to;
+    if (inPeriod) bookedAll++;
+    if (plat && d.ads[k]!.platform !== plat) continue;
     if (leadDay >= from && leadDay <= to) crmLeads++;
-    const day = by === 'paid' ? paidDay : leadDay;
-    if (isPaid && day && day >= from && day <= to) { booked++; value += num(amount); }
+    if (inPeriod) { booked++; value += num(amount); }
   }
   for (const [leadDay, paidDay, amount] of (crmData?.paid_all ?? []) as [string, string, number][]) {
     const day = by === 'paid' ? paidDay : leadDay;
-    if (day && day >= from && day <= to) { closings++; paid += num(amount); }
+    if (day && day >= from && day <= to) { closingsAll++; if (!plat) { closings++; paid += num(amount); } }
   }
+  if (plat) { closings = booked; paid = value; }
   return {
-    spend, impr, clicks, leads, conv, crm: !!crmData?.paid_all, crmLeads, booked, value, closings, paid,
+    spend, impr, clicks, leads, conv, crm: !plat && !!crmData?.paid_all, crmLinked: !!crmData, crmLeads, booked, value, closings, paid,
     cpm: impr ? (1000 * spend) / impr : null, cpc: ratio(spend, clicks), ctr: impr ? (100 * clicks) / impr : null, cpl: ratio(ls, ln),
     clickToResult: clicks ? (100 * (leads + conv)) / clicks : null, closeRate: crmLeads ? (100 * booked) / crmLeads : null,
-    roas: spend && value ? value / spend : null, mer: ratio(paid, spend), cac: ratio(spend, closings),
+    roas: spend && value ? value / spend : null, mer: ratio(paid, spend), cac: ratio(spend, closings), closingsAll, bookedAll,
   };
+}
+
+// The customer journey as the main dashboard draws it (pipeline/dash/05-render.js): four layers, each narrower than the
+// one above, the rate that carries people down between layers, the cost beside each. The sale layer always shows: with
+// no CRM block its numbers are null ("—") and noCrm says why. Values: [label, now, kind] where kind picks the format.
+export type Fmt = 'qty' | 'sar' | 'pct' | 'x';
+// missing: shown instead of a number that would mislead (a closing rate of 0% when no closing is tied to an ad)
+export type JStat = { label: string; key: keyof Outcome | null; now: number | null; fmt: Fmt; lowerIsBetter: boolean; missing?: string };
+// cost: the stage's cost shown under the band; amount: the sale stage's money, shown next to its count
+export interface JStage { n: string; hint: string; width: number; colour: string; main: JStat; sub: JStat[]; rate?: JStat; cost?: JStat; amount?: JStat }
+export const FUNNEL_WIDTHS = [100, 84, 68, 52];
+export const FUNNEL_COLOURS = ['#7C8CFF', '#8B6CFF', '#294036', '#5B36D6'];
+export const NO_CRM = 'مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الإقفالات هنا.';
+export const NO_CRM_EN = "The sale stage is empty because the CRM numbers did not reach this copy of the dashboard. Closings show here as soon as they do.";
+
+export const UNLINKED = 'غير مربوط';
+export const UNLINKED_EN = 'Not linked';
+// The ad-to-sale step can't be judged: no CRM, too few leads tied to an ad, or paid closings in the CRM with none tied to
+// an ad (counted across all platforms, so a platform filter can't turn missing attribution into a 0% close rate).
+// Then the step is «غير مربوط», never 0% and never the bottleneck.
+export const MIN_CRM_COVERAGE = 0.3;
+export function unattributed(a: Outcome): boolean {
+  const results = a.leads + a.conv;
+  return !a.crmLinked || (results >= 10 && a.crmLeads < MIN_CRM_COVERAGE * results) || (a.closingsAll > 0 && a.bookedAll === 0);
+}
+
+export function journey(a: Outcome, l: Lang = 'ar'): { stages: JStage[]; noCrm: string | null } {
+  const t = (ar: string, en: string) => pick(l, ar, en);
+  const st = (label: string, key: keyof Outcome, fmt: Fmt, lowerIsBetter = false, on = true): JStat =>
+    ({ label, key: on ? key : null, now: on ? (a[key] as number | null) : null, fmt, lowerIsBetter });
+  const linked = a.crmLinked, tied = !unattributed(a);
+  // Counted only when the closings are tied to their ads; else «غير مربوط», no number and no change
+  const ad = (label: string, key: keyof Outcome, fmt: Fmt, lowerIsBetter = false): JStat =>
+    (tied ? st(label, key, fmt, lowerIsBetter) : { label, key: null, now: null, fmt, lowerIsBetter, missing: t(UNLINKED, UNLINKED_EN) });
+  const cpm = st(t('تكلفة الألف ظهور', 'Cost per 1,000 impressions'), 'cpm', 'sar', true), cpc = st(t('تكلفة النقرة', 'Cost per click'), 'cpc', 'sar', true);
+  const cpl = st(t('تكلفة الطلب', 'Cost per lead'), 'cpl', 'sar', true), cac = st(t('تكلفة العميل', 'Cost per customer'), 'cac', 'sar', true, linked);
+  // The sales amount: every paid closing in the CRM (all platforms), or this platform's ad-linked ones. When the closings
+  // aren't tied to ads it is the CRM's total, said so, and the ads' share is «غير مربوط» rather than 0.
+  const amount = st(a.crm && !tied ? t('إجمالي المدفوع (CRM)', 'Total paid (CRM)') : t('مبلغ المبيعات', 'Sales amount'), 'paid', 'sar', false, linked);
+  const raw: Omit<JStage, 'width' | 'colour'>[] = [
+    { n: t('الوعي', 'Awareness'), hint: t('كم شخص شاف الإعلان', 'How many saw the ad'), main: st(t('الظهور', 'Impressions'), 'impr', 'qty'), sub: [cpm], cost: cpm },
+    { n: t('الاهتمام', 'Interest'), hint: t('كم واحد ضغط', 'How many clicked'), main: st(t('نقرات الرابط والسوايب', 'Link clicks and swipes'), 'clicks', 'qty'),
+      sub: [cpc], rate: st(t('نسبة النقر', 'Click rate'), 'ctr', 'pct'), cost: cpc },
+    { n: t('التحويل', 'Conversion'), hint: t('كم واحد ترك بياناته أو راسلنا', 'How many left details or messaged us'), main: st(t('الطلبات', 'Leads'), 'leads', 'qty'),
+      sub: [cpl, st(t('محادثات واتساب وماسنجر', 'WhatsApp and Messenger chats'), 'conv', 'qty')],
+      rate: st(t('من نقرة إلى طلب أو محادثة', 'Click to lead or chat'), 'clickToResult', 'pct'), cost: cpl },
+    { n: t('البيع', 'Sale'), hint: linked ? t('كم واحد دفع', 'How many paid') : t('نظام العملاء مو موصول بهالأرقام', 'The CRM is not connected to these numbers'),
+      // Same as the main dashboard: every paid closing in the CRM, or the ad-linked ones when that list is missing
+      main: st(t('إقفالات مدفوعة', 'Paid closings'), a.crm ? 'closings' : 'booked', 'qty', false, linked),
+      sub: [amount, ...(a.crm ? [ad(t('المبيعات من الإعلانات', 'Sales from ads'), 'value', 'sar')] : []), ad(t('إقفالات من الإعلانات', 'Closings from ads'), 'booked', 'qty'),
+        ad(t('العائد من الإعلانات', 'Return from ads'), 'roas', 'x'), cac],
+      rate: ad(t('من طلب إلى إقفالة', 'Lead to closing'), 'closeRate', 'pct'), cost: cac, amount },
+  ];
+  return { stages: raw.map((s, i) => ({ ...s, width: FUNNEL_WIDTHS[i]!, colour: FUNNEL_COLOURS[i]! })), noCrm: linked ? null : t(NO_CRM, NO_CRM_EN) };
 }
 
 // ---- Wins of the period against the one before it (template.html renderWins). "New winning ads" stays out: the main
 // dashboard keeps it off (WIN_ON = false) until winners are judged on closed patients.
-export interface Win { icon: string; title: string; detail: string }
+// name: an ad or idea name inside the detail (data, in whatever language it was written): shown isolated before it
+export interface Win { icon: string; title: string; detail: string; name?: string }
 // Idea = the same creative across ad sets and platforms: the name without the uploaded file prefix and the Spark/copy suffix
 export function ideaKey(name: string): string {
   let n = String(name || '').replace(/[‎‏‪-‮]/g, '');
@@ -187,14 +250,24 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
   const pf = addDays(from, -days), pt = addDays(from, -1), B = compare ? sums(d, pf, pt) : null;
   if (B) {
     const c = pctCh(A.tot.leads, B.tot.leads);
+<<<<<<< well
+    if (c != null && c >= 3) out.push({ icon: '📈', title: T(`الطلبات زادت ${r0(c)}%`, `Leads up ${r0(c)}%`), detail: T(`${r0(A.tot.leads)} طلب مقابل ${r0(B.tot.leads)}`, `${r0(A.tot.leads)} leads vs ${r0(B.tot.leads)}`) });
+    const l = pctCh(cplOf(A.tot), cplOf(B.tot));
+    if (l != null && l <= -3) out.push({ icon: '💰', title: T(`تكلفة الطلب نزلت ${r0(-l)}%`, `Cost per lead down ${r0(-l)}%`), detail: T(`${r2(cplOf(A.tot))} ريال مقابل ${r2(cplOf(B.tot))}`, `${r2(cplOf(A.tot))} SAR vs ${r2(cplOf(B.tot))}`) });
+=======
     if (c != null && c >= 3) out.push({ icon: '📈', title: `الطلبات زادت ${r0(c)}%`, detail: `${r0(A.tot.leads)} طلب مقابل ${r0(B.tot.leads)}` });
     const l = pctCh(cplOf(A.tot), cplOf(B.tot));
     if (l != null && l <= -3) out.push({ icon: '💰', title: `تكلفة الطلب نزلت ${r0(-l)}%`, detail: `${r2(cplOf(A.tot))} ريال مقابل ${r2(cplOf(B.tot))}` });
+>>>>>>> hoven
     const m = pctCh(A.tot.conv, B.tot.conv);
-    if (m != null && m >= 5 && A.tot.conv >= 10) out.push({ icon: '💬', title: `المحادثات زادت ${r0(m)}%`, detail: `${r0(A.tot.conv)} محادثة مقابل ${r0(B.tot.conv)}` });
+    if (m != null && m >= 5 && A.tot.conv >= 10) out.push({ icon: '💬', title: T(`المحادثات زادت ${r0(m)}%`, `Conversations up ${r0(m)}%`), detail: T(`${r0(A.tot.conv)} محادثة مقابل ${r0(B.tot.conv)}`, `${r0(A.tot.conv)} conversations vs ${r0(B.tot.conv)}`) });
   }
   const best = [...A.idea.values()].filter(y => y.ln >= 10).sort((p, q) => p.ls / p.ln - q.ls / q.ln)[0];
+<<<<<<< well
+  if (best) out.push({ icon: '🎬', title: T('أرخص فكرة في الفترة', 'Cheapest idea in the period'), name: best.name, detail: T(`${r0(best.ln)} طلب بـ ${r2(best.ls / best.ln)} ريال`, `${r0(best.ln)} leads at ${r2(best.ls / best.ln)} SAR`) });
+=======
   if (best) out.push({ icon: '🎬', title: 'أرخص فكرة في الفترة', detail: `${best.name} · ${r0(best.ln)} طلب بـ ${r2(best.ls / best.ln)} ريال` });
+>>>>>>> hoven
   if (B) {
     const better = (a: Map<string, Sum>, b: Map<string, Sum>, keys: string[]) => keys.map(k => {
       const x = a.get(k) ?? blank(), y = b.get(k) ?? blank();
@@ -202,15 +275,25 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
     }).filter(r => r.c != null && r.c <= -5).sort((p, q) => p.c! - q.c!)[0];
     const names = depts(d, from, to);
     const dp = better(A.dept, B.dept, names.map(x => x.key));
+<<<<<<< well
+    if (dp) out.push({ icon: '🩺', title: T(`${names.find(x => x.key === dp.k)!.name}: تكلفة الطلب نزلت ${r0(-dp.c!)}%`, `${names.find(x => x.key === dp.k)!.name}: cost per lead down ${r0(-dp.c!)}%`), detail: T(`${r2(cplOf(dp.x))} ريال مقابل ${r2(cplOf(dp.y))}`, `${r2(cplOf(dp.x))} SAR vs ${r2(cplOf(dp.y))}`) });
+    const pl = better(A.plat, B.plat, [...A.plat.keys()]);
+    if (pl) out.push({ icon: '📣', title: T(`${platformName(family(pl.k))}: تكلفة الطلب نزلت ${r0(-pl.c!)}%`, `${platformName(family(pl.k))}: cost per lead down ${r0(-pl.c!)}%`), detail: T(`${r2(cplOf(pl.x))} ريال مقابل ${r2(cplOf(pl.y))}`, `${r2(cplOf(pl.x))} SAR vs ${r2(cplOf(pl.y))}`) });
+=======
     if (dp) out.push({ icon: '🩺', title: `${names.find(x => x.key === dp.k)!.name}: تكلفة الطلب نزلت ${r0(-dp.c!)}%`, detail: `${r2(cplOf(dp.x))} ريال مقابل ${r2(cplOf(dp.y))}` });
     const pl = better(A.plat, B.plat, [...A.plat.keys()]);
     if (pl) out.push({ icon: '📣', title: `${platformName(family(pl.k))}: تكلفة الطلب نزلت ${r0(-pl.c!)}%`, detail: `${r2(cplOf(pl.x))} ريال مقابل ${r2(cplOf(pl.y))}` });
+>>>>>>> hoven
   }
   // A lead day above every day before the period, since the data starts
   const top = [...A.day.entries()].sort((p, q) => q[1] - p[1])[0];
   if (top && d.range?.start) {
     const before = sums(d, d.range.start, addDays(from, -1)), rec = Math.max(0, ...before.day.values());
+<<<<<<< well
+    if (top[1] > rec && rec > 0) out.push({ icon: '⭐', title: T('أعلى يوم طلبات من بداية البيانات', 'Best lead day since the data began'), detail: T(`${top[0]} · ${r0(top[1])} طلب`, `${top[0]} · ${r0(top[1])} leads`) });
+=======
     if (top[1] > rec && rec > 0) out.push({ icon: '⭐', title: 'أعلى يوم طلبات من بداية البيانات', detail: `${top[0]} · ${r0(top[1])} طلب` });
+>>>>>>> hoven
   }
   // Launches: campaigns and ads whose first spend is inside the period
   const firstAd = new Map<string, string>(), firstCamp = new Map<string, string>();
@@ -227,8 +310,10 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
     if ((firstCamp.get(c) ?? '') >= from) camps.add(c);
     if ((firstAd.get(b) ?? '') >= from) newAds.add(b);
   }
-  const launched = [camps.size && few(camps.size, 'حملة', 'حملتين', 'حملات'), newAds.size && few(newAds.size, 'إعلان جديد', 'إعلانين جداد', 'إعلانات جديدة')].filter(Boolean);
-  if (launched.length) out.push({ icon: '🚀', title: `أطلقنا ${launched.join(' و')}`, detail: 'أول صرف لها كان في هالفترة' });
+  const en = pageLang() === 'en', many = (n: number, one: string) => (n === 1 ? `1 ${one}` : `${n} ${one}s`);
+  const launched = en ? [camps.size && many(camps.size, 'campaign'), newAds.size && many(newAds.size, 'new ad')].filter(Boolean)
+    : [camps.size && few(camps.size, 'حملة', 'حملتين', 'حملات'), newAds.size && few(newAds.size, 'إعلان جديد', 'إعلانين جداد', 'إعلانات جديدة')].filter(Boolean);
+  if (launched.length) out.push({ icon: '🚀', title: en ? `Launched ${launched.join(' and ')}` : `أطلقنا ${launched.join(' و')}`, detail: T('أول صرف لها كان في هالفترة', 'Their first spend was in this period') });
   return out;
 }
 
