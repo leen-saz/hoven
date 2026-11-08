@@ -32,6 +32,10 @@ const EN = {
   'كم واحد ضغط':'How many clicked',
   'كم واحد ترك بياناته أو راسلنا':'How many left details or messaged us',
   'كم واحد دفع':'How many paid',
+  'غير مربوط':'Not linked',
+  'عنق الزجاجة':'Bottleneck',
+  'نظام العملاء مو موصول بهالأرقام':'The CRM is not connected to these numbers',
+  'مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الاقفالات هنا.':'The sale stage is empty because the CRM numbers did not reach this copy of the dashboard. Closings show here as soon as they do.',
   'اقفالات مدفوعة':'Paid closings',
   'العائد من الإعلانات':'ROAS from ads',
   'من طلب إلى اقفالة':'Order to closing',
@@ -101,7 +105,10 @@ const EN = {
   'المنصة ◂ الحملة ◂ المجموعة ◂ الإعلان. اضغط على ▸ عشان تفتح المستوى اللي تحته.':'Platform ◂ campaign ◂ ad set ◂ ad. Click ▸ to open the level below.',
   'المواد الإعلانية':'Creatives',
   'وش يعني كل كرت؟':'What does each card mean?',
-  'كل كرت = فكرة وحدة: نفس المادة الإعلانية مجمّعة من كل المنصات والحملات والنسخ (copy، spark…)، وأرقامه مجموعها. اضغط على الكرت عشان تشوف كل إعلان منها لحاله. تفاصيل كل إعلان موجودة في لوحة التحليلات.':'Each card = one idea: the same creative grouped across platforms, campaigns and copies (copy, spark…), with its numbers summed. Click the card to see each ad on its own. Per-ad detail lives in the analytics dashboard.',
+  'كيف تنحسب؟':'How is it calculated?',
+  'اللغة':'Language',
+  'كاروسيل':'Carousel',
+  'كل كرت = فكرة وحدة: نفس المادة الإعلانية مجمّعة من كل المنصات والحملات والنسخ (نسخة، Spark…)، وأرقامه مجموعها. اضغط على الكرت عشان تشوف كل إعلان منها لحاله. تفاصيل كل إعلان موجودة في لوحة التحليلات.':'Each card = one idea: the same creative grouped across platforms, campaigns and copies (copy, spark…), with its numbers summed. Click the card to see each ad on its own. Per-ad detail lives in the analytics dashboard.',
   'متحمس تعرف؟ اضغط زر «عرض المادة الإعلانية» لمعرفته':'Curious? Press «View creative» to see it',
   'الكل':'All',
   'فعّال':'Active',
@@ -121,7 +128,11 @@ const EN = {
   'المقارنة':'Comparison',
   'الفترة السابقة بنفس عدد الأيام، بتوقيت الرياض.':'The previous period has the same number of days, in Riyadh time.',
   'تيك توك':'TikTok',
+<<<<<<< well
+  'يأتي من مزامنة تيك توك، والليد من حملات الليدز.':'Comes from the TikTok sync. Leads come from lead campaigns.',
+=======
   'يأتي من فرع tiktok-data، والليد من حملات الطلبات.':'Comes from the tiktok-data branch. Orders come from order campaigns.',
+>>>>>>> hoven
   'المنشورات':'Posts',
   'الأحدث':'Newest',
   'الأكثر مشاهدة':'Most views',
@@ -141,6 +152,15 @@ const EN = {
   'إذا نقص المصدر تظهر جملة بما ينقص، ولا يتوقف سحب الإعلانات.':'If a source is missing, a short line says what is missing. The ads fetch keeps going.',
   'اليوم (جزئي)':'Today (partial)',
   'أمس':'Yesterday',
+  'اليوم':'Today',
+  'آخر أسبوع':'Last week',
+  'آخر شهر':'Last month',
+  'اختيار تاريخ':'Pick dates',
+  'اختار يوم البداية':'Pick the first day',
+  'اختار يوم النهاية':'Pick the last day',
+  'إلغاء':'Cancel',
+  'الشهر السابق':'Previous month',
+  'الشهر التالي':'Next month',
   '٧ أيام':'7 days',
   '١٤ يوم':'14 days',
   '٣٠ يوم':'30 days',
@@ -395,20 +415,54 @@ function pendingCopy(kind){
 }
 // The main dashboard keeps its data in /dash.json (cached by the browser, revalidated with an ETag, warmed by the
 // app's sidebar); department and creative pages still carry theirs inline.
+// /dash.json sends the rows column-wise (pipeline/dash_split.py): back to [key, day, spend, impr, clicks, leads, conv]
+function decodeRows(rc){
+  const {k, d, c} = rc, out = new Array(c[0].length);
+  for(let i=0;i<out.length;i++) out[i] = [k[c[0][i]], d[c[1][i]], c[2][i], c[3][i], c[4][i], c[5][i], c[6][i]];
+  return out;
+}
 const D = await (async () => {
   const t = document.getElementById('data').textContent.trim();
   if (t) return JSON.parse(t);
   const r = await fetch('/dash.json', { credentials: 'same-origin' });
   if (!r.ok) { document.getElementById('metaLine').textContent = 'ما قدرت أحمّل البيانات (' + r.status + '). حدّث الصفحة.'; throw new Error('dash.json ' + r.status); }
-  return r.json();
+  const d = await r.json();
+  if (d.rows_cols) { d.rows = decodeRows(d.rows_cols); delete d.rows_cols; }
+  return d;
 })();
 // Well excluded one TikTok account here; Hoven excludes none.
 function ttExcludedAccount(){ return false; }
 function ttExcludedAd(){ return false; }
 const ORG_FB_HIDDEN = new Set(['Hoven Home Care','Hoven Women Health']);
-if(D.organic && Array.isArray(D.organic.facebook)){
-  D.organic.facebook = D.organic.facebook.filter(p=>p && !ORG_FB_HIDDEN.has(p.name));
+function hideOrgFb(){
+  if(D.organic && Array.isArray(D.organic.facebook)) D.organic.facebook = D.organic.facebook.filter(p=>p && !ORG_FB_HIDDEN.has(p.name));
 }
+hideOrgFb();
+// ---- extra parts (tests/unit/dash-extra.test.ts runs this block)
+// /dash.json leaves out the audience detail (a.aud) and the organic posts (pipeline/dash_split.py): they load after the
+// first view and the page draws again. Each part is 'ok' (inline data, or loaded), 'wait' or 'fail' (404, an HTML page,
+// broken JSON): its sections say it is loading, or that it could not load. Inline data has everything.
+const EXTRA = Object.fromEntries(['aud', 'organic'].map(p => [p, Array.isArray(D.extra) && D.extra.includes(p) ? 'wait' : 'ok']));
+function loadExtra(then){
+  if(EXTRA.aud !== 'wait' && EXTRA.organic !== 'wait') return Promise.resolve();
+  const get = u => fetch(u, { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).catch(() => null)
+    .then(v => v && typeof v === 'object' && !Array.isArray(v) ? v : null);
+  return Promise.all([EXTRA.aud === 'wait' ? get('/dash-aud.json') : null, EXTRA.organic === 'wait' ? get('/dash-organic.json') : null]).then(([aud, org]) => {
+    if(EXTRA.aud === 'wait'){
+      if(aud){ for(const [k, v] of Object.entries(aud)) if(D.ads && D.ads[k]) D.ads[k].aud = v; EXTRA.aud = 'ok'; }
+      else EXTRA.aud = 'fail';
+    }
+    if(EXTRA.organic === 'wait'){
+      if(org){ D.organic = org; hideOrgFb(); EXTRA.organic = 'ok'; }
+      else EXTRA.organic = 'fail';
+    }
+    then();
+  });
+}
+// What a section shows while its part loads or after it failed; '' once the part is there
+const extraNote = p => EXTRA[p] === 'wait' ? `<div class="empty">${ui('يحمّل…','Loading…')}</div>`
+  : EXTRA[p] === 'fail' ? `<div class="empty">${ui('ما قدرت أحمّل هالجزء. حدّث الصفحة.','Could not load this part. Refresh the page.')}</div>` : '';
+// ---- end extra parts
 (function dropExcludedTikTok(){
   const gone = new Set();
   for(const [k,a] of Object.entries(D.ads||{})) if(ttExcludedAd(a)) gone.add(k);

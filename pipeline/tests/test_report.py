@@ -233,7 +233,7 @@ class BillingTests(unittest.TestCase):
         self.assertIn("preset:'7'", html)
         self.assertIn("hoven-ui", html)
         self.assertIn("لوحة أداء الإعلانات", html)
-        self.assertIn('class="ffun"', html)  # the customer-journey funnel (the old #funnel was a duplicate)
+        self.assertIn('class="ffun2"', html)  # the customer-journey funnel, a horizontal pipe (the old #funnel was a duplicate)
         self.assertIn('id="tCamp"', html)
         self.assertIn('id="cards"', html)
         self.assertNotIn("runGraphWrite", html)
@@ -305,11 +305,12 @@ class BillingTests(unittest.TestCase):
             }
             json.dump(payload, open(data_path, "w", encoding="utf-8"))
             subprocess.check_call([sys.executable, os.path.join(ROOT, "build.py")], cwd=ROOT)
-            # The main dashboard's data lives in dash.json now; check the page and its data together
+            # The main dashboard's data lives in dash.json and the two parts it leaves out (dash_split.py); check the
+            # page and all its data together
             page = open(os.path.join(ROOT, "web", "public", "index.html"), encoding="utf-8").read()
-            dash = open(os.path.join(ROOT, "web", "public", "dash.json"), encoding="utf-8").read()
             self.assertIn('id="data"></script>', page)  # nothing inlined in the main page
-            page += dash
+            for name in ("dash.json", "dash-aud.json", "dash-organic.json"):
+                page += open(os.path.join(ROOT, "web", "public", name), encoding="utf-8").read()
             organic = open(os.path.join(ROOT, "web", "public", "organic", "index.html"), encoding="utf-8").read()
             vercel = json.load(open(os.path.join(ROOT, "web", "vercel.json"), encoding="utf-8"))
             self.assertNotIn("99991.25", page)

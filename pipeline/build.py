@@ -57,6 +57,11 @@ print("معاينات بعد", after)
 apply_all(data.get("ads") or {})
 data["channels"] = annotate(data.get("ads") or {})
 data["departments"] = public_config()
+# أهداف حكم رحلة العميل (pipeline/dash/00-judge.js): الكتلة «funnel» من config/targets.json، والباقي افتراضي في الملف نفسه
+try:
+    data["funnel_targets"] = {k: v for k, v in (json.load(open(os.path.join(HERE, "config", "targets.json"), encoding="utf-8")).get("funnel") or {}).items() if not k.startswith("_")}
+except (FileNotFoundError, ValueError):
+    data["funnel_targets"] = {}
 if not data.get("organic"):
     data["organic"] = pending_shell()
 else:
@@ -100,8 +105,8 @@ hashes = " ".join(f"'sha256-{base64.b64encode(hashlib.sha256(s.encode()).digest(
 csp = "; ".join([
     "default-src 'none'",
     f"script-src 'self' {hashes}",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self'",
     "img-src 'self' data:",
     "media-src https: blob: data:",
     "frame-src https://www.tiktok.com https://www.instagram.com https://www.facebook.com",
@@ -128,7 +133,11 @@ os.makedirs(os.path.join(public, "organic"), exist_ok=True)
 # The main dashboard loads its data from /dash.json (cacheable, revalidated); the page itself stays small.
 # The standalone hoven-dashboard.html above keeps the data inline.
 open(os.path.join(public, "index.html"), "w", encoding="utf-8").write(wrap(tpl.replace("/*__DATA__*/", "")))
-open(os.path.join(public, "dash.json"), "w", encoding="utf-8").write(blob)
+# The audience detail and organic posts are not in the first view: their own files, loaded after it (dash_split.py)
+from dash_split import split
+_main, _aud, _organic = split(data)
+for _name, _part in (("dash.json", _main), ("dash-aud.json", _aud), ("dash-organic.json", _organic)):
+    open(os.path.join(public, _name), "w", encoding="utf-8").write(json.dumps(_part, ensure_ascii=False, separators=(",", ":")))
 open(os.path.join(public, "organic", "index.html"), "w", encoding="utf-8").write(
     '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">'
     '<meta http-equiv="refresh" content="0;url=/?mode=organic">'

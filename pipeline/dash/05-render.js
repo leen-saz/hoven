@@ -132,6 +132,9 @@ function renderKpis(now,prev){
       tile('تكلفة العميل',sar(cac),money(),delta(cac,cacB,true),'cac',null),
     ] : []),
   ].join('');
+<<<<<<< well
+  // 2) The customer journey: a horizontal pipe that narrows with the numbers, with its analysis (funnelHTML, below)
+=======
   // 2) Funnel: each stage has its volume, its cost, and the rate that carries people to the next stage
   const vol = [a.impr||0, a.clicks||0, a.leads||0, crm ? allN : (a.booked||0)];   // Hoven: conv is revenue, not a count
   const top = Math.max(...vol, 1), w = v => v>0 ? Math.max(8, 100*Math.log10(v+1)/Math.log10(top+1)) : 4;
@@ -156,13 +159,169 @@ function renderKpis(now,prev){
     + `<div class="flayer"><div class="fname"><b>${i+1}</b><span>${st.n}</span><em>${st.hint}</em></div>`
     + `<div class="fband-wrap"><div class="fband" style="--w:${widths[i]}%;--k:${i};--fc:${['#7fb59a','#4f7a63','#294036','#293342'][i]}">${st.main}</div></div>`
     + `<div class="fcost">${st.sub.join('')}</div></div>`).join('');
+>>>>>>> hoven
   $('#kpis').innerHTML =
     `<div class="kgroup"><div class="khead"><h3>النتيجة</h3>${toggle}</div><div class="kpis kout">${outcome}</div>`
     + (crm ? `<p class="knote">${tr('الاقفالات والمدفوع من كل المصادر في نظام العملاء (مدفوعات ميسّر). العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الاقفالات.')}</p>` : '') + `</div>`
-    + `<div class="kgroup"><div class="khead"><h3>رحلة العميل</h3></div><div class="ffun">${funnel}</div></div>`;
+    + `<div class="kgroup"><div class="khead"><h3>رحلة العميل</h3></div>${funnelHTML(a,b)}`
+    + (D.crm ? '' : `<p class="knote">${tr('مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الاقفالات هنا.')}</p>`) + `</div>`;
 }
 
 function noteCard(title, line, alert){
   return `<div class="item${alert?' alert':''}"><span class="b">${title}</span><span class="sub">${line}</span></div>`;
 }
+<<<<<<< well
+
+
+// رحلة العميل كأنبوب أفقي يضيق مع الأرقام: المرحلة الأولى يمين (عكسها بالإنجليزي)، ارتفاع كل مرحلة من حجمها بمقياس مخفّف،
+// وكل وصلة تضيق لعنق، وتضيق أكثر إذا الخطوة تحت هدفها. الحكم من JUDGE (00-judge.js): كل خطوة مقابل هدف ثابت، نفس
+// القواعد اللي في ملخص الأداء (src/modules/overview/judge.ts يستورد نفس الملف).
+const FUN = { W:960, H:250, MID:118, MAX:170, MIN:26, EASE:.25, NECK:.6, MIN_NECK:8, COL:['#7C8CFF','#8B6CFF','#294036','#5B36D6'] };
+// The rate steps sit on the links; the costs and the return sit on stages (cpl on stage 2, cpa and roas on stage 3)
+const FUN_RATE = ['click','lead','sale'];
+// The viewer's edits to the targets table (same key as Overview, same origin)
+const FUN_KEY = 'well-ads-funnel-targets';
+function funTargets(){
+  let mine = null; try{ mine = JSON.parse(localStorage.getItem(FUN_KEY)||'null'); }catch(e){}
+  return { mine, cfg:JUDGE.targets(D.funnel_targets), t:JUDGE.targets(D.funnel_targets, mine) };
+}
+const funFmt = { pct:v=>`${Number(v.toFixed(Math.abs(v)<.1?3:2)).toLocaleString('en-US',{maximumFractionDigits:3})}%`,
+  sar:v=>`${fmt(v, Math.abs(v)>=100||Number.isInteger(v)?0:2)} ${money()}`, x:v=>`${fmt(v,2)}×`, qty:v=>qty(v), num:(v,d)=>fmt(v,d) };
+// Any filter narrows the ads; the CRM's closings can't follow it, so the CRM side is then the whole account
+const funSliced = () => S.plat!=='all' || !!S.dept || S.stat!=='all' || !!S.camp || !!S.goal || !!S.fmt;
+// The whole account in the period (the CRM side), and every ad's leads by day (the cohort)
+function funWhole(from,to){
+  const o = {results:0, spend:0, crmLeads:0, booked:0, value:0, byDay:{}};
+  for(const [k,date,sp,im,cl,ld,cv=0] of D.rows){ if(!ADS[k]) continue; o.byDay[date]=(o.byDay[date]||0)+ld+cv; if(date<from||date>to) continue; o.results+=ld+cv; o.spend+=sp; }
+  for(const [k,leadDay,paidDay,paid,amount] of ((D.crm&&D.crm.rows)||[])){ if(!ADS[k]) continue;
+    if(leadDay>=from && leadDay<=to) o.crmLeads++;
+    const d = S.crmBy==='paid'?paidDay:leadDay; if(paid && d && d>=from && d<=to){ o.booked++; o.value+=amount||0; } }
+  return o;
+}
+function funJudge(a){
+  const T = funTargets().t, w = funWhole(S.from,S.to), all = !!(D.crm && D.crm.paid_all);
+  const paid = all ? D.crm.paid_all.map(r=>[r[0],r[1]||null]) : ((D.crm&&D.crm.rows)||[]).filter(r=>r[3]).map(r=>[r[1],r[2]||null]);
+  const cohort = D.crm ? JUDGE.cohort(Object.entries(w.byDay), paid, S.from, S.to, MAX, T.maturityDays) : null;
+  return JUDGE.judge({
+    top:{impr:a.impr||0, clicks:a.clicks||0, results:(a.leads||0)+(a.conv||0), spend:a.spend||0, cpl:a.cpl},
+    sale:{crm:!!D.crm, results:w.results, spend:w.spend, closings:all?(a.allPaidN||0):w.booked, paid:all?(a.allPaid||0):w.value, adClosings:w.booked, adLeads:w.crmLeads, wide:funSliced()},
+    cohort }, T, LANG, funFmt);
+}
+// Editing a target re-judges at once (kept in this browser); «رجّع الافتراضي» drops the edits
+document.addEventListener('change', e => { const i = e.target.closest && e.target.closest('input[data-ftarget]'); if(!i) return;
+  const {mine} = funTargets(), next = {...(mine||{})}, n = Number(i.value);
+  if(i.value==='' || !(n>0)) delete next[i.dataset.ftarget]; else next[i.dataset.ftarget] = n;
+  try{ localStorage.setItem(FUN_KEY, JSON.stringify(next)); }catch(err){}
+  render(); });
+document.addEventListener('click', e => { if(!(e.target.closest && e.target.closest('[data-ftreset]'))) return;
+  try{ localStorage.removeItem(FUN_KEY); }catch(err){} render(); });
+// The benchmark table: each target «افتراضي — عدّله» until the viewer changes it
+function funTargetsHTML(){
+  const {mine, cfg, t} = funTargets(), unit = {'%':'%', sar:money(), share:ui('من قيمتها','of its value'), x:'×', days:ui('يوم','days')};
+  const rows = JUDGE.FIELDS.map(f=>{ const own = mine && mine[f.key]!=null && mine[f.key]!==cfg[f.key];
+    return `<tr><th scope="row">${ui(...f.label)}</th><td><label><span class="sr-only">${ui(...f.label)}</span><input type="number" inputmode="decimal" min="0" step="any" data-ftarget="${f.key}" value="${t[f.key]}"> <span class="m">${unit[f.unit]}</span></label></td>`
+      + `<td class="m">${own?ui('معدّل منك','Your edit'):ui('افتراضي — عدّله','Default — edit it')}</td></tr>`; }).join('');
+  const edited = mine && Object.keys(mine).length;
+  return `<details class="ftargets"><summary>${ui('الأهداف اللي ينحكم عليها','The targets it judges against')}</summary><div class="ft-scroll"><table><caption class="sr-only">${ui('جدول الأهداف','Targets table')}</caption><tbody>${rows}</tbody></table></div>`
+    + `<p class="m">${ui('التعديل يتحفظ في متصفحك بس. الأهداف الدائمة تتعدّل في ملف الأهداف بطلب تغيير.','Edits are kept in this browser only. The lasting targets live in pipeline/config/targets.json.')}${edited?` <button type="button" class="btn-sm" data-ftreset>${ui('رجّع الافتراضي','Back to defaults')}</button>`:''}</p></details>`;
+}
+
+// Band geometry: eased heights, a neck on every link (pinched further by a weak step), stage 1 on the right in Arabic
+function funShape(vols, scores){
+  const top = Math.max(1,...vols.map(v=>v||0));
+  const h = v => v==null||v<=0 ? FUN.MIN : FUN.MIN + (FUN.MAX-FUN.MIN)*Math.pow(v/top, FUN.EASE);
+  const heights = vols.map(h);
+  const waists = scores.map((s,i)=>Math.max(FUN.MIN_NECK, Math.min(heights[i],heights[i+1])*FUN.NECK*Math.max(.35,Math.min(1,s==null?1:s))));
+  return {heights,waists};
+}
+const funX = i => { const slot=FUN.W/4, c=(i+.5)*slot; return LANG==='en' ? c : FUN.W-c; };
+// The outline: a flat run over each stage, a smooth S into the neck between stages (horizontal tangents at every point)
+function funPath(sh){
+  const slot = FUN.W/4, run = slot*.42, pts = [];
+  const order = [0,1,2,3].sort((i,j)=>funX(i)-funX(j));
+  order.forEach((i,n)=>{ pts.push({x:funX(i)-run/2,h:sh.heights[i]},{x:funX(i)+run/2,h:sh.heights[i]});
+    if(n<3){ const j=order[n+1], l=Math.min(i,j); pts.push({x:(funX(i)+funX(j))/2,h:sh.waists[l]}); } });
+  pts[0].x=0; pts[pts.length-1].x=FUN.W;
+  const y = (p,s) => (FUN.MID + s*p.h/2).toFixed(1);
+  const edge = (ps,s) => ps.map((p,k)=>{ if(!k) return ''; const q=ps[k-1], m=((q.x+p.x)/2).toFixed(1);
+    return `C${m},${y(q,s)} ${m},${y(p,s)} ${p.x.toFixed(1)},${y(p,s)}`; }).join('');
+  const back = [...pts].reverse();
+  return `M${pts[0].x},${y(pts[0],-1)}${edge(pts,-1)}L${back[0].x},${y(back[0],1)}${edge(back,1)}Z`;
+}
+
+// The whole journey block: the band, each stage's numbers with labelled changes, the verdict and a line per step
+function funnelHTML(a,b){
+  const crm = !!(D.crm && D.crm.paid_all), allN = a.allPaidN||0;
+  const ratio = (x,y) => x!=null && y ? x/y : null;
+  const clickToLead = ratio(100*((a.leads||0)+(a.conv||0)), a.clicks), clickToLeadB = ratio(100*((b.leads||0)+(b.conv||0)), b.clicks);
+  const v = funJudge(a), steps = v.steps, unlinked = !!v.unlinked;
+  // Lead to closing on the whole CRM when the ads aren't narrowed by a filter (the judge's own figure); else the ad-linked rate
+  const res = (a.leads||0)+(a.conv||0), resB = (b.leads||0)+(b.conv||0), wideRate = crm && !funSliced();
+  const saleRate = wideRate ? (res ? 100*allN/res : null) : a.closeRate, saleRateB = wideRate ? (resB ? 100*(b.allPaidN||0)/resB : null) : b.closeRate;
+  const saleN = D.crm ? (crm?allN:(a.booked||0)) : null;
+  const NA = tr('غير مربوط'), dl = d => /لا مقارنة/.test(d) ? '' : d;
+  const rs = v => v==null||!isFinite(v) ? '—' : `${sar(v)} ${money()}`;
+  const kpi = (l,val,d,cls='') => `<div class="kpi ${cls}"><span class="l">${l}</span><span class="v">${val}</span>${dl(d||'')}</div>`;
+  const stages = [
+    {n:'الوعي', hint:'كم شخص شاف الإعلان', vol:a.impr||0, val:fmt(a.impr), main:kpi(tr('الظهور'),fmt(a.impr),delta(a.impr,b.impr,false)),
+     cost:[tr('تكلفة الألف ظهور'),rs(a.cpm)], sub:[kpi(tr('تكلفة الألف ظهور'),`${sar(a.cpm)} <small>${money()}</small>`,delta(a.cpm,b.cpm,true),'sub')]},
+    {n:'الاهتمام', hint:'كم واحد ضغط', vol:a.clicks||0, val:fmt(a.clicks), main:kpi(tr('نقرات الرابط والسوايب'),fmt(a.clicks),delta(a.clicks,b.clicks,false)),
+     cost:[tr('تكلفة النقرة'),rs(a.cpc)], sub:[kpi(tr('تكلفة النقرة'),`${sar(a.cpc)} <small>${money()}</small>`,delta(a.cpc,b.cpc,true),'sub')],
+     rate:[tr('نسبة النقر'),pct(a.ctr),delta(a.ctr,b.ctr,false)]},
+    {n:'التحويل', hint:'كم واحد ترك بياناته أو راسلنا', vol:a.leads||0, val:qty(a.leads), main:kpi(tr('الليدز'),qty(a.leads),delta(a.leads,b.leads,false)),
+     cost:[tr('تكلفة الليد'),rs(a.cpl)], sub:[kpi(tr('تكلفة الليد'),`${sar(a.cpl)} <small>${money()}</small>`,delta(a.cpl,b.cpl,true),'sub'), kpi(tr('محادثات واتساب وماسنجر'),fmt(a.conv),delta(a.conv,b.conv,false),'sub')],
+     rate:[tr('من نقرة إلى ليد'),pct(clickToLead),delta(clickToLead,clickToLeadB,false)]},
+    {n:'البيع', hint:D.crm?'كم واحد دفع':'نظام العملاء مو موصول بهالأرقام', vol:saleN, val:saleN==null?'—':fmt(saleN),
+     main:kpi(tr('اقفالات مدفوعة'),saleN==null?'—':fmt(saleN),D.crm?delta(saleN,crm?b.allPaidN:b.booked,false):''),
+     cost:[tr('تكلفة العميل'),crm&&allN?rs(a.spend/allN):'—'],
+     // The sales amount: every paid closing in the CRM, called the CRM's total when the closings aren't tied to ads
+     amount:D.crm?[crm&&unlinked?ui('إجمالي المدفوع (CRM)','Total paid (CRM)'):ui('مبلغ المبيعات','Sales amount'),rs(crm?a.allPaid:a.value)]:null,
+     sub:[kpi(crm&&unlinked?ui('إجمالي المدفوع (CRM)','Total paid (CRM)'):ui('مبلغ المبيعات','Sales amount'),D.crm?`${sar(crm?a.allPaid:a.value)} <small>${money()}</small>`:'—',D.crm?delta(crm?a.allPaid:a.value,crm?b.allPaid:b.value,false):'','sub'),
+       ...(crm?[kpi(ui('المبيعات من الإعلانات','Sales from ads'),unlinked?NA:`${sar(a.value||0)} <small>${money()}</small>`,unlinked?'':delta(a.value,b.value,false),'sub')]:[]),
+       kpi(tr('اقفالات من الإعلانات'),unlinked?NA:fmt(a.booked||0),unlinked?'':delta(a.booked,b.booked,false),'sub'), kpi(tr('العائد من الإعلانات'),unlinked||a.roas==null?(unlinked?NA:'—'):fmt(a.roas,2)+'×',unlinked?'':delta(a.roas,b.roas,false),'sub')],
+     rate:[tr('من ليد إلى اقفالة'),wideRate?pct(saleRate):unlinked?NA:pct(saleRate),wideRate||!unlinked?delta(saleRate,saleRateB,false):'']},
+  ];
+  const linkStep = i => steps.find(s=>s.link===i && FUN_RATE.includes(s.key));
+  const sh = funShape(stages.map(s=>s.vol), [0,1,2].map(i=>linkStep(i).score));
+  const weakV = v.level!=='fine' && v.level!=='na';
+  const weakLink = weakV && FUN_RATE.includes(v.step) ? FUN_RATE.indexOf(v.step) : null;
+  // A weak cost or return (cpl on stage 2, cpa or roas on stage 3) shows in red under its stage
+  const weakCost = weakV && v.step && !FUN_RATE.includes(v.step) ? steps.find(s=>s.key===v.step).link : null;
+  const grad = [0,1,2,3].map(i=>({o:funX(i)/FUN.W, c:i===3&&saleN==null?'#C9C2E8':FUN.COL[i]})).sort((x,y)=>x.o-y.o)
+    .map(s=>`<stop offset="${s.o.toFixed(3)}" stop-color="${s.c}"/>`).join('');
+  const svgStages = stages.map((s,i)=>{ const x=funX(i), hh=sh.heights[i]/2, on=s.vol!=null && hh*2>=56;
+    const vy = on ? FUN.MID-2 : FUN.MID-hh-8, ly = on ? FUN.MID+16 : FUN.MID+hh+15;
+    return `<g class="fstage"><text x="${x}" y="22" class="fs-name">${i+1}. ${tr(s.n)}</text>`
+      + `<text x="${x}" y="${vy}" class="fs-val${on?' on':''}">${s.val}</text>`
+      + `<text x="${x}" y="${ly}" class="fs-lab${on?' on':''}">${s.main.match(/<span class="l">(.*?)<\/span>/)[1]}</text>`
+      + (s.amount ? `<text x="${x}" y="${on ? FUN.MID+hh+14 : ly+16}" class="fs-amount">${s.amount[0]}: ${s.amount[1]}</text>` : '')
+      + `<text x="${x}" y="${FUN.H-26}" class="fs-lab">${s.cost[0]}</text><text x="${x}" y="${FUN.H-8}" class="fs-cost${i===weakCost?' bad':''}">${s.cost[1]}</text></g>`; }).join('');
+  const svgLinks = [0,1,2].map(i=>{ const x=(funX(i)+funX(i+1))/2, st=linkStep(i), r=stages[i+1].rate, weak=weakLink===i, off=!!st.unattributed;
+    return `<g class="flinkp${weak?' weak':''}${off?' off':''}${st.level==='watch'?' watch':''}${st.level==='problem'||st.level==='disaster'?' bad':''}">${weak?`<text x="${x}" y="${FUN.MID-26}" class="fl-neck">${tr('عنق الزجاجة')}</text>`:''}`
+      + `<rect x="${x-44}" y="${FUN.MID-13}" width="88" height="26" rx="13"/><text x="${x}" y="${FUN.MID+5}">${r[1]}</text></g>`; }).join('');
+  const svg = `<div class="fpipe-scroll"><svg class="fpipe" viewBox="0 0 ${FUN.W} ${FUN.H}" role="img" aria-label="${tr('رحلة العميل')}">`
+    + `<defs><linearGradient id="fpipeFill" x1="0" x2="1" y1="0" y2="0">${grad}</linearGradient></defs>`
+    + `<path d="${funPath(sh)}" fill="url(#fpipeFill)"/>${svgStages}${svgLinks}</svg></div>`;
+  // Each stage's numbers in the same right-to-left order as the band, with the change against the earlier period
+  const cols = stages.map((s,i)=>`<div class="fcol"><div class="fname"><b>${i+1}</b><span>${tr(s.n)}</span><em>${tr(s.hint)}</em></div>${s.main}${s.sub.join('')}`
+    + (s.rate?kpi(s.rate[0],s.rate[1],s.rate[2],'rate'):'')+`</div>`).join('');
+  const cls = l => ({fine:'', watch:'watch', problem:'bad', disaster:'bad dis', na:'off'})[l];
+  const conf = {high:ui('عالية','high'), medium:ui('متوسطة','medium'), low:ui('منخفضة','low')};
+  const row = (k,val) => val ? `<p><span class="m">${k}</span>${val}</p>` : '';
+  const verdict = `<div class="fverdict ${cls(v.level)}"><div class="fv-head"><span class="fv-badge">${ui(...JUDGE.SEV[v.level])}</span><span class="fv-conf m">${ui('الثقة','Confidence')}: ${conf[v.confidence]}</span></div>`
+    + `<h4>${v.title}</h4>${v.owner?`<span class="fv-owner"><span class="m">${ui('المسؤول','Owner')}: </span><b>${v.owner}</b></span>`:''}`
+    + row(ui('المرحلة: ','Stage: '), v.stage) + row(ui('الدليل: ','Evidence: '), v.evidence) + row(ui('على المحك: ','At stake: '), v.sar!=null?`<b>≈ ${funFmt.sar(v.sar)}</b>`:'')
+    + row(ui('ليش: ','Why: '), v.why) + row(ui('وش تسوي: ','What to do: '), v.todo) + row(ui('وش يغيّر الحكم: ','What would change it: '), v.change)
+    + (v.unlinked?`<div class="fv-unlinked"><b>${ui('الربط بالإعلانات ناقص','Attribution to ads is incomplete')}</b><span class="fv-owner"><span class="m">${ui('المسؤول','Owner')}: </span><b>${v.unlinked.owner}</b></span><p>${v.unlinked.why}</p><p><span class="m">${ui('وش تسوي: ','What to do: ')}</span>${v.unlinked.todo}</p></div>`:'')
+    + (v.rule?`<p class="fv-note">${ui('القاعدة: ','Rule: ')}${v.rule}</p>`:'')
+    + `<p class="fv-note">${ui('حكم بالقواعد: كل خطوة مقابل هدف ثابت من جدول الأهداف تحت.','Rule-based: every step against a fixed target from the table below.')}</p></div>`;
+  // One «التحليل» heading over the lines (each line already starts with its step's name), then the end-to-end rate,
+  // the biggest loss, the data trust and the lead cohorts
+  const lines = `<h4 class="flines-h">${ui('التحليل','Analysis')}</h4><ul class="flines">${steps.map(s=>`<li class="${cls(s.level)}">${s.line}<span class="fl-owner">${ui('المسؤول','Owner')}: ${s.owner}${s.unattributed||(s.level!=='fine'&&s.level!=='na')?` · ${s.fix}`:''}</span></li>`).join('')}`
+    + (v.e2e?`<li class="${cls(v.e2e.level)}">${v.e2e.line}</li>`:'') + `</ul>`
+    + `<div class="fmeta">${v.biggest?`<p class="fbig">${v.biggest}</p>`:''}<p>${v.trust.line}</p>${v.cohort?`<p>${v.cohort.line}</p>`:''}</div>` + funTargetsHTML();
+  return `<div class="ffun2"><div class="fmain">${svg}<div class="fcols">${cols}</div></div>${verdict}</div>${lines}`;
+}
+=======
 // HOVEN-DASH: Hoven overlay applied
+>>>>>>> hoven

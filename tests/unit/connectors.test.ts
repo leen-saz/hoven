@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../../src/api/index';
-import { PLATFORMS, oauth1 } from '../../src/lib/connectors';
+import { PLATFORMS, oauth1, pullState } from '../../src/lib/connectors';
 import { sign, SESSION, type AuthEnv } from '../../src/lib/auth';
 
 const ENV: AuthEnv = { SUPABASE_URL: 'https://db.test', SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_x', SESSION_SECRET: 's'.repeat(32), OWNER_EMAIL: 'leen@x.co' };
@@ -174,8 +174,28 @@ describe('meta_pages exchange', () => {
     const p = byId('meta_pages');
     expect(p).not.toBeNull();
     const got = await exchange(p!, { code: 'c', redirect: 'https://x/cb', id: 'app', secret: 's' });
-    expect(got).toEqual({ values: { META_PAGE_ID: '111', META_PAGE_ACCESS_TOKEN: 'page-tok', IG_USER_ID: '222' }, expiresIn: null });
+    expect(got).toMatchObject({ values: { META_PAGE_ID: '111', META_PAGE_ACCESS_TOKEN: 'page-tok', IG_USER_ID: '222' }, expiresIn: null, shown: { META_PAGE_NAME: 'Hoven' } });
+    expect(got.pick).toBeUndefined();
     expect(urls.some(u => u.includes('/me/accounts') && u.includes('access_token=long'))).toBe(true);
+  });
+  it('several pages: none is bound by position, the list waits for the owner to choose', async () => {
+    const { exchange, byId } = await import('../../src/lib/connectors');
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('fb_exchange_token')) return new Response(JSON.stringify({ access_token: 'long', expires_in: 5184000 }));
+      if (url.includes('/me/accounts')) return new Response(JSON.stringify({ data: [{ id: '1', name: 'Kids', access_token: 't1' }, { id: '2', name: 'Care', access_token: 't2', instagram_business_account: { id: '9', username: 'care' } }] }));
+      return new Response(JSON.stringify({ access_token: 'short' }));
+    }));
+    const got = await exchange(byId('meta_pages')!, { code: 'c', redirect: 'r', id: 'a', secret: 's' });
+    expect(got.pick).toBe(true);
+    expect(Object.keys(got.values)).toEqual(['META_PAGES_PENDING']);
+    expect(JSON.parse(got.values.META_PAGES_PENDING!).pages.map((p: { name: string }) => p.name)).toEqual(['Kids', 'Care']);
+  });
+  it('one page without Instagram drops an Instagram id saved for a previous page', async () => {
+    const { exchange, byId } = await import('../../src/lib/connectors');
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => new Response(JSON.stringify(url.includes('/me/accounts') ? { data: [{ id: '1', name: 'Kids', access_token: 't1' }] } : { access_token: 'x' }))));
+    const got = await exchange(byId('meta_pages')!, { code: 'c', redirect: 'r', id: 'a', secret: 's' });
+    expect(got.drop).toContain('IG_USER_ID');
+    expect(got.values).not.toHaveProperty('IG_USER_ID');
   });
   it('fails when no page was granted', async () => {
     const { exchange, byId } = await import('../../src/lib/connectors');
@@ -194,5 +214,27 @@ describe('oauth1 (X)', () => {
     const r = await oauth1('https://api.x.com/oauth/request_token', { key: 'ck', secret: 'cs', extra: { oauth_callback: 'https://w/cb' } });
     expect(r).toEqual({ oauth_token: 't', oauth_token_secret: 's' });
     expect(auth).toMatch(/^OAuth .*oauth_signature_method="HMAC-SHA1".*oauth_signature="[^"]+"/);
+  });
+});
+
+describe('pullState: is the GitHub pull delivering?', () => {
+  const NOW = Date.parse('2026-11-08T12:00:00Z');
+  it('a recent ad write or a recent metric day counts; nothing, or only old rows, does not', () => {
+    expect(pullState('2026-11-08T11:00:00Z', null, NOW).live).toBe(true);
+    expect(pullState('2026-11-01T11:00:00Z', '2026-11-07', NOW).live).toBe(true);   // ads quiet, daily numbers arriving
+    expect(pullState('2026-11-01T11:00:00Z', '2026-11-01', NOW).live).toBe(false);
+    expect(pullState(null, null, NOW)).toEqual({ live: false, last: null });
+  });
+  it('last is the newer of the two, as an ISO time', () => {
+    expect(pullState('2026-11-05T00:00:00Z', '2026-11-07', NOW).last).toBe('2026-11-07T00:00:00.000Z');
+  });
+  it('the list answers github for a pulled platform with no saved keys, and keeps ok for saved ones', async () => {
+    db(url => url.includes('/rest/v1/ads?') && url.includes('platform=eq.snap') ? [{ updated_at: new Date().toISOString() }]
+      : url.includes('/connections') ? [{ platform: 'meta', names: ['META_ACCESS_TOKEN', 'META_AD_ACCOUNT_ID'] }] : url.includes('/rest/v1/ads?') && url.includes('platform=eq.meta') ? [{ updated_at: new Date().toISOString() }] : []);
+    const { platforms } = await (await call('/api/connectors/list')).json() as { platforms: { id: string; status: string }[] };
+    const st = Object.fromEntries(platforms.map(p => [p.id, p.status]));
+    expect(st['snap']).toBe('github');
+    expect(st['meta']).toBe('ok');
+    expect(st['google_ads']).toBe('none');
   });
 });

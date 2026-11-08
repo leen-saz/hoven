@@ -4,8 +4,10 @@ import {
   env, sb, json, html, readJson, handle, requireUser, audit, sign, verify, readCookie, loadProfile, sessionFor, can,
   type AuthEnv, type Cfg, type Session,
 } from '../../lib/auth';
+import { WELL_COMPANY } from '../../lib/tenant';
+import { saveValues } from '../../lib/vault';
 import { TIKTOK_MCP_DAYS, pkce, registerClient, authorizeUrl as mcpAuthorizeUrl, exchangeCode } from '../../lib/mcp-oauth';
-import { PLATFORMS, OAUTH, byId, appCreds, authorizeUrl, exchange, oauth1, check, type Platform, type Values, type Exchanged, CORE } from '../../lib/connectors';
+import { PLATFORMS, OAUTH, byId, appCreds, authorizeUrl, exchange, oauth1, check, pullState, type Platform, type Values, type Exchanged, CORE } from '../../lib/connectors';
 
 type Row = Record<string, unknown>;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);
@@ -14,27 +16,7 @@ const vars = (e: AuthEnv) => e as unknown as Record<string, unknown>;
 const OAUTH_COOKIE = '__Secure-hoven_oauth'; // not __Host-: its path is /api/connectors/ only
 const redirectFor = (request: Request) => new URL('/api/connectors/callback', request.url).toString();
 
-// ---- Vault writes (vault.js)
-async function saveValues(cfg: Cfg, user: Session, p: Platform, method: 'key' | 'oauth', values: Values,
-  { shown = {}, expiresIn = null, checked = null }: { shown?: Values; expiresIn?: number | null; checked?: string | null } = {}): Promise<void> {
-  const names = Object.keys(values);
-  for (const name of names) {
-    const r = await sb(cfg, '/rest/v1/rpc/connector_put', { method: 'POST', admin: true, body: { p_name: name, p_value: values[name] } });
-    if (!r.ok) throw new Error('vault write failed');
-  }
-  const old = await sb(cfg, `/rest/v1/connections?platform=eq.${encodeURIComponent(p.id)}&select=names,shown`, { admin: true });
-  const prev = (old.ok ? rows(old.data)[0] : undefined) || { names: [], shown: {} };
-  const row: Row = {
-    platform: p.id, method, names: [...new Set([...((prev.names as string[]) || []), ...names])], shown: { ...((prev.shown as Values) || {}), ...shown },
-    connected_by: user.email, connected_at: new Date().toISOString(), checked,
-  };
-  if (expiresIn) row.expires_at = new Date(Date.now() + expiresIn * 1000).toISOString();
-  else if (method === 'key') row.expires_at = null;
-  const w = await sb(cfg, '/rest/v1/connections', { method: 'POST', admin: true, headers: { Prefer: 'return=minimal,resolution=merge-duplicates' }, body: row });
-  if (!w.ok) throw new Error('connections write failed');
-  await audit(cfg, user, 'connector_saved', { target: { platform: p.id, method, names } });
-}
-
+// ---- Vault writes: src/lib/vault.ts (shared with the Social tab's page chooser)
 async function dropPlatform(cfg: Cfg, user: Session, p: Platform): Promise<void> {
   const old = await sb(cfg, `/rest/v1/connections?platform=eq.${encodeURIComponent(p.id)}&select=names`, { admin: true });
   const names = ((old.ok ? rows(old.data)[0] : undefined)?.names as string[] | undefined) || [];
@@ -46,15 +28,22 @@ async function dropPlatform(cfg: Cfg, user: Session, p: Platform): Promise<void>
 // ---- list: platforms and their status. No secret value: names, status and account ids only.
 export const list = {
   GET: handle(async (request, e) => {
-    const { cfg } = await requireUser(request, e, 'connectors');
+    const { cfg } = await requireUser(request, e, 'connectors', { well: true });
     const r = await sb(cfg, '/rest/v1/connections?select=platform,method,names,shown,connected_by,connected_at,expires_at,checked', { admin: true });
     if (!r.ok) return json(500, { error: 'ما قدرت أقرأ حالة الربط. تأكد إن 005_connectors.sql انطبق على القاعدة' });
     const by = Object.fromEntries(rows(r.data).map(x => [String(x.platform), x]));
-    // Platforms the hourly pull already reads with keys kept in GitHub secrets: ads updated in the last 2 days
-    const since = new Date(Date.now() - 2 * 864e5).toISOString();
-    const pulled = await sb(cfg, `/rest/v1/ads?select=platform&updated_at=gte.${since}&limit=5000`, { admin: true });
+    // Platforms the hourly pull reads with keys kept in GitHub secrets: the last ad write and the last metric day of each
     const PULL: Record<string, string> = { meta: 'meta', google: 'google_ads', snap: 'snap', tiktok: 'tiktok' };
-    const live = new Set(rows(pulled.ok ? pulled.data : []).map(x => PULL[String(x.platform)]).filter(Boolean));
+    // One row per platform is enough (a single 5000-row read is cut at 1000 and could hold only one platform)
+    const first = async (path: string, field: string) => { const r = await sb(cfg, path, { admin: true }); const x = r.ok ? rows(r.data)[0] : undefined; return x ? String(x[field] ?? '') || null : null; };
+    const pulls = new Map<string, { live: boolean; last: string | null }>();
+    await Promise.all(Object.keys(PULL).map(async k => {
+      const [ad, day] = await Promise.all([
+        first(`/rest/v1/ads?select=updated_at&platform=eq.${k}&order=updated_at.desc&limit=1`, 'updated_at'),
+        first(`/rest/v1/ad_metrics?select=day,ads!inner(platform)&ads.platform=eq.${k}&order=day.desc&limit=1`, 'day'),
+      ]);
+      pulls.set(PULL[k] as string, pullState(ad, day));
+    }));
     const platforms = PLATFORMS.map(p => {
       const c = by[p.id] || null;
       const o = OAUTH[p.id];
@@ -63,14 +52,17 @@ export const list = {
       const have = new Set<string>(c ? (c.names as string[]) || [] : []);
       const expires = c?.expires_at as string | null | undefined;
       // TikTok stays on MCP: 'mcp' (Grok's branch) until it is signed in to TikTok's MCP server from here.
-      const status = p.mcp && !have.size ? 'mcp' : !c ? (live.has(p.id) ? 'pull' : 'none') : expires && new Date(expires) < new Date() ? 'expired' : required.every(n => have.has(n)) ? 'ok' : 'partial';
+      // 'github' = keys live in GitHub secrets and the hourly pull is delivering: working, but not connected from this page
+      const pull = pulls.get(p.id);
+      const own = !c ? 'none' : expires && new Date(expires) < new Date() ? 'expired' : required.every(n => have.has(n)) ? 'ok' : 'partial';
+      const status = p.mcp && !have.size ? 'mcp' : own !== 'ok' && pull?.live ? 'github' : own;
       const shown = (c?.shown as Values | undefined) || {};
       return {
         id: p.id, name: p.name, group: p.group, core: CORE[p.id] || null, fetch: !!p.fetch, mcp: !!p.mcp, docs: p.docs, help: p.help,
         oauth: !!o, oauthReady: !!(o && (o.mcpOAuth || appCreds(p, vars(e)))), expiresNote: o?.expires || null, logo: p.logo || null, color: p.color || null,
         fields: p.fields.map(f => ({ env: f.env, label: f.label, secret: f.secret, type: f.type, optional: !!f.optional, manual: !!f.manual,
           placeholder: f.placeholder || '', saved: have.has(f.env), shown: !f.secret && c ? shown[f.env] || '' : '' })),
-        status, method: c && c.method, by: c && c.connected_by, at: c && c.connected_at, expires: c && c.expires_at, checked: c && c.checked,
+        status, lastPull: pull?.last || null, method: c && c.method, by: c && c.connected_by, at: c && c.connected_at, expires: c && c.expires_at, checked: c && c.checked,
       };
     });
     return json(200, { platforms });
@@ -81,7 +73,7 @@ export const list = {
 const MAX = 20000; // a service account JSON is a few thousand characters
 export const save = {
   POST: handle(async (request, e) => {
-    const { cfg, user } = await requireUser(request, e, 'connectors', { write: true });
+    const { cfg, user } = await requireUser(request, e, 'connectors', { write: true, well: true });
     const body = await readJson(request, 100000);
     const p = byId(body.platform);
     if (!p || p.mcp) return json(400, { error: 'منصة غير معروفة' });
@@ -106,7 +98,7 @@ export const save = {
 // ---- disconnect: wipes the platform's values and status. The pipeline falls back to old GitHub secrets if any.
 export const disconnect = {
   POST: handle(async (request, e) => {
-    const { cfg, user } = await requireUser(request, e, 'connectors', { write: true });
+    const { cfg, user } = await requireUser(request, e, 'connectors', { write: true, well: true });
     const p = byId((await readJson(request)).platform);
     if (!p) return json(400, { error: 'منصة غير معروفة' });
     await dropPlatform(cfg, user, p);
@@ -133,7 +125,7 @@ async function startMcp(request: Request, cfg: Cfg, uid: string, platform: strin
 
 export const start = {
   GET: handle(async (request, e) => {
-    const { cfg, user } = await requireUser(request, e, 'connectors');
+    const { cfg, user } = await requireUser(request, e, 'connectors', { well: true });
     const p = byId(new URL(request.url).searchParams.get('platform'));
     const o = p ? OAUTH[p.id] : undefined;
     if (!p || !o) return html(400, 'المنصة ما تدعم زر الربط.');
@@ -181,7 +173,7 @@ export const callback = {
     if (q.get('error') || q.get('denied') || !(v1 ? q.get('oauth_verifier') : code)) return back(`/connectors/?err=denied&p=${encodeURIComponent(st.p)}`, true);
     const profile = await loadProfile(cfg, st.uid);
     const user = profile && profile.active !== false ? sessionFor(profile, cfg) : null;
-    if (!user || !p || !o || !can(user, 'connectors', cfg)) return back('/connectors/?err=access', true);
+    if (!user || user.co !== WELL_COMPANY || !p || !o || !can(user, 'connectors', cfg)) return back('/connectors/?err=access', true);
     if (o.mcpOAuth) {
       // TikTok MCP: the code + the PKCE verifier from the nonce cookie + the client id from the signed state
       try {
@@ -207,7 +199,10 @@ export const callback = {
       } else {
         got = await exchange(p, { code, redirect: redirectFor(request), ...app });
       }
-      await saveValues(cfg, user, p, 'oauth', got.values, { expiresIn: got.expiresIn || null, checked: 'انربط من صفحة المنصة' });
+      await saveValues(cfg, user, p, 'oauth', got.values, { expiresIn: got.expiresIn || null, shown: got.shown, drop: got.drop,
+        checked: got.pick ? 'ينتظر اختيار الصفحة' : 'انربط من صفحة المنصة' });
+      // Several pages granted: the owner chooses which one on the Social tab (nothing is bound until then)
+      if (got.pick) return back('/social/?pick=1', true);
     } catch (err) {
       console.error('connector oauth', p.id, err instanceof Error ? err.message : 'error');
       return back(`/connectors/?err=exchange&p=${encodeURIComponent(p.id)}`, true);
