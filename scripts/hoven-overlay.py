@@ -140,6 +140,8 @@ EMPTY_DASH = """    if (!page) {
 
 
 def site(s):
+    # R2 onlyIf.etagDoesNotMatch wants the bare etag; upstream passes the quoted httpEtag (500 on the second visit)
+    s = s.replace("onlyIf: { etagDoesNotMatch: old.etag } }", "onlyIf: { etagDoesNotMatch: old.etag.replace(/^W\\//, '').replace(/\"/g, '') } }")
     if "اللوحة تنبني بعد أول سحب بيانات" in s:
         return s
     old = "  if (!page) return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });\n"
@@ -418,6 +420,23 @@ def clean_well_terms(s):
     return s
 
 
+def hoven_en(s):
+    """English for Hoven's own Arabic strings (store examples, library, two-step sign-in, quotas): scripts/hoven/en.json."""
+    import json
+    words = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "hoven", "en.json"), encoding="utf-8"))
+    s = re.sub(r"  // HOVEN-EN start\n.*?  // HOVEN-EN end\n", "", s, flags=re.S)
+    start = s.find("export const EN = {")
+    end = s.find("\n};", start)
+    if start < 0 or end < 0:
+        return s
+    have = set(m.group(2) for m in re.finditer(r"""(['"])((?:\\.|(?!\1).)*)\1\s*:""", s[start:end]))
+    add = {k: v for k, v in words.items() if k not in have}
+    if not add:
+        return s
+    block = "  // HOVEN-EN start\n" + "".join(f"  {json.dumps(k, ensure_ascii=False)}: {json.dumps(v, ensure_ascii=False)},\n" for k, v in add.items()) + "  // HOVEN-EN end\n"
+    return s[:end + 1] + block + s[end + 1:]
+
+
 RULES = {
     "src/modules/overview/numbers.ts": [overview_results, clean_well_terms],
     "src/modules/journeys/journeys.ts": [clean_well_terms, lead_to_order],
@@ -438,7 +457,7 @@ RULES = {
     "public/assets/control.js": [depts, moh, lead_to_order],
     "public/assets/launch.js": [depts, moh, launch, lead_to_order],
     "public/assets/i18n.js": [lead_to_order],   # the EN dictionary lives in i18n-en.js now
-    "public/assets/i18n-en.js": [lead_to_order, i18n_en, dedupe_dict, clean_well_terms],   # Well moved the EN strings here
+    "public/assets/i18n-en.js": [lead_to_order, i18n_en, dedupe_dict, clean_well_terms, hoven_en],   # Well moved the EN strings here
     "src/api/routes/control.ts": [moh, lead_to_order],
     "src/lib/auth.ts": [depts],
 }

@@ -35,7 +35,8 @@ function bucket(files: Record<string, string>, etag = '"e"') {
     async get(key: string, o?: { onlyIf?: { etagDoesNotMatch?: string } }) {
       reads.push({ key, onlyIf: o?.onlyIf });
       if (!(key in files)) return null;
-      if (o?.onlyIf?.etagDoesNotMatch === etag) return { httpEtag: etag };
+      // Real R2 takes the bare etag here (a quoted one throws); httpEtag is the quoted form
+      if (o?.onlyIf?.etagDoesNotMatch !== undefined && `"${o.onlyIf.etagDoesNotMatch}"` === etag) return { httpEtag: etag };
       const text = files[key] as string;
       return { body: new Response(text).body, httpEtag: etag, text: async () => text, arrayBuffer: async () => new TextEncoder().encode(text).buffer };
     },
@@ -84,7 +85,7 @@ describe('in-isolate cache of the pages', () => {
     expect(r?.status).toBe(304);
     expect(b.reads).toHaveLength(1);
     const later = await kept(b, 'site/dash.json', Date.now() + KEEP_MS + 1);
-    expect(b.reads[1]?.onlyIf).toEqual({ etagDoesNotMatch: '"e"' });
+    expect(b.reads[1]?.onlyIf).toEqual({ etagDoesNotMatch: 'e' });
     expect(new TextDecoder().decode(later!.bytes)).toBe('{"a":1}');
   });
   it('answers a copy under 10 minutes old at once and revalidates it after the response', async () => {
@@ -95,7 +96,7 @@ describe('in-isolate cache of the pages', () => {
     expect(new TextDecoder().decode(k!.bytes)).toBe('{"a":1}');
     expect(later).toHaveLength(1);
     await Promise.all(later);
-    expect(b.reads[1]?.onlyIf).toEqual({ etagDoesNotMatch: '"e"' });
+    expect(b.reads[1]?.onlyIf).toEqual({ etagDoesNotMatch: 'e' });
     // Older than that: the visit waits for R2
     const old: Promise<unknown>[] = [];
     await kept(b, 'site/dash.json', Date.now() + STALE_MS + KEEP_MS + 1, p => old.push(p));
