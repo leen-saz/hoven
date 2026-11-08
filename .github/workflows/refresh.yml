@@ -29,7 +29,7 @@ jobs:
   refresh:
     runs-on: ubuntu-24.04
     environment: production
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.full && 240 || 30 }}   # a full pull from 2023 takes over an hour
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
