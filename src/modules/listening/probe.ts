@@ -6,7 +6,12 @@ import { handle, json, requireUser } from '../../lib/auth';
 import { collect, get, type ListenEnv } from './fetcher';
 import { parseBing, parseGdelt, parseNews, type Watch } from './social';
 
+<<<<<<< well
+// The brand watch «أضف الكلمات الأربع» creates, so the check shows what Hoven's own terms bring
+export const SAMPLE: Watch & { id: number } = { id: 0, kind: 'brand', name: 'هوفن يونيون', keywords: ['تطبيق هوفن', 'wellunion', 'wellcare'] };
+=======
 export const SAMPLE: Watch & { id: number } = { id: 0, kind: 'brand', name: 'هوفن', keywords: ['هوفن', 'hoven'] };
+>>>>>>> hoven
 const CONTROL = 'الرياض';
 const BROWSER = { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36' };
 

@@ -1,8 +1,8 @@
 // الرصد: (1) وش ينقال عننا وعن المنافسين بالكلمات من مصادر عامة، مع الشعور، وحصة الظهور في الإشارات والتنبيهات.
 // (2) تبويب ثاني: تفاعل منشوراتنا العضوية والطلب من الـ CRM (يتحمّل أول ما ينفتح).
-import { $, $$, api, say, esc, shell, fmt, busy } from '/assets/common.js';
+import { $, $$, api, say, esc, shell, fmt, busy, failure } from '/assets/common.js';
 import { analyze, postsOf, demandAlerts } from '/modules/listening/analyze.js';
-import { summarize, filterMentions } from '/modules/listening/social.js';
+import { summarize, filterMentions, brandSuggestions, brandAdd, missingKeys } from '/modules/listening/social.js';
 
 const NET = { facebook: 'فيسبوك', instagram: 'انستقرام', tiktok: 'تيك توك' };
 const SRC = { meta_form: 'نموذج ميتا', meta_ctwa: 'واتساب من إعلان', whatsapp_ad_prefill: 'واتساب من إعلان', snapchat_form: 'نموذج سناب', tiktok_form: 'نموذج تيك توك',
@@ -57,8 +57,13 @@ async function organic() {
       $('#demand').innerHTML = (d.sources || []).length ? `<div class="tbl"><table class="dg-plat"><thead><tr><th>المصدر</th><th>هالأسبوع</th><th>الأسبوع اللي قبله</th><th>التغيّر</th></tr></thead><tbody>
           ${d.sources.map(s => { const a = alerts.find(x => x.source === s.source); return `<tr${a ? ' class="ls-alert"' : ''}><td>${esc(SRC[s.source] || s.source)}</td><td class="n">${fmt(s.now)}</td><td class="n">${fmt(s.prev)}</td><td class="n">${s.prev ? pct((s.now - s.prev) / s.prev) : '—'}</td></tr>`; }).join('')}
           </tbody></table></div>${alerts.length ? `<p class="dg-fix" style="margin:10px 0 0"><b>انتبه:</b> ${alerts.map(a => `${esc(SRC[a.source] || a.source)} ${pct(a.change)}`).join('، ')}</p>` : ''}`
+<<<<<<< well
+        : '<p class="muted">ما فيه طلبات آخر أسبوعين.</p>';
+    } catch (err) { failure($('#demand'), err, demand); }
+=======
         : '<p class="muted">ما فيه طلبات آخر أسبوعين.</p>';
     } catch (err) { $('#demand').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
+>>>>>>> hoven
   }
 
   $('#addKw').addEventListener('submit', e => { e.preventDefault(); const v = $('#kwIn').value.trim(); if (v && !kw.includes(v)) { kw = [...kw, v].slice(0, 20); save(); draw(); } $('#kwIn').value = ''; });
@@ -84,27 +89,51 @@ async function listening() {
   let W = [], M = [], days = 30, shown = 15, filt = {};
 
   function setup(d) {
-    $('#setup').innerHTML = d.missing ? `<section class="card pad lx-sql" style="margin:0 0 16px"><h2 style="margin:0 0 6px">خطوة وحدة قبل ما يشتغل الرصد</h2>
-      <p style="margin:0 0 8px">شغّل هالـ SQL مرة وحدة في Supabase (SQL Editor في مشروع Hoven)، وبعدها ارجع لهالصفحة.</p>
-      <details><summary>اعرض الـ SQL</summary><pre id="sql">${esc(d.sql)}</pre></details>
-      <div class="bar" style="margin-top:8px"><button class="btn secondary" type="button" id="copySql">انسخ الـ SQL</button></div></section>` : '';
+    // Nothing technical here: a normal user is told to ask the owner, the owner is sent to the data-health page
+    $('#setup').innerHTML = d.missing ? `<section class="card pad" style="margin:0 0 16px"><h2 style="margin:0 0 6px">الرصد ما اكتمل تجهيزه</h2>
+      <p style="margin:0">${d.owner ? 'التفاصيل وش ناقص في <a href="/maestro/health/">صحة الداتا</a>.' : 'بلّغ الإدارة عشان تكمل تجهيزه.'}</p></section>` : '';
     const s = d.sources || {};
-    // Off sources say «يحتاج تفعيل»; the key name stays in the tooltip for whoever sets it up
-    const chip = (on, label, need) => `<span class="${on ? '' : 'off'}" title="${on ? 'شغّال' : esc(need)}">${on ? '✓' : '○'} ${esc(label)}${on || !need ? '' : ' · يحتاج تفعيل من الإدارة'}</span>`;
-    $('#src').innerHTML = chip(s.news, 'الأخبار (قوقل، وإذا رفض فـ Bing)', '') + chip(s.reddit, 'ريديت', 'يحتاج REDDIT_CLIENT_ID و REDDIT_CLIENT_SECRET') + chip(s.youtube, 'يوتيوب', 'يحتاج YOUTUBE_API_KEY')
-      + chip(s.x, 'X عن طريق Grok (مدفوع)', 'يحتاج XAI_API_KEY') + chip(s.tiktok, 'تيك توك عن طريق Grok (مدفوع)', 'يحتاج XAI_API_KEY') + chip(s.sentiment, 'تحليل الشعور', 'يحتاج Workers AI');
+    const chip = (on, label, need) => `<span class="${on ? '' : 'off'}">${on ? '✓' : '○'} ${esc(label)}${on || !need ? '' : ' · يحتاج تفعيل من الإدارة'}</span>`;
+    $('#src').innerHTML = chip(s.news, 'الأخبار (قوقل، وإذا رفض فـ Bing)', '') + chip(s.reddit, 'ريديت', 1) + chip(s.youtube, 'يوتيوب', 1)
+      + chip(s.x, 'X عن طريق Grok (مدفوع)', 1) + chip(s.tiktok, 'تيك توك عن طريق Grok (مدفوع)', 1) + chip(s.sentiment, 'تحليل الشعور', 1);
+    const miss = d.missing ? [] : missingKeys(s);
+    $('#keys').innerHTML = miss.length ? `<section class="card pad lx-keys"><h2 style="margin:0 0 6px">مصادر ما انفعّلت للحين</h2>
+      <p class="muted" style="margin:0 0 8px">الرصد شغّال على الأخبار. كل مصدر هنا يضيف إشارات أكثر أول ما تفعّله الإدارة.</p>
+      <ul>${miss.map(k => `<li><b>${esc(k.label)}</b> (${esc(k.cost)}): ${esc(k.adds)}</li>`).join('')}</ul>${d.owner ? '<p class="muted" style="margin:8px 0 0">طريقة التفعيل في <a href="/maestro/health/">صحة الداتا</a>.</p>' : ''}</section>` : '';
     $('#refresh').disabled = !!d.missing; $('#wf button[type=submit]').disabled = !!d.missing;
   }
+
+  // علامتنا فاضية: تنبيه واضح مع كلمات Hoven الجاهزة، تنضاف بضغطة
+  function drawBrand() {
+    const none = !W.some(w => w.kind === 'brand'), sug = brandSuggestions(W);
+    $('#brand').innerHTML = none && !$('#refresh').disabled ? `<section class="card pad lx-brand" aria-labelledby="brandH"><h2 id="brandH" style="margin:0 0 6px">ما فيه شي يراقب Hoven للحين</h2>
+      <p style="margin:0 0 10px">"علامتنا" فاضية، فما راح تشوف وش ينقال عننا ولا حصتنا مقابل المنافسين. أضف كلمات Hoven، واضغط على أي وحدة تضيفها بروحها:</p>
+      <div class="lx-sug">${sug.map(t => `<button type="button" class="so-chip" data-sug="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div>
+      <div class="bar" style="margin-top:10px"><button type="button" class="btn primary" data-sug-all>أضف الكلمات الأربع</button></div></section>` : '';
+    const g = $('#watch [data-grp="brand"]');
+    if (g && !none && sug.length) g.insertAdjacentHTML('beforeend', `<div class="lx-sug" style="margin-top:6px"><span class="muted">اقتراحات:</span>${sug.map(t => `<button type="button" class="so-chip" data-sug="${esc(t)}">+ ${esc(t)}</button>`).join('')}</div>`);
+  }
+  async function addBrand(terms, btn) {
+    const body = brandAdd(W, terms); if (!body) return;
+    busy(btn, true);
+    try { await api('/api/listening/watch', { method: 'POST', body }); await load(); say($('#wmsg'), 'انضافت لعلامتنا. اضغط "حدّث الحين" عشان تجيب إشاراتها.', true); }
+    catch (err) { say($('#wmsg'), err.message); busy(btn, false); }
+  }
+  $('#paneListen').addEventListener('click', e => {
+    const one = e.target.closest('[data-sug]'), all = e.target.closest('[data-sug-all]');
+    if (one) addBrand([one.dataset.sug], one);
+    if (all) addBrand(brandSuggestions(W), all);
+  });
 
   function drawWatch() {
     $('#watch').innerHTML = Object.entries(KIND).map(([k, label]) => {
       const list = W.filter(w => w.kind === k);
-      return `<div class="lx-grp"><h3>${label}</h3>${list.length ? list.map(w => `<div class="lx-item"><div><b>${esc(w.name)}</b>
+      return `<div class="lx-grp" data-grp="${k}"><h3>${label}</h3>${list.length ? list.map(w => `<div class="lx-item"><div><b>${esc(w.name)}</b>
           ${w.keywords.length ? `<div class="kw">${w.keywords.map(esc).join('، ')}</div>` : ''}
           ${w.kind === 'competitor' ? `<div class="lx-links">${w.adlibrary ? `<a class="btn sm ghost" href="${esc(w.adlibrary)}" target="_blank" rel="noopener">إعلاناته في مكتبة ميتا</a>` : ''}
             ${Object.entries(w.links || {}).filter(([n]) => n !== 'adlibrary').map(([n, v]) => `<span class="so-chip">${esc(n)}: ${esc(v)}</span>`).join('')}</div>` : ''}</div>
           <div class="bar"><button type="button" class="btn sm secondary" data-run="${w.id}">حدّثه</button><button type="button" class="btn sm ghost" data-del="${w.id}" aria-label="احذف ${esc(w.name)}">احذف</button></div></div>`).join('')
-        : `<p class="muted" style="margin:0">${k === 'brand' ? 'أضف اسم Hoven والكلمات اللي ينذكر فيها.' : k === 'competitor' ? 'أضف منافس عشان تقارن صوتك بصوته.' : 'كلمات تبي تنبيه أول ما تنذكر، مثل شكوى أو اسم منتج.'}</p>`}</div>`;
+        : `<p class="muted" style="margin:0">${k === 'brand' ? 'فاضية: أضف كلمات Hoven من التنبيه فوق، أو اكتبها بنفسك تحت.' : k === 'competitor' ? 'أضف منافس عشان تقارن صوتك بصوته.' : 'كلمات تبي تنبيه أول ما تنذكر، مثل شكوى أو اسم منتج.'}</p>`}</div>`;
     }).join('');
     $('#fW').innerHTML = '<option value="">الكل</option>' + W.map(w => `<option value="${w.id}">${esc(w.name)}</option>`).join('');
     if (filt.watch) $('#fW').value = String(filt.watch);
@@ -148,7 +177,7 @@ async function listening() {
     $('#more').hidden = list.length <= shown;
   }
 
-  function drawAll() { const sum = summarize(W, M, Date.now(), days); drawWatch(); drawVoice(sum); drawTrend(sum); drawAlerts(sum); drawMentions(); }
+  function drawAll() { const sum = summarize(W, M, Date.now(), days); drawWatch(); drawBrand(); drawVoice(sum); drawTrend(sum); drawAlerts(sum); drawMentions(); }
 
   async function load() {
     const d = await api('/api/listening/watch'); setup(d); W = d.watches || [];
@@ -156,10 +185,6 @@ async function listening() {
     drawAll();
   }
 
-  $('#setup').addEventListener('click', async e => {
-    if (!e.target.closest('#copySql')) return;
-    try { await navigator.clipboard.writeText($('#sql').textContent); say($('#lmsg'), 'انسخ الـ SQL.', true); } catch { say($('#lmsg'), 'ما قدرت أنسخ. افتح "اعرض الـ SQL" وانسخه يدوي.'); }
-  });
   $('#wk').addEventListener('change', () => { $('#wl').hidden = $('#wk').value !== 'competitor'; });
   $('#wf').addEventListener('submit', async e => {
     e.preventDefault(); const btn = e.submitter; busy(btn, true);
@@ -180,7 +205,7 @@ async function listening() {
     if (run) { busy(run, true); await refresh(+run.dataset.run); busy(run, false); }
   });
   // Sources that refused, per watch: "ايفر كير: قوقل رفض (503)"
-  const ASKED = { google: 'قوقل', bing: 'Bing', gdelt: 'GDELT', reddit: 'ريديت', youtube: 'يوتيوب', x: 'X', tiktok: 'تيك توك' };
+  const ASKED = { google: 'قوقل', bing: 'Bing', reddit: 'ريديت', youtube: 'يوتيوب', x: 'X', tiktok: 'تيك توك' };
   function failures(report = {}) {
     const bad = Object.entries(report).flatMap(([name, by]) => Object.entries(by || {}).filter(([, v]) => typeof v === 'string')
       .map(([src, v]) => `${name}: ${ASKED[src] || src} رفض (${String(v).replace('error ', '')})`));
