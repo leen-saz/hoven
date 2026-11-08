@@ -200,9 +200,9 @@ export function journey(a: Outcome, l: Lang = 'ar'): { stages: JStage[]; noCrm: 
     { n: t('الوعي', 'Awareness'), hint: t('كم شخص شاف الإعلان', 'How many saw the ad'), main: st(t('الظهور', 'Impressions'), 'impr', 'qty'), sub: [cpm], cost: cpm },
     { n: t('الاهتمام', 'Interest'), hint: t('كم واحد ضغط', 'How many clicked'), main: st(t('نقرات الرابط والسوايب', 'Link clicks and swipes'), 'clicks', 'qty'),
       sub: [cpc], rate: st(t('نسبة النقر', 'Click rate'), 'ctr', 'pct'), cost: cpc },
-    { n: t('التحويل', 'Conversion'), hint: t('كم واحد ترك بياناته أو راسلنا', 'How many left details or messaged us'), main: st(t('الطلبات', 'Leads'), 'leads', 'qty'),
-      sub: [cpl, st(t('محادثات واتساب وماسنجر', 'WhatsApp and Messenger chats'), 'conv', 'qty')],
-      rate: st(t('من نقرة إلى طلب أو محادثة', 'Click to lead or chat'), 'clickToResult', 'pct'), cost: cpl },
+    { n: t('التحويل', 'Conversion'), hint: t('كم واحد اشترى', 'How many bought'), main: st(t('الطلبات', 'Orders'), 'leads', 'qty'),
+      sub: [cpl, st(t('الإيراد', 'Revenue'), 'conv', 'sar')],
+      rate: st(t('من نقرة إلى طلب', 'Click to order'), 'clickToResult', 'pct'), cost: cpl },
     { n: t('البيع', 'Sale'), hint: linked ? t('كم واحد دفع', 'How many paid') : t('نظام العملاء مو موصول بهالأرقام', 'The CRM is not connected to these numbers'),
       // Same as the main dashboard: every paid closing in the CRM, or the ad-linked ones when that list is missing
       main: st(t('إقفالات مدفوعة', 'Paid closings'), a.crm ? 'closings' : 'booked', 'qty', false, linked),
@@ -250,24 +250,14 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
   const pf = addDays(from, -days), pt = addDays(from, -1), B = compare ? sums(d, pf, pt) : null;
   if (B) {
     const c = pctCh(A.tot.leads, B.tot.leads);
-<<<<<<< well
-    if (c != null && c >= 3) out.push({ icon: '📈', title: T(`الطلبات زادت ${r0(c)}%`, `Leads up ${r0(c)}%`), detail: T(`${r0(A.tot.leads)} طلب مقابل ${r0(B.tot.leads)}`, `${r0(A.tot.leads)} leads vs ${r0(B.tot.leads)}`) });
+    if (c != null && c >= 3) out.push({ icon: '📈', title: T(`الطلبات زادت ${r0(c)}%`, `Orders up ${r0(c)}%`), detail: T(`${r0(A.tot.leads)} طلب مقابل ${r0(B.tot.leads)}`, `${r0(A.tot.leads)} orders vs ${r0(B.tot.leads)}`) });
     const l = pctCh(cplOf(A.tot), cplOf(B.tot));
-    if (l != null && l <= -3) out.push({ icon: '💰', title: T(`تكلفة الطلب نزلت ${r0(-l)}%`, `Cost per lead down ${r0(-l)}%`), detail: T(`${r2(cplOf(A.tot))} ريال مقابل ${r2(cplOf(B.tot))}`, `${r2(cplOf(A.tot))} SAR vs ${r2(cplOf(B.tot))}`) });
-=======
-    if (c != null && c >= 3) out.push({ icon: '📈', title: `الطلبات زادت ${r0(c)}%`, detail: `${r0(A.tot.leads)} طلب مقابل ${r0(B.tot.leads)}` });
-    const l = pctCh(cplOf(A.tot), cplOf(B.tot));
-    if (l != null && l <= -3) out.push({ icon: '💰', title: `تكلفة الطلب نزلت ${r0(-l)}%`, detail: `${r2(cplOf(A.tot))} ريال مقابل ${r2(cplOf(B.tot))}` });
->>>>>>> hoven
+    if (l != null && l <= -3) out.push({ icon: '💰', title: T(`تكلفة الطلب نزلت ${r0(-l)}%`, `Cost per order down ${r0(-l)}%`), detail: T(`${r2(cplOf(A.tot))} ريال مقابل ${r2(cplOf(B.tot))}`, `${r2(cplOf(A.tot))} SAR vs ${r2(cplOf(B.tot))}`) });
     const m = pctCh(A.tot.conv, B.tot.conv);
-    if (m != null && m >= 5 && A.tot.conv >= 10) out.push({ icon: '💬', title: T(`المحادثات زادت ${r0(m)}%`, `Conversations up ${r0(m)}%`), detail: T(`${r0(A.tot.conv)} محادثة مقابل ${r0(B.tot.conv)}`, `${r0(A.tot.conv)} conversations vs ${r0(B.tot.conv)}`) });
+    if (m != null && m >= 5 && A.tot.conv >= 10) out.push({ icon: '💰', title: T(`الإيراد زاد ${r0(m)}%`, `Revenue up ${r0(m)}%`), detail: T(`${r0(A.tot.conv)} ريال مقابل ${r0(B.tot.conv)}`, `${r0(A.tot.conv)} SAR vs ${r0(B.tot.conv)}`) });
   }
   const best = [...A.idea.values()].filter(y => y.ln >= 10).sort((p, q) => p.ls / p.ln - q.ls / q.ln)[0];
-<<<<<<< well
-  if (best) out.push({ icon: '🎬', title: T('أرخص فكرة في الفترة', 'Cheapest idea in the period'), name: best.name, detail: T(`${r0(best.ln)} طلب بـ ${r2(best.ls / best.ln)} ريال`, `${r0(best.ln)} leads at ${r2(best.ls / best.ln)} SAR`) });
-=======
-  if (best) out.push({ icon: '🎬', title: 'أرخص فكرة في الفترة', detail: `${best.name} · ${r0(best.ln)} طلب بـ ${r2(best.ls / best.ln)} ريال` });
->>>>>>> hoven
+  if (best) out.push({ icon: '🎬', title: T('أرخص فكرة في الفترة', 'Cheapest idea in the period'), name: best.name, detail: T(`${r0(best.ln)} طلب بـ ${r2(best.ls / best.ln)} ريال`, `${r0(best.ln)} orders at ${r2(best.ls / best.ln)} SAR`) });
   if (B) {
     const better = (a: Map<string, Sum>, b: Map<string, Sum>, keys: string[]) => keys.map(k => {
       const x = a.get(k) ?? blank(), y = b.get(k) ?? blank();
@@ -275,25 +265,15 @@ export function wins(d: Dash, from: string, to: string, compare: boolean): Win[]
     }).filter(r => r.c != null && r.c <= -5).sort((p, q) => p.c! - q.c!)[0];
     const names = depts(d, from, to);
     const dp = better(A.dept, B.dept, names.map(x => x.key));
-<<<<<<< well
-    if (dp) out.push({ icon: '🩺', title: T(`${names.find(x => x.key === dp.k)!.name}: تكلفة الطلب نزلت ${r0(-dp.c!)}%`, `${names.find(x => x.key === dp.k)!.name}: cost per lead down ${r0(-dp.c!)}%`), detail: T(`${r2(cplOf(dp.x))} ريال مقابل ${r2(cplOf(dp.y))}`, `${r2(cplOf(dp.x))} SAR vs ${r2(cplOf(dp.y))}`) });
+    if (dp) out.push({ icon: '🩺', title: T(`${names.find(x => x.key === dp.k)!.name}: تكلفة الطلب نزلت ${r0(-dp.c!)}%`, `${names.find(x => x.key === dp.k)!.name}: cost per order down ${r0(-dp.c!)}%`), detail: T(`${r2(cplOf(dp.x))} ريال مقابل ${r2(cplOf(dp.y))}`, `${r2(cplOf(dp.x))} SAR vs ${r2(cplOf(dp.y))}`) });
     const pl = better(A.plat, B.plat, [...A.plat.keys()]);
-    if (pl) out.push({ icon: '📣', title: T(`${platformName(family(pl.k))}: تكلفة الطلب نزلت ${r0(-pl.c!)}%`, `${platformName(family(pl.k))}: cost per lead down ${r0(-pl.c!)}%`), detail: T(`${r2(cplOf(pl.x))} ريال مقابل ${r2(cplOf(pl.y))}`, `${r2(cplOf(pl.x))} SAR vs ${r2(cplOf(pl.y))}`) });
-=======
-    if (dp) out.push({ icon: '🩺', title: `${names.find(x => x.key === dp.k)!.name}: تكلفة الطلب نزلت ${r0(-dp.c!)}%`, detail: `${r2(cplOf(dp.x))} ريال مقابل ${r2(cplOf(dp.y))}` });
-    const pl = better(A.plat, B.plat, [...A.plat.keys()]);
-    if (pl) out.push({ icon: '📣', title: `${platformName(family(pl.k))}: تكلفة الطلب نزلت ${r0(-pl.c!)}%`, detail: `${r2(cplOf(pl.x))} ريال مقابل ${r2(cplOf(pl.y))}` });
->>>>>>> hoven
+    if (pl) out.push({ icon: '📣', title: T(`${platformName(family(pl.k))}: تكلفة الطلب نزلت ${r0(-pl.c!)}%`, `${platformName(family(pl.k))}: cost per order down ${r0(-pl.c!)}%`), detail: T(`${r2(cplOf(pl.x))} ريال مقابل ${r2(cplOf(pl.y))}`, `${r2(cplOf(pl.x))} SAR vs ${r2(cplOf(pl.y))}`) });
   }
   // A lead day above every day before the period, since the data starts
   const top = [...A.day.entries()].sort((p, q) => q[1] - p[1])[0];
   if (top && d.range?.start) {
     const before = sums(d, d.range.start, addDays(from, -1)), rec = Math.max(0, ...before.day.values());
-<<<<<<< well
-    if (top[1] > rec && rec > 0) out.push({ icon: '⭐', title: T('أعلى يوم طلبات من بداية البيانات', 'Best lead day since the data began'), detail: T(`${top[0]} · ${r0(top[1])} طلب`, `${top[0]} · ${r0(top[1])} leads`) });
-=======
-    if (top[1] > rec && rec > 0) out.push({ icon: '⭐', title: 'أعلى يوم طلبات من بداية البيانات', detail: `${top[0]} · ${r0(top[1])} طلب` });
->>>>>>> hoven
+    if (top[1] > rec && rec > 0) out.push({ icon: '⭐', title: T('أعلى يوم طلبات من بداية البيانات', 'Best order day since the data began'), detail: T(`${top[0]} · ${r0(top[1])} طلب`, `${top[0]} · ${r0(top[1])} leads`) });
   }
   // Launches: campaigns and ads whose first spend is inside the period
   const firstAd = new Map<string, string>(), firstCamp = new Map<string, string>();

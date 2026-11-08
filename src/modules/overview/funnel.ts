@@ -130,7 +130,7 @@ export function steps(a: Outcome, b: Partial<Outcome> | null, m: Usual, l: Lang 
   const off = unattributed(a);
   return [
     mk('click', t('نسبة النقر', 'Click rate'), 0, a.ctr, b?.ctr ?? null, m.click, FLOORS.click, false, pc),
-    mk('lead', t('من نقرة إلى طلب أو محادثة', 'Click to lead or chat'), 1, a.clickToResult, b?.clickToResult ?? null, m.lead, FLOORS.lead, false, pc),
+    mk('lead', t('من نقرة إلى طلب', 'Click to order'), 1, a.clickToResult, b?.clickToResult ?? null, m.lead, FLOORS.lead, false, pc),
     // The earlier period's rate only counts when it was tied to ads too (b.closeRate is null otherwise)
     mk('sale', t('من طلب إلى إقفالة', 'Lead to closing'), 2, a.closeRate, b && !unattributed(b as Outcome) ? b.closeRate ?? null : null, null, FLOORS.sale, false, pc, off),
     mk('cpl', t('تكلفة الطلب', 'Cost per lead'), 2, a.cpl, b?.cpl ?? null, m.cpl, null, true, money),
@@ -145,7 +145,7 @@ function unlinkedLine(a: Outcome, l: Lang): string {
   if (a.closingsAll > 0 && a.bookedAll === 0) return t(`غير مربوط: في نظام العملاء ${a.closingsAll} إقفالة مدفوعة بس ولا وحدة منها مربوطة بإعلان، فنسبة الإقفال من الإعلانات ما تنحسب (مو صفر).`,
     `Not linked: the CRM has ${a.closingsAll} paid closings but none is tied to an ad, so the ad close rate cannot be computed (it is not zero).`);
   return t(`غير مربوط: أغلب الطلبات ما انربطت بإعلان في نظام العملاء (${a.crmLeads} من ${a.leads + a.conv})، فنسبة الإقفال ما تنحكم.`,
-    `Not linked: most leads are not tied to an ad in the CRM (${a.crmLeads} of ${a.leads + a.conv}), so the close rate cannot be judged.`);
+    `Not linked: most orders are not tied to an ad in the CRM (${a.crmLeads} of ${a.leads + a.conv}), so the close rate cannot be judged.`);
 }
 
 type Advice = { title: string; where: string; why: string; todo: string };
@@ -158,16 +158,16 @@ const ADVICE: Record<Lang, Record<StepKey, Advice>> = {
   ar: {
     cpm: { title: 'الوصول صار أغلى', where: 'تكلفة الألف ظهور', why: 'المزايدة أو الجمهور أو أماكن الظهور ترفع سعر الوصول.', todo: 'راجع الجمهور والمزايدة وأماكن الظهور، وجرّب جمهور أوسع.' },
     click: { title: 'الإعلان ما يجيب نقرات كفاية', where: 'من الظهور للنقرة', why: 'الإعلان ما يشد: الصورة أو أول سطر ما يوقف اللي يمرر.', todo: 'جرّب مادة جديدة، وغيّر أول سطر والعنوان، وابدأ بالفايدة أو بسؤال يلمس المشكلة.' },
-    lead: { title: 'النقرات ما تصير طلبات', where: 'من النقرة لليد', why: 'الناس تضغط بس ما تكمل: النموذج طويل، أو الصفحة بطيئة، أو دخول الواتساب فيه خطوة زايدة.', todo: 'قصّر النموذج، وشيك على سرعة الصفحة من الجوال، وجرّب رسالة الواتساب الجاهزة بنفسك.' },
+    lead: { title: 'النقرات ما تصير طلبات', where: 'من النقرة للطلب', why: 'الناس تضغط بس ما تكمل: النموذج طويل، أو الصفحة بطيئة، أو دخول الواتساب فيه خطوة زايدة.', todo: 'قصّر النموذج، وشيك على سرعة الصفحة من الجوال، وجرّب رسالة الواتساب الجاهزة بنفسك.' },
     sale: { title: 'الطلبات ما تصير إقفالات', where: 'من الطلب للإقفالة', why: 'المتابعة متأخرة، أو جودة الطلبات نازلة.', todo: 'شيك كم ياخذ الفريق عشان يرد على الليد، وراجع أسئلة النموذج عشان تفلتر الجادين.' },
     cpl: { title: 'تكلفة الطلب طالعة', where: 'تكلفة الطلب', why: 'الجمهور تشبّع، أو المواد تعبت من كثر ما انعرضت.', todo: 'وسّع الجمهور أو غيّره، وبدّل المواد اللي صار لها فترة طويلة تنعرض.' },
   },
   en: {
     cpm: { title: 'Reach got more expensive', where: 'Cost per 1,000 impressions', why: 'The bid, the audience or the placements are pushing up the price of reach.', todo: 'Review the audience, the bid and the placements; try a wider audience.' },
     click: { title: 'The ads get too few clicks', where: 'Impression to click', why: 'The ad does not stop the scroll: the image or the first line.', todo: 'Try a new creative and a new first line and headline; lead with the benefit or a question about the problem.' },
-    lead: { title: 'Clicks are not becoming leads', where: 'Click to lead', why: 'People click but do not finish: a long form, a slow page, or an extra step into WhatsApp.', todo: 'Shorten the form, check the page speed on a phone, and try the WhatsApp entry yourself.' },
-    sale: { title: 'Leads are not closing', where: 'Lead to closing', why: 'Follow-up is slow, or lead quality dropped.', todo: 'Check how long the team takes to answer a lead, and tighten the form questions to filter serious ones.' },
-    cpl: { title: 'Cost per lead is rising', where: 'Cost per lead', why: 'The audience is saturated, or the creatives are worn out from running too long.', todo: 'Widen or change the audience, and replace creatives that have run for a long time.' },
+    lead: { title: 'Clicks are not becoming orders', where: 'Click to order', why: 'People click but do not finish: a slow page, a long checkout, or the shipping cost.', todo: 'Shorten the form, check the page speed on a phone, and try the WhatsApp entry yourself.' },
+    sale: { title: 'Orders are not completing', where: 'Order to completion', why: 'Follow-up is slow, or lead quality dropped.', todo: 'Check how long the team takes to answer a lead, and tighten the form questions to filter serious ones.' },
+    cpl: { title: 'Cost per order is rising', where: 'Cost per order', why: 'The audience is saturated, or the creatives are worn out from running too long.', todo: 'Widen or change the audience, and replace creatives that have run for a long time.' },
   },
 };
 

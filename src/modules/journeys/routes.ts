@@ -7,7 +7,7 @@ import { check } from '../compliance/compliance';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
 import type { JourneyParams } from './workflow';
-import { guard, meter } from '../../lib/usage';
+import { guard, meter } from '../../lib/quotas';
 
 type Row = Record<string, unknown>;
 type WfEnv = AuthEnv & { JOURNEY?: { create(o: { id: string; params: JourneyParams }): Promise<unknown> } };

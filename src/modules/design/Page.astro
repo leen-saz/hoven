@@ -13,10 +13,7 @@ import { ClientRouter } from 'astro:transitions';
 <meta name="theme-color" content="#F2F0E3">
 <title>التصميم · Hoven</title>
 <link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
-<<<<<<< well
-<link rel="preload" href="/assets/fonts/playfair-display-900.woff2" as="font" type="font/woff2" crossorigin>
-=======
->>>>>>> hoven
+<link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/app.css">
 <ClientRouter />
 <style is:global>
@@ -107,7 +104,6 @@ import { ClientRouter } from 'astro:transitions';
   <div class="main">
     <header class="topbar" id="top"></header>
     <main class="content" id="content">
-<<<<<<< well
       <div class="dz-kind"><span id="kindLabel" style="font-weight:600">نوع التصميم</span>
         <div class="seg" id="kind" role="group" aria-labelledby="kindLabel"><button type="button" data-kind="image" aria-pressed="true">صورة</button><button type="button" data-kind="motion" aria-pressed="false">موشن جرافيك</button></div></div>
       <div id="imageFlow">
@@ -116,7 +112,7 @@ import { ClientRouter } from 'astro:transitions';
           <section class="card pad">
             <h2>تفاصيل التصميم</h2>
             <form id="f" novalidate>
-              <label for="offer">وش نعلن عنه</label><input id="offer" type="text" placeholder="مثال: جلسة فيتامين سي بالوريد في البيت">
+              <label for="offer">وش نعلن عنه</label><input id="offer" type="text" placeholder="مثال: طقم مفارش قطن مزدوج">
               <label for="photo">صورة منتجك الأصلية <span class="muted">(اختياري: المصمم يحطها في مشهد جديد، وبدونها يصمم خلفية)</span></label><input id="photo" type="file" accept="image/*">
               <div class="dz-thumbs" id="thumbs" aria-live="polite"></div>
               <fieldset class="dz-sizes"><legend>وين بينشر؟</legend>
@@ -128,8 +124,8 @@ import { ClientRouter } from 'astro:transitions';
               <div class="msg" id="msg" role="status"></div>
               <details class="dz-more"><summary>خيارات إضافية <span class="muted">(النوع، الفئة، القسم، صور مرجعية)</span></summary>
               <label for="type">النوع</label><select id="type"><option value="ad">إعلان</option><option value="post">بوست عضوي</option><option value="story">ستوري</option></select>
-              <label for="aud">الفئة المستهدفة</label><input id="aud" type="text" placeholder="مثال: الموظفين اللي يحسون بإرهاق">
-              <label for="dept">القسم</label><select id="dept"><option value="">بدون</option><option value="المحاليل الوريدية">المحاليل الوريدية</option><option value="القبالة / رعاية الحمل">القبالة / رعاية الحمل</option><option value="تقويم القدم">تقويم القدم</option><option value="رينان لصحة الطفل">رينان لصحة الطفل</option></select>
+              <label for="aud">الفئة المستهدفة</label><input id="aud" type="text" placeholder="مثال: العرسان الجدد، اللي يجهزون بيتهم">
+              <label for="dept">القسم</label><select id="dept"><option value="">بدون</option><option value="هوفن">هوفن</option></select>
               <label for="refs">صور مرجعية <span class="muted">(حتى 4: تصاميم يعجبك أسلوبها)</span></label><input id="refs" type="file" accept="image/*" multiple>
               <label class="dz-check"><input type="checkbox" id="useRefColors" disabled> خذ الألوان من المراجع <span class="muted" id="refColorsNote">(ارفع صورة مرجعية أول)</span></label>
               </details>
@@ -153,7 +149,7 @@ import { ClientRouter } from 'astro:transitions';
               <h2>موشن جديد</h2>
               <label for="design">التصميم المعتمد (PNG من تاب التصميم)</label><input type="file" id="design" accept="image/png,image/jpeg,image/webp">
               <label for="voice">الصوت المعتمد (WAV من تاب الصوت)</label><input type="file" id="voice" accept="audio/wav,audio/x-wav,audio/mpeg,audio/mp4,.wav,.mp3,.m4a">
-              <label for="vtitle">اسم الفيديو</label><input type="text" id="vtitle" maxlength="120" placeholder="مثال: المحاليل في البيت · رمضان">
+              <label for="vtitle">اسم الفيديو</label><input type="text" id="vtitle" maxlength="120" placeholder="مثال: مفارش الشتاء · رمضان">
               <label for="headline">العنوان</label><input type="text" id="headline" maxlength="140">
               <label for="script">نص التعليق الصوتي</label><textarea id="script" rows="4" maxlength="2000" placeholder="الصق نفس النص اللي انقرا في الصوت، عشان المشاهد تمشي معه"></textarea>
               <div class="mv-row"><div><label for="ratio">المقاس</label><select id="ratio"><option value="9:16">9:16 ستوري وريلز</option><option value="1:1">1:1 مربع</option><option value="16:9">16:9 عرضي</option></select></div></div>
@@ -174,7 +170,7 @@ import { ClientRouter } from 'astro:transitions';
               </div>
               <form id="editForm" novalidate><div id="editBox" hidden>
                 <label for="change">وش تبي تغيّر؟</label>
-                <textarea id="change" rows="3" maxlength="600" placeholder="مثال: خل العنوان يطلع أكبر، وغيّر الزر لـ «اطلب زيارة»، وخل النص يجي من فوق"></textarea>
+                <textarea id="change" rows="3" maxlength="600" placeholder="مثال: خل العنوان يطلع أكبر، وغيّر الزر لـ «اطلب الحين»، وخل النص يجي من فوق"></textarea>
                 <div class="bar" style="margin-top:8px"><button class="btn primary" type="submit" id="editGo">سوّ النسخة الجديدة</button><button class="btn ghost" type="button" id="editCancel">إلغاء</button></div>
                 <span class="mv-paid">مدفوع: كل تعديل طلب واحد للمصمم. النسخة الحالية تبقى في السجل.</span>
                 <div class="msg" id="emsg" role="status"></div>
@@ -184,36 +180,6 @@ import { ClientRouter } from 'astro:transitions';
             </div>
           </section>
         </div>
-=======
-      <nav class="dz-kind" aria-label="نوع التصميم"><a href="/design/" aria-current="page">صورة</a><a href="/design/video/">موشن جرافيك</a></nav>
-      <p class="muted" style="margin:0 0 14px">يبني تفاصيل التصميم من أفضل إعلاناتنا، ويقترح نصوص مفحوصة على قواعد الامتثال، ويرسم معاينة لكل مقاس. المصمم يصمم الصورة، والنص دايم طبقة فوقها تقدر تعدّلها.</p>
-      <div class="so-grid">
-        <section class="card pad">
-          <h2>تفاصيل التصميم</h2>
-          <form id="f" novalidate>
-            <label for="offer">وش نعلن عنه</label><input id="offer" type="text" placeholder="مثال: طقم مفارش قطن مزدوج">
-            <label for="photo">صورة منتجك الأصلية <span class="muted">(اختياري: المصمم يحطها في مشهد جديد، وبدونها يصمم خلفية)</span></label><input id="photo" type="file" accept="image/*">
-            <div class="dz-thumbs" id="thumbs" aria-live="polite"></div>
-            <fieldset class="dz-sizes"><legend>وين بينشر؟</legend>
-              <label class="dz-size"><input type="checkbox" name="size" value="square" checked><b>بوست</b><span>إنستغرام وفيسبوك · مربع 1:1</span></label>
-              <label class="dz-size"><input type="checkbox" name="size" value="story" checked><b>ستوري وريلز</b><span>سناب، تيك توك، ستوري · طولي 9:16</span></label>
-              <label class="dz-size"><input type="checkbox" name="size" value="portrait"><b>بوست طولي</b><span>إنستغرام · 4:5</span></label>
-              <label class="dz-size"><input type="checkbox" name="size" value="landscape"><b>إعلان رابط</b><span>فيسبوك وقوقل · عرضي</span></label></fieldset>
-            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit">صمّم</button></div>
-            <div class="msg" id="msg" role="status"></div>
-            <details class="dz-more"><summary>خيارات إضافية <span class="muted">(النوع، الفئة، القسم، صور مرجعية)</span></summary>
-            <label for="type">النوع</label><select id="type"><option value="ad">إعلان</option><option value="post">بوست عضوي</option><option value="story">ستوري</option></select>
-            <label for="aud">الفئة المستهدفة</label><input id="aud" type="text" placeholder="مثال: العرسان الجدد، اللي يجهزون بيتهم">
-            <label for="dept">القسم</label><select id="dept"><option value="">بدون</option><option value="هوفن">هوفن</option></select>
-            <label for="refs">صور مرجعية <span class="muted">(حتى 4: تصاميم يعجبك أسلوبها)</span></label><input id="refs" type="file" accept="image/*" multiple>
-            <label class="dz-check"><input type="checkbox" id="useRefColors" disabled> خذ الألوان من المراجع <span class="muted" id="refColorsNote">(ارفع صورة مرجعية أول)</span></label>
-            </details>
-            <p class="muted" id="brandNote" hidden style="margin:6px 0 0;font-size:13px">يستخدم شعارك وألوانك وخطك من المعرفة ← الهوية والبصريات تلقائياً.</p>
-            <p class="muted dz-note">صورة المنتج تنرسل لخدمة التصميم بالذكاء الاصطناعي بمقاس 1024 عشان يحطها في مشهد جديد. الصور المرجعية تنرسل نسخة صغيرة عشان يوصف أسلوبها بس. ولا وحدة تنحفظ عندنا.</p>
-          </form>
-        </section>
-        <div class="ls-out"><section class="card pad" id="ref"><p class="muted">املأ التفاصيل واضغط "صمّم".</p></section><section class="card pad" id="vars"></section></div>
->>>>>>> hoven
       </div>
     </main>
   </div>

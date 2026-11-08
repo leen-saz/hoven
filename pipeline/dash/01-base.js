@@ -128,11 +128,7 @@ const EN = {
   'المقارنة':'Comparison',
   'الفترة السابقة بنفس عدد الأيام، بتوقيت الرياض.':'The previous period has the same number of days, in Riyadh time.',
   'تيك توك':'TikTok',
-<<<<<<< well
-  'يأتي من مزامنة تيك توك، والليد من حملات الليدز.':'Comes from the TikTok sync. Leads come from lead campaigns.',
-=======
-  'يأتي من فرع tiktok-data، والليد من حملات الطلبات.':'Comes from the tiktok-data branch. Orders come from order campaigns.',
->>>>>>> hoven
+  'يأتي من مزامنة تيك توك، والليد من حملات الطلبات.':'Comes from the TikTok sync. Orders come from order campaigns.',
   'المنشورات':'Posts',
   'الأحدث':'Newest',
   'الأكثر مشاهدة':'Most views',

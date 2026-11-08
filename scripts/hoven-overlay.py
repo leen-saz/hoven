@@ -313,10 +313,31 @@ def probe_sample(s):
     return re.sub(r"name: '[^']*', keywords: \['ايفر كير', 'wellunion'\]", "name: 'هوفن', keywords: ['هوفن', 'hoven']", s)
 
 
+def overview_funnel(s):
+    """Overview funnel and wins: Hoven's conv column is revenue in SAR (ADR-0007), not WhatsApp/Messenger chats."""
+    pairs = [("t('كم واحد ترك بياناته أو راسلنا', 'How many left details or messaged us')", "t('كم واحد اشترى', 'How many bought')"),
+             ("st(t('الطلبات', 'Leads'), 'leads', 'qty')", "st(t('الطلبات', 'Orders'), 'leads', 'qty')"),
+             ("st(t('محادثات واتساب وماسنجر', 'WhatsApp and Messenger chats'), 'conv', 'qty')", "st(t('الإيراد', 'Revenue'), 'conv', 'sar')"),
+             ("t('من نقرة إلى طلب أو محادثة', 'Click to lead or chat')", "t('من نقرة إلى طلب', 'Click to order')"),
+             ("icon: '💬', title: T(`المحادثات زادت ${r0(m)}%`, `Conversations up ${r0(m)}%`)", "icon: '💰', title: T(`الإيراد زاد ${r0(m)}%`, `Revenue up ${r0(m)}%`)"),
+             ("${r0(A.tot.conv)} محادثة مقابل ${r0(B.tot.conv)}", "${r0(A.tot.conv)} ريال مقابل ${r0(B.tot.conv)}"),
+             ("${r0(A.tot.conv)} conversations", "${r0(A.tot.conv)} SAR"),
+             ("where: 'من النقرة لليد'", "where: 'من النقرة للطلب'"),
+             ("'Clicks are not becoming leads', where: 'Click to lead'", "'Clicks are not becoming orders', where: 'Click to order'"),
+             ("a long form, a slow page, or an extra step into WhatsApp", "a slow page, a long checkout, or the shipping cost"),
+             ("'Leads are not closing', where: 'Lead to closing'", "'Orders are not completing', where: 'Order to completion'"),
+             ("'Cost per lead is rising', where: 'Cost per lead'", "'Cost per order is rising', where: 'Cost per order'"),
+             ("most leads are not tied", "most orders are not tied")]
+    for a, b in pairs:
+        s = s.replace(a, b)
+    return overview_results(s) if "overview_results" in globals() and False else s
+
+
 RULES = {
     "src/modules/listening/probe.ts": [probe_sample, lead_to_order],
     **{f: [overview_labels] for f in glob.glob("src/modules/overview/*.tsx") if ".test." not in f},
-    "src/modules/overview/analytics.ts": [overview_results],
+    "src/modules/overview/analytics.ts": [overview_results, overview_funnel],
+    "src/modules/overview/funnel.ts": [overview_funnel, lead_to_order],
     "src/modules/overview/numbers.ts": [overview_results],
     "src/lib/site.ts": [site],
     "src/modules/content/routes.ts": [content_prompts],
@@ -327,7 +348,8 @@ RULES = {
     "public/assets/common.js": [common, lead_to_order],
     "public/assets/control.js": [depts, moh, lead_to_order],
     "public/assets/launch.js": [depts, moh, launch, lead_to_order],
-    "public/assets/i18n.js": [lead_to_order, i18n_en, dedupe_dict],
+    "public/assets/i18n.js": [lead_to_order],   # the EN dictionary lives in i18n-en.js now
+    "public/assets/i18n-en.js": [lead_to_order, i18n_en, dedupe_dict],   # Well moved the EN strings here
     "src/api/routes/control.ts": [moh, lead_to_order],
     "src/lib/auth.ts": [depts],
 }

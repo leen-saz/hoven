@@ -36,14 +36,10 @@ export const DEP_EN: Record<string, string> = { iv: 'IV Drips', midwife: 'Midwif
 export const platformName = (p: string): string => platformNameIn(p, pageLang());
 export const platformNameIn = (p: string, lang: 'ar' | 'en'): string => (lang === 'en' ? PLATFORM_EN[p] : PLATFORM[p]) ?? p;
 
-<<<<<<< well
-export const GOAL: Record<string, string> = { lead: 'طلبات', messages: 'محادثات' };
-const GOAL_EN: Record<string, string> = { lead: 'Leads', messages: 'Conversations' };
+export const GOAL: Record<string, string> = { lead: 'مبيعات', messages: 'رسائل' };
+const GOAL_EN: Record<string, string> = { lead: 'Sales', messages: 'Messages' };
 // The goal's name in the page language; fallback when the ad has none
 export const goalName = (g: string, other = '—'): string => (pageLang() === 'en' ? GOAL_EN[g] : GOAL[g]) ?? (other === '—' ? '—' : pageLang() === 'en' ? 'Other' : other);
-=======
-export const GOAL: Record<string, string> = { lead: 'مبيعات', messages: 'رسائل' };
->>>>>>> hoven
 
 const META = new Set(['facebook', 'instagram', 'messenger', 'threads', 'audience_network']);
 export const family = (p: string): string => (p.startsWith('google') ? 'google' : p.startsWith('meta') || META.has(p) ? 'meta' : p);

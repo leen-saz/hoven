@@ -48,23 +48,13 @@ export function PaceCard({ data, from, to }: Props) {
   const p = pace(data, from, to);
   const wait = p.waitDays ? T('يطلع بعد 3 أيام', 'Shows after 3 days') : '—';
   const items: [string, string, (string | undefined)?][] = [
-<<<<<<< well
     [p.partialToday ? T('صرف اليوم الجزئي', 'Spend today (partial)') : T(`صرف ${month(p.month)} حتى الآن (${p.done} من ${p.days} يوم)`, `${month(p.month)} spend so far (${p.done} of ${p.days} days)`), sar(p.spend)],
-    [T('نتايج حتى الآن', 'Results so far'), p.results == null ? '—' : qty(p.results)],
+    [T('طلبات حتى الآن', 'Orders so far'), p.results == null ? '—' : qty(p.results)],
     [T('توقع الصرف لنهاية الشهر', 'Spend forecast for the month'), p.forecast ? sar(p.forecast.spend) : wait],
-    [T('توقع النتايج لنهاية الشهر', 'Results forecast for the month'), p.forecast ? qty(p.forecast.results) : wait],
+    [T('توقع الطلبات لنهاية الشهر', 'Orders forecast for the month'), p.forecast ? qty(p.forecast.results) : wait],
     [T(`مقارنة بنفس الأيام من ${month(p.prevMonth)}`, `Against the same days of ${month(p.prevMonth)}`), p.vs ? T(`صرف ${ch(p.vs.spend)} · نتايج ${ch(p.vs.results)}`, `spend ${ch(p.vs.spend)} · results ${ch(p.vs.results)}`) : '—'],
     [p.prev?.full ? T(`${month(p.prevMonth)} كامل`, `All of ${month(p.prevMonth)}`) : T(`نفس الأيام من ${month(p.prevMonth)}`, `The same days of ${month(p.prevMonth)}`), p.prev ? T(`${qty(p.prev.results)} نتيجة`, `${qty(p.prev.results)} results`) : '—',
       p.prev ? T(`${sar(p.prev.spend)} · تكلفة الطلب ${p.prev.results ? sar(p.prev.spend / p.prev.results) : '—'}`, `${sar(p.prev.spend)} · cost per result ${p.prev.results ? sar(p.prev.spend / p.prev.results) : '—'}`) : undefined],
-=======
-    [p.partialToday ? 'صرف اليوم الجزئي' : `صرف ${month(p.month)} حتى الآن (${p.done} من ${p.days} يوم)`, sar(p.spend)],
-    ['نتايج حتى الآن', p.results == null ? '—' : qty(p.results)],
-    ['توقع الصرف لنهاية الشهر', p.forecast ? sar(p.forecast.spend) : wait],
-    ['توقع النتايج لنهاية الشهر', p.forecast ? qty(p.forecast.results) : wait],
-    [`مقارنة بنفس الأيام من ${month(p.prevMonth)}`, p.vs ? `صرف ${ch(p.vs.spend)} · نتايج ${ch(p.vs.results)}` : '—'],
-    [p.prev?.full ? `${month(p.prevMonth)} كامل` : `نفس الأيام من ${month(p.prevMonth)}`, p.prev ? `${qty(p.prev.results)} نتيجة` : '—',
-      p.prev ? `${sar(p.prev.spend)} · تكلفة الطلب ${p.prev.results ? sar(p.prev.spend / p.prev.results) : '—'}` : undefined],
->>>>>>> hoven
   ];
   return (
     <Card>
@@ -87,11 +77,7 @@ export function HeatCard({ data, from, to }: Props) {
   };
   return (
     <Card>
-<<<<<<< well
-      <CardHeader><CardTitle>{T('تكلفة الطلب حسب يوم الأسبوع', 'Cost per lead by weekday')}</CardTitle><CardDescription>{T('إعلانات الطلبات بس. الأغمق = الأغلى.', 'Lead ads only. Darker = more expensive.')}</CardDescription></CardHeader>
-=======
-      <CardHeader><CardTitle>تكلفة الطلب حسب يوم الأسبوع</CardTitle><CardDescription>إعلانات الطلبات بس. الأغمق = الأغلى.</CardDescription></CardHeader>
->>>>>>> hoven
+      <CardHeader><CardTitle>{T('تكلفة الطلب حسب يوم الأسبوع', 'Cost per order by weekday')}</CardTitle><CardDescription>{T('إعلانات الطلبات بس. الأغمق = الأغلى.', 'Lead ads only. Darker = more expensive.')}</CardDescription></CardHeader>
       <CardContent className="overflow-x-auto">
         {h.rows.length ? (
           <table className="w-full border-separate border-spacing-1 text-sm">
@@ -100,11 +86,7 @@ export function HeatCard({ data, from, to }: Props) {
               <tr key={r.platform}><th className="whitespace-nowrap pe-2 text-start font-medium">{platformName(r.platform)}</th>
                 {r.cpl.map((v, i) => <td key={i} className="rounded-md px-2 py-1.5 text-center tabular-nums" style={shade(v)} title={`${platformName(r.platform)} · ${days()[i]}: ${sar(v)}`}>{v == null ? '—' : Math.round(v)}</td>)}
               </tr>))}</tbody>
-<<<<<<< well
-          </table>) : <p className="text-sm text-muted-foreground">{T('ما فيه طلبات في هالفترة.', 'No leads in this period.')}</p>}
-=======
-          </table>) : <p className="text-sm text-muted-foreground">ما فيه طلبات في هالفترة.</p>}
->>>>>>> hoven
+          </table>) : <p className="text-sm text-muted-foreground">{T('ما فيه طلبات في هالفترة.', 'No orders in this period.')}</p>}
       </CardContent>
     </Card>
   );
@@ -115,11 +97,7 @@ export function DeptsCard({ data, from, to }: Props) {
   const ms = Math.max(1, ...list.map(x => x.spend)), ml = Math.max(1, ...list.map(x => x.leads));
   return (
     <Card>
-<<<<<<< well
-      <CardHeader><CardTitle>{T('الأقسام', 'Departments')}</CardTitle><CardDescription>{T('الصرف والليدز وتكلفة الطلب لكل قسم. اضغط على القسم لفتح صفحته في التحليلات.', 'Spend, leads and cost per lead for each department. Click one to open its page in the analytics.')}</CardDescription></CardHeader>
-=======
-      <CardHeader><CardTitle>الأقسام</CardTitle><CardDescription>الصرف والليدز وتكلفة الطلب لكل قسم. اضغط على القسم لفتح صفحته في التحليلات.</CardDescription></CardHeader>
->>>>>>> hoven
+      <CardHeader><CardTitle>{T('الأقسام', 'Departments')}</CardTitle><CardDescription>{T('الصرف والطلبات وتكلفة الطلب لكل قسم. اضغط على القسم لفتح صفحته في التحليلات.', 'Spend, leads and cost per order for each department. Click one to open its page in the analytics.')}</CardDescription></CardHeader>
       <CardContent className="grid gap-3">
         {list.length ? list.map((x, i) => (
           <a key={x.key} href={`/dept/${x.key}/`} data-astro-reload className="grid grid-cols-[minmax(8rem,auto)_1fr] items-center gap-3 rounded-md p-1 hover:bg-muted">
@@ -127,11 +105,7 @@ export function DeptsCard({ data, from, to }: Props) {
             <div className="grid gap-1">
               <div className="h-2.5 rounded-full bg-muted"><div className="h-full rounded-full" style={{ width: `${(100 * x.spend) / ms}%`, background: COLORS[i % COLORS.length] }} /></div>
               <div className="h-1.5 rounded-full bg-muted"><div className="h-full rounded-full bg-foreground" style={{ width: `${(100 * x.leads) / ml}%` }} /></div>
-<<<<<<< well
-              <span className="text-sm tabular-nums text-muted-foreground">{T(`${sar(x.spend)} · ${qty(x.leads)} طلب · تكلفة الطلب ${sar(x.cpl)}`, `${sar(x.spend)} · ${qty(x.leads)} leads · cost per lead ${sar(x.cpl)}`)}</span>
-=======
-              <span className="text-sm tabular-nums text-muted-foreground">{sar(x.spend)} · {qty(x.leads)} طلب · تكلفة الطلب {sar(x.cpl)}</span>
->>>>>>> hoven
+              <span className="text-sm tabular-nums text-muted-foreground">{T(`${sar(x.spend)} · ${qty(x.leads)} طلب · تكلفة الطلب ${sar(x.cpl)}`, `${sar(x.spend)} · ${qty(x.leads)} leads · cost per order ${sar(x.cpl)}`)}</span>
             </div>
           </a>)) : <p className="text-sm text-muted-foreground">{T('ما فيه أقسام.', 'No departments.')}</p>}
       </CardContent>

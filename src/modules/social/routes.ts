@@ -10,7 +10,7 @@ import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
 import { MEDIA_TYPES, MEDIA_MAX, mediaKey } from './media';
-import { guard, meter } from '../../lib/usage';
+import { guard, meter } from '../../lib/quotas';
 
 type Row = Record<string, unknown>;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);

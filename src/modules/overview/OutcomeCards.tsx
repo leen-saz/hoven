@@ -38,18 +38,6 @@ export function OutcomeCards({ data, from, to }: Props) {
   // Same rule as the main dashboard: no comparison when the earlier period is incomplete
   const b: Partial<Outcome> = canCompare(data, from, to) ? outcome(data, pf, pt, by) : {};
   const v = (k: keyof Outcome) => (b[k] as number | null | undefined) ?? null;
-<<<<<<< well
-=======
-  const stages = [
-    { n: 'الوعي', hint: 'كم شخص شاف الإعلان', main: ['الظهور', qty(a.impr), a.impr, v('impr'), false], sub: [['تكلفة الألف ظهور', sar(a.cpm), a.cpm, v('cpm'), true]] },
-    { n: 'الاهتمام', hint: 'كم واحد ضغط', rate: ['نسبة النقر', p2(a.ctr), a.ctr, v('ctr')], main: ['نقرات الرابط والسوايب', qty(a.clicks), a.clicks, v('clicks'), false], sub: [['تكلفة النقرة', sar(a.cpc), a.cpc, v('cpc'), true]] },
-    { n: 'التحويل', hint: 'كم واحد ترك بياناته أو راسلنا', rate: ['من نقرة إلى طلب أو محادثة', p2(a.clickToResult), a.clickToResult, v('clickToResult')], main: ['الطلبات', qty(a.leads), a.leads, v('leads'), false],
-      sub: [['تكلفة الطلب', sar(a.cpl), a.cpl, v('cpl'), true], ['محادثات واتساب وماسنجر', qty(a.conv), a.conv, v('conv'), false]] },
-    ...(a.crm ? [{ n: 'البيع', hint: 'كم واحد دفع', rate: ['من طلب إلى إقفالة', p2(a.closeRate), a.closeRate, v('closeRate')], main: ['إقفالات مدفوعة', qty(a.closings), a.closings, v('closings'), false],
-      sub: [['إقفالات من الإعلانات', qty(a.booked), a.booked, v('booked'), false], ['العائد من الإعلانات', x2(a.roas), a.roas, v('roas'), false]] }] : []),
-  ] as { n: string; hint: string; rate?: [string, string, number | null, number | null]; main: [string, string, number, number | null, boolean]; sub: [string, string, number | null, number | null, boolean][] }[];
-
->>>>>>> hoven
   return (
     <div className="grid gap-4">
       <Card>
@@ -58,15 +46,9 @@ export function OutcomeCards({ data, from, to }: Props) {
           <CardDescription>{a.crm ? T('الإقفالات والمدفوع من كل المصادر في نظام العملاء. العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الإقفالات.', 'Closings and payments from every source in the CRM. Return on spend = paid ÷ spend. Cost per customer = spend ÷ closings.') : T('نظام العملاء مو مربوط، فما فيه إقفالات.', 'The CRM is not connected, so there are no closings.')}</CardDescription>
           {a.crm && (
             <CardAction>
-<<<<<<< well
               <ToggleGroup type="single" variant="outline" value={by} onValueChange={x => x && setBy(x as CrmBy)} aria-label={T('الإقفالات حسب', 'Closings by')}>
-                <ToggleGroupItem value="lead" className="px-3">{T('يوم الطلب', 'Lead day')}</ToggleGroupItem>
+                <ToggleGroupItem value="lead" className="px-3">{T('يوم الطلب', 'Order day')}</ToggleGroupItem>
                 <ToggleGroupItem value="paid" className="px-3">{T('يوم الدفع', 'Payment day')}</ToggleGroupItem>
-=======
-              <ToggleGroup type="single" variant="outline" value={by} onValueChange={x => x && setBy(x as CrmBy)} aria-label="الإقفالات حسب">
-                <ToggleGroupItem value="lead" className="px-3">يوم الطلب</ToggleGroupItem>
-                <ToggleGroupItem value="paid" className="px-3">يوم الدفع</ToggleGroupItem>
->>>>>>> hoven
               </ToggleGroup>
             </CardAction>
           )}

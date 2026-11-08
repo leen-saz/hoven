@@ -119,4 +119,6 @@ export default async function mount() {
   });
 
   shell({ active: 'library', title: 'المكتبة' }).then(loadAll).catch(err => say($('#tmsg'), err.message));
+  // The shared items saved from every tab (Well's library) sit above the templates on the same page
+  import('/modules/library/saved.js').then(m => m.default()).catch(err => say($('#msg'), err.message));
 }

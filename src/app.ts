@@ -6,13 +6,9 @@ import { gate } from './lib/gate';
 import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
-<<<<<<< well
 import { versionAssets } from './lib/assets';
 import { withWaiter } from './lib/usage';
-import { dispatchRefresh, type CronEnv } from './lib/cron';
-=======
 import { dispatchRefresh, UPSTREAM_URL, type CronEnv } from './lib/cron';
->>>>>>> hoven
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
 import { runSocial } from './modules/social/cron';
 // Cloudflare Workflows: the class must be exported from the Worker entry
@@ -72,10 +68,6 @@ export default {
   // Cloudflare Cron Triggers (production only): the hourly data refresh on GitHub Actions, and every 5 minutes the due social posts
   scheduled(event: ScheduledController, env: CronEnv & AuthEnv, ctx: ExecutionContext) {
     // Every 5 minutes: due social posts, then one social-listening keyword that has not been fetched in a day
-<<<<<<< well
-    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : dispatchRefresh(env)));
-=======
-    ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)]));
->>>>>>> hoven
+    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)])));
   },
 };

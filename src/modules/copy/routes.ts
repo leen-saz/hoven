@@ -7,13 +7,9 @@ import { loadKnowledge, systemPrompt, forbiddenRules, withKnowledge } from '../k
 import { generate, pick, stream, sseResponse, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
 import { winners, type AdIn, type MetIn } from '../design/design';
-<<<<<<< well
 import { KINDS, cleanProject, styleCard, type Project } from './copy';
 import { SKILL, partsOf, cleanInputs, missing, skillPrompt, parseVariants, reviewVariant } from './skills';
-=======
-import { KINDS, DEFAULT_KIND, fitDraft, cleanProject, styleCard, writePrompt, parseDrafts, fallbackDrafts, review, type Project } from './copy';
-import { guard, meter } from '../../lib/usage';
->>>>>>> hoven
+import { guard, meter } from '../../lib/quotas';
 
 // The copywriter writes with OpenAI when OPENAI_API_KEY is set, else Workers AI (src/lib/llm.ts); it reads the knowledge too
 type AiEnv = LlmEnv;
@@ -79,11 +75,11 @@ export const skill = { POST: handle(async (request, e: AiEnv & Parameters<typeof
   if (!k) return json(400, { error: 'اختر نوع الطلب' });
   const p = await one(cfg, user.co, parseInt(String(b.project_id), 10) || 0);
   if (!p) return json(404, { error: 'اختر مشروع' });
-<<<<<<< well
   const inputs = cleanInputs(k, (b.inputs && typeof b.inputs === 'object' ? b.inputs : {}) as Record<string, unknown>);
   const ask = missing(k, inputs);
   if (ask.length) return json(200, { ask });
   if (!pick(e, 'copy')) return json(503, { error: 'الكاتب يحتاج الذكاء الاصطناعي، وهو مو متصل الحين' });
+  const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'copy', 'text');
   const count = Math.min(k.count[1], Math.max(1, parseInt(String(b.count), 10) || k.count[0]));
   const parts = partsOf(k, inputs);
   const [{ cards, hooks }, known] = await Promise.all([references(cfg, user.co, p, b.competitors), loadKnowledge(cfg, user.co)]);
@@ -101,30 +97,6 @@ export const skill = { POST: handle(async (request, e: AiEnv & Parameters<typeof
         yield { type: 'result', variants: got.map(v => reviewVariant(v, parts, p, extra)), parts, engine: eng, used };
       }
     })());
-=======
-  const kind = String(b.kind) in KINDS ? String(b.kind) : DEFAULT_KIND;
-  const count = Math.min(5, Math.max(1, parseInt(String(b.count), 10) || 3));
-  const use = new Set(Array.isArray(b.competitors) ? b.competitors.map(String) : []);
-  const cards = (p.competitors || []).filter(c => use.has(c.id)).flatMap(c => { const card = styleCard(c.samples || []); return card ? [{ name: c.name, card }] : []; });
-  // Our own openings that got the cheapest leads in the last 30 days (same reference as the design tab)
-  const since = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-  const [ads, metrics] = await Promise.all([
-    sb<AdIn[]>(cfg, scoped('/rest/v1/ads?select=ad_key,platform,name,format,goal,text:doc->>text&goal=eq.lead&limit=3000', user.co), { admin: true }),
-    // ad_metrics has no company column: rows only count through this company's ads (winners joins on ad_key)
-    sb<MetIn[]>(cfg, `/rest/v1/ad_metrics?select=ad_key,spend,leads,clicks,impressions&day=gte.${since}&limit=20000`, { admin: true }),
-  ]);
-  const hooks = winners(Array.isArray(ads.data) ? ads.data : [], Array.isArray(metrics.data) ? metrics.data : []).hooks;
-  let drafts = fallbackDrafts(p, count, kind), engine = 'templates';
-  // One read of the knowledge: what the writer is told, and the company's forbidden words for the compliance notes
-  const known = await loadKnowledge(cfg, user.co), extra = forbiddenRules(known);
-  if (pick(e, 'copy')) {
-    const over = await guard(cfg, user, 'text'); if (over) return over; await meter(cfg, user, 'copy', 'text');
-    try {
-      const out = await generate(e, 'copy', { messages: withKnowledge([{ role: 'user', content: writePrompt(p, kind, count, cards, hooks) }], systemPrompt(known, 'copy')), max_tokens: 900 });
-      const got = parseDrafts(out.response, KINDS[kind]!.max);
-      if (got.length) { drafts = got.map(d => fitDraft(d, kind)); engine = out.engine === 'workers' ? 'workers-ai' : out.engine; }
-    } catch { /* templates stay */ }
->>>>>>> hoven
   }
   let variants: ReturnType<typeof parseVariants> = [], engine = '';
   try {

@@ -1,11 +1,7 @@
 // /api/auth/*: login, logout, refresh, forgot, reset. Port of web/lib/routes/auth/*.js.
 import {
   env, sb, loadProfile, sessionFor, sign, verify, readCookie, setCookie, clearCookie, safePath, home, audit, html, json,
-<<<<<<< well
-  sameOrigin, readJson, handle, keyKind, auditEmail, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile,
-=======
-  sameOrigin, readJson, handle, keyKind, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile, type Cfg,
->>>>>>> hoven
+  sameOrigin, readJson, handle, keyKind, auditEmail, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile, type Cfg,
 } from '../../lib/auth';
 import { signPending, readPending, open, checkTotp, hashCode, MAX_FAILS, LOCK_MS } from '../../lib/totp';
 

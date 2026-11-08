@@ -5,11 +5,8 @@ import { scoped } from '../../lib/tenant';
 import { check as checkText, scan as scanAds, rewritePrompt, RULES, type AdText } from './compliance';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
-<<<<<<< well
 import { usageCtx } from '../../lib/usage';
-=======
-import { guard, meter } from '../../lib/usage';
->>>>>>> hoven
+import { guard, meter } from '../../lib/quotas';
 
 type AiEnv = AuthEnv & LlmEnv;
 

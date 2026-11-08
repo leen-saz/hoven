@@ -57,13 +57,8 @@ async function organic() {
       $('#demand').innerHTML = (d.sources || []).length ? `<div class="tbl"><table class="dg-plat"><thead><tr><th>المصدر</th><th>هالأسبوع</th><th>الأسبوع اللي قبله</th><th>التغيّر</th></tr></thead><tbody>
           ${d.sources.map(s => { const a = alerts.find(x => x.source === s.source); return `<tr${a ? ' class="ls-alert"' : ''}><td>${esc(SRC[s.source] || s.source)}</td><td class="n">${fmt(s.now)}</td><td class="n">${fmt(s.prev)}</td><td class="n">${s.prev ? pct((s.now - s.prev) / s.prev) : '—'}</td></tr>`; }).join('')}
           </tbody></table></div>${alerts.length ? `<p class="dg-fix" style="margin:10px 0 0"><b>انتبه:</b> ${alerts.map(a => `${esc(SRC[a.source] || a.source)} ${pct(a.change)}`).join('، ')}</p>` : ''}`
-<<<<<<< well
         : '<p class="muted">ما فيه طلبات آخر أسبوعين.</p>';
     } catch (err) { failure($('#demand'), err, demand); }
-=======
-        : '<p class="muted">ما فيه طلبات آخر أسبوعين.</p>';
-    } catch (err) { $('#demand').innerHTML = `<p class="muted">${esc(err.message)}</p>`; }
->>>>>>> hoven
   }
 
   $('#addKw').addEventListener('submit', e => { e.preventDefault(); const v = $('#kwIn').value.trim(); if (v && !kw.includes(v)) { kw = [...kw, v].slice(0, 20); save(); draw(); } $('#kwIn').value = ''; });

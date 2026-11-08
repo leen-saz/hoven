@@ -81,6 +81,11 @@ function sallaSum(from,to){
   for(const r of D.salla||[]) if(r.day>=from&&r.day<=to){o.orders+=r.orders||0;o.net+=r.net||0;}
   return o;
 }
+function sallaSum(from,to){
+  const o={orders:0,net:0};
+  for(const r of D.salla||[]) if(r.day>=from&&r.day<=to){o.orders+=r.orders||0;o.net+=r.net||0;}
+  return o;
+}
 function renderKpis(now,prev){
   const a=derive(now.tot), b=cur&&cur.compareOk&&prev?derive(prev.tot):{};
   const dl = d => /لا مقارنة/.test(d) ? '' : d;   // no comparison → no line
@@ -125,6 +130,19 @@ function renderKpis(now,prev){
           tile('العائد الحقيقي (سلة ÷ الصرف)',tr2==null?'—':fmt(tr2,2)+'×','',delta(tr2,tr2B,false),'ret',null),
         ] : []),
       ]; })() : []),
+    // Hoven (ADR-0007): orders = purchases, conv = revenue in SAR; Salla = the store's own sales
+    ...(!crm ? (()=>{ const x=sallaSum(S.from,S.to), y=cur&&cur.compareOk&&prev?sallaSum(cur.pFrom,cur.pTo):{};
+      const roas=ratio(a.conv,a.spend), roasB=ratio(b.conv,b.spend), tr2=ratio(x.net,a.spend), tr2B=y.net!=null?ratio(y.net,b.spend):null;
+      return [
+        tile('طلبات الإعلانات',qty(a.leads),'',delta(a.leads,b.leads,false),'closings',keys.map(k=>daySum(k,'orders')),'feature'),
+        tile('إيراد الإعلانات',sar(a.conv),money(),delta(a.conv,b.conv,false),'paid',null),
+        tile('ROAS',roas==null?'—':fmt(roas,2)+'×','',delta(roas,roasB,false),'ret',null),
+        ...(D.salla&&D.salla.length ? [
+          tile('مبيعات سلة',sar(x.net),money(),delta(x.net,y.net,false),'paid',null),
+          tile('طلبات سلة',fmt(x.orders),'',delta(x.orders,y.orders,false),'closings',null),
+          tile('العائد الحقيقي (سلة ÷ الصرف)',tr2==null?'—':fmt(tr2,2)+'×','',delta(tr2,tr2B,false),'ret',null),
+        ] : []),
+      ]; })() : []),
     ...(crm ? [
       tile('الاقفالات',fmt(allN),'',delta(allN,b.allPaidN,false),'closings',keys.map(k=>paidIn(k,false)),'feature'),
       tile('المدفوع',sar(allP),money(),delta(allP,b.allPaid,false),'paid',keys.map(k=>paidIn(k,true))),
@@ -132,34 +150,7 @@ function renderKpis(now,prev){
       tile('تكلفة العميل',sar(cac),money(),delta(cac,cacB,true),'cac',null),
     ] : []),
   ].join('');
-<<<<<<< well
   // 2) The customer journey: a horizontal pipe that narrows with the numbers, with its analysis (funnelHTML, below)
-=======
-  // 2) Funnel: each stage has its volume, its cost, and the rate that carries people to the next stage
-  const vol = [a.impr||0, a.clicks||0, a.leads||0, crm ? allN : (a.booked||0)];   // Hoven: conv is revenue, not a count
-  const top = Math.max(...vol, 1), w = v => v>0 ? Math.max(8, 100*Math.log10(v+1)/Math.log10(top+1)) : 4;
-  const clickToLead = ratio(100*(a.leads||0), a.clicks), clickToLeadB = ratio(100*(b.leads||0), b.clicks);
-  const leadToSale = a.closeRate, leadToSaleB = b.closeRate;   // ad-linked paid closings ÷ ad-linked CRM orders: both sides from ads
-  const stages = [
-    {n:'الوعي', hint:'كم شخص شاف الإعلان', main:kpi('الظهور',fmt(a.impr),'',delta(a.impr,b.impr,false),'main'),
-     sub:[kpi('تكلفة الألف ظهور',sar(a.cpm),money(),delta(a.cpm,b.cpm,true),'sub')]},
-    {n:'الاهتمام', hint:'كم واحد ضغط', main:kpi('نقرات الرابط والسوايب',fmt(a.clicks),'',delta(a.clicks,b.clicks,false),'main'),
-     sub:[kpi('تكلفة النقرة',sar(a.cpc),money(),delta(a.cpc,b.cpc,true),'sub')],
-     rate:kpi('نسبة النقر',pct(a.ctr),'',delta(a.ctr,b.ctr,false),'rate')},
-    {n:'التحويل', hint:'كم واحد اشترى', main:kpi('الطلبات',qty(a.leads),'',delta(a.leads,b.leads,false),'main'),
-     sub:[kpi('تكلفة الطلب',sar(a.cpl),money(),delta(a.cpl,b.cpl,true),'sub'), kpi('الإيراد (ر.س)',sar(a.conv),money(),delta(a.conv,b.conv,false),'sub')],
-     rate:kpi('من نقرة إلى طلب',pct(clickToLead),'',delta(clickToLead,clickToLeadB,false),'rate')},
-    ...(D.crm ? [{n:'البيع', hint:'كم واحد دفع', main:kpi('اقفالات مدفوعة',fmt(crm?allN:(a.booked||0)),'',delta(crm?allN:a.booked,crm?b.allPaidN:b.booked,false),'main'),
-     sub:[kpi('اقفالات من الإعلانات',fmt(a.booked||0),'',delta(a.booked,b.booked,false),'sub'), kpi('العائد من الإعلانات',a.roas==null?'—':fmt(a.roas,2)+'×','',delta(a.roas,b.roas,false),'sub')],
-     rate:kpi('من طلب إلى اقفالة',pct(leadToSale),'',delta(leadToSale,leadToSaleB,false),'rate')}] : []),
-  ];
-  // A real funnel: each layer narrower than the one above; stage name on one side, its cost on the other, the rate between layers
-  const widths = [100, 84, 68, 52];
-  const funnel = stages.map((st,i)=>(st.rate?`<div class="flink"><span class="farrow" aria-hidden="true">↓</span>${st.rate}</div>`:'')
-    + `<div class="flayer"><div class="fname"><b>${i+1}</b><span>${st.n}</span><em>${st.hint}</em></div>`
-    + `<div class="fband-wrap"><div class="fband" style="--w:${widths[i]}%;--k:${i};--fc:${['#7fb59a','#4f7a63','#294036','#293342'][i]}">${st.main}</div></div>`
-    + `<div class="fcost">${st.sub.join('')}</div></div>`).join('');
->>>>>>> hoven
   $('#kpis').innerHTML =
     `<div class="kgroup"><div class="khead"><h3>النتيجة</h3>${toggle}</div><div class="kpis kout">${outcome}</div>`
     + (crm ? `<p class="knote">${tr('الاقفالات والمدفوع من كل المصادر في نظام العملاء (مدفوعات ميسّر). العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الاقفالات.')}</p>` : '') + `</div>`
@@ -170,7 +161,6 @@ function renderKpis(now,prev){
 function noteCard(title, line, alert){
   return `<div class="item${alert?' alert':''}"><span class="b">${title}</span><span class="sub">${line}</span></div>`;
 }
-<<<<<<< well
 
 
 // رحلة العميل كأنبوب أفقي يضيق مع الأرقام: المرحلة الأولى يمين (عكسها بالإنجليزي)، ارتفاع كل مرحلة من حجمها بمقياس مخفّف،
@@ -178,7 +168,7 @@ function noteCard(title, line, alert){
 // اليومي لآخر 30 يوم وبحد أدنى. نفس قواعد ملخص الأداء (src/modules/overview/funnel.ts).
 // A step is weak only when weaker than every reference it has: WATCH (15% under all) and BAD (30%), or under its floor
 const FUN = { W:960, H:250, MID:118, MAX:170, MIN:26, EASE:.25, NECK:.6, MIN_NECK:8, WATCH:.85, BAD:.7,
-  COL:['#7C8CFF','#8B6CFF','#294036','#5B36D6'], FLOORS:{click:.7, lead:1.5, sale:2}, COVER:.3, MIN_DAYS:7 };
+  COL:['#7fb59a','#4f7a63','#294036','#293342'], FLOORS:{click:.7, lead:1.5, sale:2}, COVER:.3, MIN_DAYS:7 };
 
 // The usual level: the median of the daily values over the 30 days up to `to`, days with enough volume only
 function funMedians(to){
@@ -197,11 +187,11 @@ function funMedians(to){
     cpm: med(v.filter(o=>o.impr>=200).map(o=>1000*o.spend/o.impr)) };
 }
 
-// The ad-to-sale step can't be judged: no CRM, too few leads tied to an ad, or paid closings in the CRM with none tied to
+// The ad-to-sale step can't be judged: no CRM, too few orders tied to an ad, or paid closings in the CRM with none tied to
 // an ad in the period (counted over the whole CRM, so a platform filter can't turn missing attribution into a 0% rate)
 function funUnlinked(a){
   if(!D.crm) return 'nocrm';
-  const results = (a.leads||0)+(a.conv||0);
+  const results = a.leads||0;   // Hoven: conv is revenue (SAR), not a count (ADR-0007)
   if(results>=10 && (a.crmLeads||0) < FUN.COVER*results) return 'cover';
   let bookedAll = 0;
   for(const [, leadDay, paidDay, paid] of (D.crm.rows||[])){ const d = S.crmBy==='paid'?paidDay:leadDay; if(paid && d && d>=S.from && d<=S.to) bookedAll++; }
@@ -216,9 +206,9 @@ const FUN_OWNERS = {
   cpm:{who:['المشتري الإعلامي','Media buyer'], fix:['راجع الجمهور والمزايدة وأماكن الظهور.','Review the audience, the bid and the placements.']},
   click:{who:['الإنتاج / الكريتيف','Production / creative'], fix:['جدّد الافتتاحية والمادة والنص.','Refresh the hook, the creative and the copy.']},
   lead:{who:['الإنتاج + صفحة الهبوط / النموذج','Production + landing page / form'], fix:['راجع العرض وطول النموذج وسرعة الصفحة، ومع المشتري الإعلامي إذا الزوار مو الجمهور الصح.','Review the offer, the form length and the page speed; with the media buyer if the traffic is the wrong audience.']},
-  sale:{who:['المبيعات','Sales'], fix:['سرّع الرد على الليد وتابع اللي ما ردوا.','Answer leads faster and follow up on the ones who did not reply.']},
+  sale:{who:['المبيعات','Sales'], fix:['سرّع الرد على الطلب وتابع اللي ما ردوا.','Answer orders faster and follow up on the ones who did not reply.']},
   cpl:{who:['المشتري الإعلامي','Media buyer'], fix:['وسّع الجمهور أو غيّره، وبدّل المواد اللي طوّلت.','Widen or change the audience and replace long-running creatives.']},
-  crm:{who:['نظام العملاء / العمليات','CRM / operations'], fix:['تأكد إن كل ليد ودفعة توصل ومعها رقم الإعلان.','Make sure every lead and payment arrives with its ad id.']},
+  crm:{who:['نظام العملاء / العمليات','CRM / operations'], fix:['تأكد إن كل طلب ودفعة توصل ومعها رقم الإعلان.','Make sure every lead and payment arrives with its ad id.']},
 };
 const funOwner = k => ({owner:ui(...FUN_OWNERS[k].who), fix:ui(...FUN_OWNERS[k].fix)});
 // The rate steps sit on the links; the two costs sit on stages (cpm on stage 0, cpl on stage 2)
@@ -239,16 +229,16 @@ function funSteps(a,b,m,clickToLead,clickToLeadB,unlinked){
   const mk = (key,label,link,now,prev,median,floor,lower,f) => { const score=judge(now,prev,median,floor,lower), below=floor!=null&&now!=null&&now<floor;
     return {key,label,link,now,score,level:score==null?'ok':below||score<FUN.BAD?'bad':score<FUN.WATCH?'watch':'ok',line:line(label,now,prev,median,floor,f),...funOwner(key)}; };
   const sale = unlinked
-    ? {key:'sale',label:tr('من ليد إلى اقفالة'),link:2,now:null,score:null,level:'ok',unlinked:true,...funOwner('crm'),line:
-        unlinked==='nocrm' ? ui('غير مربوط: نظام العملاء مو موصول بهالأرقام، فما نعرف كم ليد صار اقفالة.','Not linked: the CRM is not connected to these numbers.')
+    ? {key:'sale',label:tr('من طلب إلى اقفالة'),link:2,now:null,score:null,level:'ok',unlinked:true,...funOwner('crm'),line:
+        unlinked==='nocrm' ? ui('غير مربوط: نظام العملاء مو موصول بهالأرقام، فما نعرف كم طلب صار اقفالة.','Not linked: the CRM is not connected to these numbers.')
         : unlinked==='none' ? ui(`غير مربوط: في نظام العملاء ${fmt(a.allPaidN)} اقفالة مدفوعة بس ولا وحدة منها مربوطة بإعلان، فنسبة الاقفال من الإعلانات ما تنحسب (مو صفر).`,`Not linked: the CRM has ${fmt(a.allPaidN)} paid closings but none is tied to an ad, so the ad close rate can't be computed (it is not zero).`)
-        : ui(`غير مربوط: أغلب الليدز ما انربطت بإعلان في نظام العملاء (${fmt(a.crmLeads||0)} من ${fmt((a.leads||0)+(a.conv||0))})، فنسبة الاقفال ما تنحكم.`,`Not linked: most leads are not tied to an ad in the CRM, so the close rate can't be judged.`)}
-    : mk('sale',tr('من ليد إلى اقفالة'),2,a.closeRate,b.closeRate,null,FUN.FLOORS.sale,false,pc);
+        : ui(`غير مربوط: أغلب الطلبات ما انربطت بإعلان في نظام العملاء (${fmt(a.crmLeads||0)} من ${fmt(a.leads||0)})، فنسبة الاقفال ما تنحكم.`,`Not linked: most orders are not tied to an ad in the CRM, so the close rate can't be judged.`)}
+    : mk('sale',tr('من طلب إلى اقفالة'),2,a.closeRate,b.closeRate,null,FUN.FLOORS.sale,false,pc);
   return [
     mk('click',tr('نسبة النقر'),0,a.ctr,b.ctr,m.click,FUN.FLOORS.click,false,pc),
-    mk('lead',tr('من نقرة إلى ليد'),1,clickToLead,clickToLeadB,m.lead,FUN.FLOORS.lead,false,pc),
+    mk('lead',tr('من نقرة إلى طلب'),1,clickToLead,clickToLeadB,m.lead,FUN.FLOORS.lead,false,pc),
     sale,
-    mk('cpl',tr('تكلفة الليد'),2,a.cpl,b.cpl,m.cpl,null,true,rs),
+    mk('cpl',tr('تكلفة الطلب'),2,a.cpl,b.cpl,m.cpl,null,true,rs),
     mk('cpm',tr('تكلفة الألف ظهور'),0,a.cpm,b.cpm,m.cpm,null,true,rs),
   ];
 }
@@ -256,12 +246,12 @@ function funSteps(a,b,m,clickToLead,clickToLeadB,unlinked){
 const FUN_ADVICE = {
   cpm:{t:['الوصول صار أغلى','Reach got more expensive'], w:['المزايدة أو الجمهور أو أماكن الظهور ترفع سعر الوصول.','The bid, the audience or the placements are pushing up the price of reach.'], d:['راجع الجمهور والمزايدة وأماكن الظهور، وجرّب جمهور أوسع.','Review the audience, the bid and the placements; try a wider audience.']},
   click:{t:['الإعلان ما يجيب نقرات كفاية','The ads get too few clicks'], w:['الإعلان ما يشد: الصورة أو أول سطر ما يوقف اللي يمرر.','The ad does not stop the scroll: the image or the first line.'], d:['جرّب مادة جديدة، وغيّر أول سطر والعنوان، وابدأ بالفايدة أو بسؤال يلمس المشكلة.','Try a new creative and a new first line; lead with the benefit or a question.']},
-  lead:{t:['النقرات ما تصير ليدز','Clicks are not becoming leads'], w:['الناس تضغط بس ما تكمل: النموذج طويل، أو الصفحة بطيئة، أو دخول الواتساب فيه خطوة زايدة.','People click but stop: a long form, a slow page, or an extra step into WhatsApp.'], d:['قصّر النموذج، وشيك على سرعة الصفحة من الجوال، وجرّب رسالة الواتساب الجاهزة بنفسك.','Shorten the form, check the page speed on a phone, try the WhatsApp entry yourself.']},
-  sale:{t:['الليدز ما تصير اقفالات','Leads are not closing'], w:['المتابعة متأخرة، أو جودة الليدز نازلة.','Follow-up is slow, or lead quality dropped.'], d:['شيك كم ياخذ الفريق عشان يرد على الليد، وراجع أسئلة النموذج عشان تفلتر الجادين.','Check how fast the team answers a lead; tighten the form questions.']},
-  cpl:{t:['تكلفة الليد طالعة','Cost per lead is rising'], w:['الجمهور تشبّع، أو المواد تعبت من كثر ما انعرضت.','The audience is saturated or the creatives are worn out.'], d:['وسّع الجمهور أو غيّره، وبدّل المواد اللي صار لها فترة طويلة تنعرض.','Widen or change the audience; replace long-running creatives.']},
+  lead:{t:['النقرات ما تصير طلبات','Clicks are not becoming orders'], w:['الناس تضغط بس ما تكمل: النموذج طويل، أو الصفحة بطيئة، أو دخول الواتساب فيه خطوة زايدة.','People click but stop: a long form, a slow page, or an extra step into WhatsApp.'], d:['قصّر النموذج، وشيك على سرعة الصفحة من الجوال، وجرّب رسالة الواتساب الجاهزة بنفسك.','Shorten the form, check the page speed on a phone, try the WhatsApp entry yourself.']},
+  sale:{t:['الطلبات ما تصير اقفالات','Orders are not closing'], w:['المتابعة متأخرة، أو جودة الطلبات نازلة.','Follow-up is slow, or order quality dropped.'], d:['شيك كم ياخذ الفريق عشان يرد على العميل، وراجع أسئلة النموذج عشان تفلتر الجادين.','Check how fast the team answers a lead; tighten the form questions.']},
+  cpl:{t:['تكلفة الطلب طالعة','Cost per order is rising'], w:['الجمهور تشبّع، أو المواد تعبت من كثر ما انعرضت.','The audience is saturated or the creatives are worn out.'], d:['وسّع الجمهور أو غيّره، وبدّل المواد اللي صار لها فترة طويلة تنعرض.','Widen or change the audience; replace long-running creatives.']},
 };
-const FUN_UNLINKED = {w:['الاقفالات ما توصل من نظام العملاء مربوطة بإعلاناتها، فما نقدر نقول وين تضيع الليدز بعد التواصل.','Closings reach us without their ads, so we cannot tell where leads drop after contact.'],
-  d:['شيك على ربط نظام العملاء من صفحة الربط، وتأكد إن كل ليد يوصل ومعه رقم الإعلان.','Check the CRM link on the Connectors page; make sure every lead carries its ad id.']};
+const FUN_UNLINKED = {w:['الاقفالات ما توصل من نظام العملاء مربوطة بإعلاناتها، فما نقدر نقول وين تضيع الطلبات بعد التواصل.','Closings reach us without their ads, so we cannot tell where orders drop after contact.'],
+  d:['شيك على ربط نظام العملاء من صفحة الربط، وتأكد إن كل طلب يوصل ومعه رقم الإعلان.','Check the CRM link on the Connectors page; make sure every lead carries its ad id.']};
 
 // The bottleneck: the weakest step that can be judged; an unlinked step is never it
 function funVerdict(steps){
@@ -302,7 +292,7 @@ function funPath(sh){
 function funnelHTML(a,b){
   const crm = !!(D.crm && D.crm.paid_all), allN = a.allPaidN||0;
   const ratio = (x,y) => x!=null && y ? x/y : null;
-  const clickToLead = ratio(100*((a.leads||0)+(a.conv||0)), a.clicks), clickToLeadB = ratio(100*((b.leads||0)+(b.conv||0)), b.clicks);
+  const clickToLead = ratio(100*(a.leads||0), a.clicks), clickToLeadB = ratio(100*(b.leads||0), b.clicks);
   const unlinked = funUnlinked(a);
   const steps = funSteps(a,b,funMedians(S.to),clickToLead,clickToLeadB,unlinked), v = funVerdict(steps);
   const saleN = D.crm ? (crm?allN:(a.booked||0)) : null;
@@ -315,9 +305,9 @@ function funnelHTML(a,b){
     {n:'الاهتمام', hint:'كم واحد ضغط', vol:a.clicks||0, val:fmt(a.clicks), main:kpi(tr('نقرات الرابط والسوايب'),fmt(a.clicks),delta(a.clicks,b.clicks,false)),
      cost:[tr('تكلفة النقرة'),rs(a.cpc)], sub:[kpi(tr('تكلفة النقرة'),`${sar(a.cpc)} <small>${money()}</small>`,delta(a.cpc,b.cpc,true),'sub')],
      rate:[tr('نسبة النقر'),pct(a.ctr),delta(a.ctr,b.ctr,false)]},
-    {n:'التحويل', hint:'كم واحد ترك بياناته أو راسلنا', vol:a.leads||0, val:qty(a.leads), main:kpi(tr('الليدز'),qty(a.leads),delta(a.leads,b.leads,false)),
-     cost:[tr('تكلفة الليد'),rs(a.cpl)], sub:[kpi(tr('تكلفة الليد'),`${sar(a.cpl)} <small>${money()}</small>`,delta(a.cpl,b.cpl,true),'sub'), kpi(tr('محادثات واتساب وماسنجر'),fmt(a.conv),delta(a.conv,b.conv,false),'sub')],
-     rate:[tr('من نقرة إلى ليد'),pct(clickToLead),delta(clickToLead,clickToLeadB,false)]},
+    {n:'التحويل', hint:'كم واحد اشترى', vol:a.leads||0, val:qty(a.leads), main:kpi(tr('الطلبات'),qty(a.leads),delta(a.leads,b.leads,false)),
+     cost:[tr('تكلفة الطلب'),rs(a.cpl)], sub:[kpi(tr('تكلفة الطلب'),`${sar(a.cpl)} <small>${money()}</small>`,delta(a.cpl,b.cpl,true),'sub'), kpi(tr('الإيراد واتساب وماسنجر'),fmt(a.conv),delta(a.conv,b.conv,false),'sub')],
+     rate:[tr('من نقرة إلى طلب'),pct(clickToLead),delta(clickToLead,clickToLeadB,false)]},
     {n:'البيع', hint:D.crm?'كم واحد دفع':'نظام العملاء مو موصول بهالأرقام', vol:saleN, val:saleN==null?'—':fmt(saleN),
      main:kpi(tr('اقفالات مدفوعة'),saleN==null?'—':fmt(saleN),D.crm?delta(saleN,crm?b.allPaidN:b.booked,false):''),
      cost:[tr('تكلفة العميل'),crm&&allN?rs(a.spend/allN):'—'],
@@ -326,7 +316,7 @@ function funnelHTML(a,b){
      sub:[kpi(crm&&unlinked?ui('إجمالي المدفوع (CRM)','Total paid (CRM)'):ui('مبلغ المبيعات','Sales amount'),D.crm?`${sar(crm?a.allPaid:a.value)} <small>${money()}</small>`:'—',D.crm?delta(crm?a.allPaid:a.value,crm?b.allPaid:b.value,false):'','sub'),
        ...(crm?[kpi(ui('المبيعات من الإعلانات','Sales from ads'),unlinked?NA:`${sar(a.value||0)} <small>${money()}</small>`,unlinked?'':delta(a.value,b.value,false),'sub')]:[]),
        kpi(tr('اقفالات من الإعلانات'),unlinked?NA:fmt(a.booked||0),unlinked?'':delta(a.booked,b.booked,false),'sub'), kpi(tr('العائد من الإعلانات'),unlinked||a.roas==null?(unlinked?NA:'—'):fmt(a.roas,2)+'×',unlinked?'':delta(a.roas,b.roas,false),'sub')],
-     rate:[tr('من ليد إلى اقفالة'),unlinked?NA:pct(a.closeRate),unlinked?'':delta(a.closeRate,b.closeRate,false)]},
+     rate:[tr('من طلب إلى اقفالة'),unlinked?NA:pct(a.closeRate),unlinked?'':delta(a.closeRate,b.closeRate,false)]},
   ];
   const linkStep = i => steps.find(s=>s.link===i && FUN_RATE.includes(s.key));
   const sh = funShape(stages.map(s=>s.vol), [0,1,2].map(i=>linkStep(i).score));
@@ -360,6 +350,4 @@ function funnelHTML(a,b){
   const lines = `<h4 class="flines-h">${ui('التحليل','Analysis')}</h4><ul class="flines">${steps.map(s=>`<li class="${dot(s)}">${s.line}<span class="fl-owner">${ui('المسؤول','Owner')}: ${s.owner}${s.unlinked||s.level!=='ok'?` · ${s.fix}`:''}</span></li>`).join('')}</ul>`;
   return `<div class="ffun2"><div class="fmain">${svg}<div class="fcols">${cols}</div></div>${verdict}</div>${lines}`;
 }
-=======
 // HOVEN-DASH: Hoven overlay applied
->>>>>>> hoven

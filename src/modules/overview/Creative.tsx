@@ -20,11 +20,7 @@ import { T, pageLang } from './lang';
 
 const RANGES = [['7', '7 أيام', '7 days'], ['30', '30 يوم', '30 days'], ['90', '90 يوم', '90 days'], ['all', 'كل البيانات', 'All data']] as const;
 type Range = (typeof RANGES)[number][0];
-<<<<<<< well
-const SORTS: [Sort, string, string][] = [['spend', 'الأعلى صرف', 'Highest spend'], ['results', 'الأكثر نتائج', 'Most results'], ['cpl', 'الأرخص تكلفة طلب', 'Cheapest cost per lead'], ['ctr', 'الأعلى نسبة نقر', 'Highest click rate'], ['hook', 'الأعلى وقفوا يشوفون', 'Most stopped to watch']];
-=======
-const SORTS: [Sort, string][] = [['spend', 'الأعلى صرف'], ['results', 'الأكثر نتائج'], ['cpl', 'الأرخص تكلفة طلب'], ['ctr', 'الأعلى نسبة نقر'], ['hook', 'الأعلى وقفوا يشوفون']];
->>>>>>> hoven
+const SORTS: [Sort, string, string][] = [['spend', 'الأعلى صرف', 'Highest spend'], ['results', 'الأكثر نتائج', 'Most results'], ['cpl', 'الأرخص تكلفة طلب', 'Cheapest cost per order'], ['ctr', 'الأعلى نسبة نقر', 'Highest click rate'], ['hook', 'الأعلى وقفوا يشوفون', 'Most stopped to watch']];
 const PAGE = 24;
 
 const goalName = (g: string) => goalOf(g, 'غيرها');
@@ -133,13 +129,8 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
   );
 }
 
-<<<<<<< well
 const cplNote = (m: Metrics) => (cplDiffers(m) ? T(`${sar(m.leadSpend)} ÷ ${qty(m.leadN)} طلب`, `${sar(m.leadSpend)} ÷ ${qty(m.leadN)} leads`) : undefined);
 const hookValue = (m: Metrics) => (m.hook == null ? T('صورة أو بدون بيانات', 'Image or no data') : pct(m.hook));
-=======
-const cplNote = (m: Metrics) => (cplDiffers(m) ? `${sar(m.leadSpend)} ÷ ${qty(m.leadN)} طلب` : undefined);
-const hookValue = (m: Metrics) => (m.hook == null ? 'صورة أو بدون بيانات' : pct(m.hook));
->>>>>>> hoven
 
 function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
   return (
@@ -155,21 +146,12 @@ function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
         <div className="line-clamp-2 font-medium leading-snug" title={idea.name}>{idea.name}</div>
         {idea.ad.text && <p className="line-clamp-2 text-sm text-muted-foreground">{idea.ad.text}</p>}
         <div className="grid grid-cols-3 gap-2 text-sm">
-<<<<<<< well
           <Stat label={T('الصرف', 'Spend')} value={sar(idea.spend)} />
-          <Stat label={T('الطلبات', 'Results')} value={qty(idea.results)} note={idea.conv ? T(`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`, `${qty(idea.leads)} leads · ${qty(idea.conv)} conversations`) : undefined} />
-          <Stat label={T('تكلفة الطلب', 'Cost per lead')} value={sar(idea.cpl)} note={cplNote(idea)} />
+          <Stat label={T('الطلبات', 'Orders')} value={qty(idea.results)} note={idea.conv ? T(`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`, `${qty(idea.leads)} leads · ${qty(idea.conv)} conversations`) : undefined} />
+          <Stat label={T('تكلفة الطلب', 'Cost per order')} value={sar(idea.cpl)} note={cplNote(idea)} />
           <Stat label={T('نسبة النقر', 'Click rate')} value={pct(idea.ctr)} />
           <Stat label={T('وقفوا يشوفون', 'Stopped to watch')} value={idea.hook == null ? '—' : pct(idea.hook)} />
           <Stat label={T('الظهور', 'Impressions')} value={qty(idea.impr)} />
-=======
-          <Stat label="الصرف" value={sar(idea.spend)} />
-          <Stat label="النتائج" value={qty(idea.results)} note={idea.conv ? `${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة` : undefined} />
-          <Stat label="تكلفة الطلب" value={sar(idea.cpl)} note={cplNote(idea)} />
-          <Stat label="نسبة النقر" value={pct(idea.ctr)} />
-          <Stat label="وقفوا يشوفون" value={idea.hook == null ? '—' : pct(idea.hook)} />
-          <Stat label="الظهور" value={qty(idea.impr)} />
->>>>>>> hoven
         </div>
       </div>
     </Card>
@@ -177,28 +159,16 @@ function IdeaCard({ idea, onOpen }: { idea: Idea; onOpen: () => void }) {
 }
 
 // Rows of the side-by-side comparison: [label, value, direction (1 higher is better, -1 lower is better, 0 neither), shown as]
-<<<<<<< well
 // The label is [Arabic, English]
 const ROWS: [[string, string], (m: Metrics) => number | null, Dir, (v: number | null) => string][] = [
   [['الصرف', 'Spend'], m => m.spend, 0, sar],
-  [['الطلبات', 'Results'], m => m.results, 1, v => (v == null ? '—' : qty(v))],
-  [['الطلبات', 'Leads'], m => m.leads, 1, v => (v == null ? '—' : qty(v))],
-  [['تكلفة الطلب', 'Cost per lead'], m => m.cpl, -1, sar],
+  [['الطلبات', 'Orders'], m => m.results, 1, v => (v == null ? '—' : qty(v))],
+  [['الطلبات', 'Orders'], m => m.leads, 1, v => (v == null ? '—' : qty(v))],
+  [['تكلفة الطلب', 'Cost per order'], m => m.cpl, -1, sar],
   [['نسبة النقر', 'Click rate'], m => m.ctr, 1, pct],
   [['وقفوا يشوفون', 'Stopped to watch'], m => m.hook, 1, pct],
   [['كمّلوا للنهاية', 'Watched to the end'], m => m.hold, 1, pct],
   [['الظهور', 'Impressions'], m => m.impr, 0, v => (v == null ? '—' : qty(v))],
-=======
-const ROWS: [string, (m: Metrics) => number | null, Dir, (v: number | null) => string][] = [
-  ['الصرف', m => m.spend, 0, sar],
-  ['الطلبات', m => m.results, 1, v => (v == null ? '—' : qty(v))],
-  ['الطلبات', m => m.leads, 1, v => (v == null ? '—' : qty(v))],
-  ['تكلفة الطلب', m => m.cpl, -1, sar],
-  ['نسبة النقر', m => m.ctr, 1, pct],
-  ['وقفوا يشوفون', m => m.hook, 1, pct],
-  ['كمّلوا للنهاية', m => m.hold, 1, pct],
-  ['الظهور', m => m.impr, 0, v => (v == null ? '—' : qty(v))],
->>>>>>> hoven
 ];
 
 function IdeaDetail({ data, idea }: { data: Dash; idea: Idea }) {
@@ -219,21 +189,12 @@ function IdeaDetail({ data, idea }: { data: Dash; idea: Idea }) {
             {idea.ad.text && <p className="text-sm leading-relaxed whitespace-pre-line">{idea.ad.text}</p>}
             {m.open && <Button asChild variant="outline" size="sm" className="justify-self-start"><a href={m.open} target="_blank" rel="noopener"><ExternalLink />{T('افتح المادة الإعلانية', 'Open the creative')}</a></Button>}
             <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-<<<<<<< well
               <Stat label={T('الصرف', 'Spend')} value={sar(idea.spend)} />
-              <Stat label={T('الطلبات', 'Results')} value={qty(idea.results)} note={T(`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`, `${qty(idea.leads)} leads · ${qty(idea.conv)} conversations`)} />
-              <Stat label={T('تكلفة الطلب', 'Cost per lead')} value={sar(idea.cpl)} note={cplNote(idea) ?? T('إعلانات الطلبات بس', 'Lead ads only')} />
+              <Stat label={T('الطلبات', 'Orders')} value={qty(idea.results)} note={T(`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`, `${qty(idea.leads)} leads · ${qty(idea.conv)} conversations`)} />
+              <Stat label={T('تكلفة الطلب', 'Cost per order')} value={sar(idea.cpl)} note={cplNote(idea) ?? T('إعلانات الطلبات بس', 'Lead ads only')} />
               <Stat label={T('نسبة النقر', 'Click rate')} value={pct(idea.ctr)} note={T(`${qty(idea.clicks)} نقرة`, `${qty(idea.clicks)} clicks`)} />
               <Stat label={T('وقفوا يشوفون', 'Stopped to watch')} value={hookValue(idea)} note={T('مدى الحياة', 'Lifetime')} />
               <Stat label={T('كمّلوا للنهاية', 'Watched to the end')} value={idea.hold == null ? '—' : pct(idea.hold)} note={T('من اللي وقفوا', 'Of those who stopped')} />
-=======
-              <Stat label="الصرف" value={sar(idea.spend)} />
-              <Stat label="النتائج" value={qty(idea.results)} note={`${qty(idea.leads)} طلب · ${qty(idea.conv)} محادثة`} />
-              <Stat label="تكلفة الطلب" value={sar(idea.cpl)} note={cplNote(idea) ?? 'إعلانات الطلبات بس'} />
-              <Stat label="نسبة النقر" value={pct(idea.ctr)} note={`${qty(idea.clicks)} نقرة`} />
-              <Stat label="وقفوا يشوفون" value={hookValue(idea)} note="مدى الحياة" />
-              <Stat label="كمّلوا للنهاية" value={idea.hold == null ? '—' : pct(idea.hold)} note="من اللي وقفوا" />
->>>>>>> hoven
             </div>
           </div>
         </div>
@@ -278,13 +239,8 @@ function IdeaDetail({ data, idea }: { data: Dash; idea: Idea }) {
             <Table>
               <TableHeader className="bg-muted">
                 <TableRow>
-<<<<<<< well
                   <TableHead>{T('الإعلان', 'Ad')}</TableHead><TableHead>{T('المنصة', 'Platform')}</TableHead><TableHead>{T('الحالة', 'Status')}</TableHead>
-                  <TableHead>{T('الصرف', 'Spend')}</TableHead><TableHead>{T('الطلبات', 'Results')}</TableHead><TableHead>{T('تكلفة الطلب', 'Cost per lead')}</TableHead><TableHead>{T('نسبة النقر', 'Click rate')}</TableHead>
-=======
-                  <TableHead>الإعلان</TableHead><TableHead>المنصة</TableHead><TableHead>الحالة</TableHead>
-                  <TableHead>الصرف</TableHead><TableHead>النتائج</TableHead><TableHead>تكلفة الطلب</TableHead><TableHead>نسبة النقر</TableHead>
->>>>>>> hoven
+                  <TableHead>{T('الصرف', 'Spend')}</TableHead><TableHead>{T('الطلبات', 'Orders')}</TableHead><TableHead>{T('تكلفة الطلب', 'Cost per order')}</TableHead><TableHead>{T('نسبة النقر', 'Click rate')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

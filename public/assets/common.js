@@ -224,20 +224,7 @@ export async function shell({ active, title, badge = '', tools = '' }) {
   // The title bar needs nothing from the server: it goes up before the user is known
   $('#top', app).innerHTML = `<div class="t"><button class="btn icon ghost burger" id="burger" aria-label="القائمة" aria-controls="side" aria-expanded="false">${icon('menu')}</button><h1>${esc(title)}</h1>${badge}</div><div class="tools"><span id="tools">${tools}</span>${langSwitch()}</div>`;
   let me;
-<<<<<<< well
   if (!ME?.v) { try { me = await fetchMe(); } catch (err) { if (err.status !== 401) pageFailure(err); throw err; } }
-=======
-  if (!ME?.v) {
-    try { me = await fetchMe(); }
-    catch (err) {
-      // Without this the page stays blank: every page swallows shell() errors
-      const main = $('#content') || $('main');
-      if (main) main.innerHTML = `<div class="card empty">${icon('alert')}<div>${esc(err.message || 'صار خطأ')}</div><button class="btn secondary" style="margin-top:12px" id="shellRetry">${icon('refresh')}حاول مرة ثانية</button></div>`;
-      $('#shellRetry')?.addEventListener('click', () => location.reload());
-      throw err;
-    }
-  }
->>>>>>> hoven
   else {
     me = ME.v;
     if (Date.now() - ME.t > FRESH) fetchMe().then(v => { if (JSON.stringify(slim(v)) !== JSON.stringify(slim(me))) { drawSide(side, v, active); bindMe(); } }).catch(() => {});

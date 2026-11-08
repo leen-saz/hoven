@@ -4,19 +4,11 @@
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-regular.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
-<<<<<<< well
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-regular.woff2) format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-medium.woff2) format("woff2");font-weight:500;font-display:swap}
 @font-face{font-family:"Plex";src:url(/assets/fonts/ibmplexsansarabic-bold.woff2) format("woff2");font-weight:700;font-display:swap}
-@font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:700;font-display:swap}
-@font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:900;font-display:swap}
-/* The "Hoven." mark: Playfair Display 900, Google's Latin file served from here (OFL, public/assets/fonts/OFL-playfair-display.txt) */
-@font-face{font-family:"Hoven Brand";src:url(/assets/fonts/playfair-display-900.woff2) format("woff2");font-weight:900;font-display:swap}
-/* المرجع: hoven.sa — خطوط ثمانية، أزرار حبة بلون Pulse Purple، كروت 24px بظل بنفسجي ناعم، هيدر زجاجي. بدون وضع داكن مثل الموقع. */
-=======
 @font-face{font-family:"Hoven Brand";src:url(/assets/fonts/hoven-brand.woff2) format("woff2");font-weight:400 900;font-display:swap}
 /* Hoven brand tokens (from leen-saz/hoven-dashboard): ivory, navy, forest green. Fonts: Hoven Brand (titles) + IBM Plex Sans Arabic (OFL). */
->>>>>>> hoven
 :root{
   --bg:#F2F0E3;        /* Hoven ivory */
   --surface:#FFFFFF;

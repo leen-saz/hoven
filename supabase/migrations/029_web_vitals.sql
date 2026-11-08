@@ -1,4 +1,4 @@
--- 022: Core Web Vitals reports from real visits (src/api/routes/vitals.ts), kept 7 days, read by the owner on the data-health page.
+-- 029: Core Web Vitals reports from real visits (src/api/routes/vitals.ts), kept 7 days, read by the owner on the data-health page.
 -- No personal data: the page's path (ids collapsed to :id), four numbers and a mobile flag. No user, company or IP.
 create table if not exists public.web_vitals (
   id bigserial primary key,

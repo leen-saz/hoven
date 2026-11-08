@@ -1,25 +1,17 @@
 // /api/design/brief: brief + headline variants from our best ads, and a ChatGPT background when no photo is given. Writes nothing.
-<<<<<<< well
 // /api/design/videos|videofile|video|videoedit|videoapprove: the «موشن جرافيك» type (motion projects and their versions).
-import { json, readJson, handle, requireUser } from '../../lib/auth';
-=======
-import { sb, json, readJson, handle, requireUser, audit, type Cfg } from '../../lib/auth';
->>>>>>> hoven
+import { json, readJson, handle, requireUser, audit } from '../../lib/auth';
 import { scoped } from '../../lib/tenant';
 import { readAll } from '../../lib/paging';
 import { type AiRun } from '../content/content';
 import { generate, openaiImage, pick, type LlmEnv } from '../../lib/llm';
-<<<<<<< well
 import { usageCtx } from '../../lib/usage';
-import { knowledgeFor, withKnowledge } from '../knowledge/knowledge';
-=======
 import { knowledgeFor, withKnowledge, loadKnowledge, forbiddenRules } from '../knowledge/knowledge';
->>>>>>> hoven
+import { guard, meter } from '../../lib/quotas';
 import { brandFor, serveFile } from '../knowledge/brand';
 import { STUDIO_SIZES, SCENES, TEXT_COLORS, scenePrompt, overlaySpec, fetchSallaImage, type StudioSize, type Scene, type Tone } from './studio';
 import { check, notice } from '../compliance/compliance';
 import { SIZES, TYPES, VISION_MODEL, VISION_PROMPT, backgroundPrompt, images, productPhoto, variantsFrom, prompt, stylePrompt, templates, winners, type AdIn, type MetIn } from './design';
-import { guard, meter } from '../../lib/usage';
 
 // Vision stays on Workers AI (free); the copy is written by OpenAI when OPENAI_API_KEY is set (src/lib/llm.ts)
 type AiEnv = Omit<LlmEnv, 'AI'> & { AI?: { run: AiRun & ((model: string, input: { image: number[]; prompt: string; max_tokens: number }) => Promise<unknown>) } };

@@ -11,15 +11,9 @@ import { T, pageLang } from './lang';
 
 // The labels are read when the chart draws, so they follow the page language
 const config = {
-<<<<<<< well
   spend: { get label() { return T('الصرف (ر.س)', 'Spend (SAR)'); }, color: 'var(--ui-chart-1)' },
-  results: { get label() { return T('الطلبات', 'Results'); }, color: 'var(--ui-chart-2)' },
-  leads: { get label() { return T('الطلبات', 'Leads'); }, color: 'var(--ui-chart-2)' },
-=======
-  spend: { label: 'الصرف (ر.س)', color: 'var(--ui-chart-1)' },
-  results: { label: 'الطلبات', color: 'var(--ui-chart-2)' },
-  leads: { label: 'الطلبات', color: 'var(--ui-chart-2)' },
->>>>>>> hoven
+  results: { get label() { return T('الطلبات', 'Orders'); }, color: 'var(--ui-chart-2)' },
+  leads: { get label() { return T('الطلبات', 'Orders'); }, color: 'var(--ui-chart-2)' },
 } satisfies ChartConfig;
 type Metric = keyof typeof config;
 const COLORS = ['#294036', '#141414', '#7fb59a', '#B3261E', '#293342', '#B49CFE', '#5B4FB0'];
@@ -82,23 +76,13 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
   return (
     <Card className="@container/card">
       <CardHeader>
-<<<<<<< well
         <CardTitle>{T('الاتجاه', 'Trend')}</CardTitle>
-        <CardDescription>{metric === 'spend' ? T('الصرف لكل المنصات', 'Spend on all platforms') : metric === 'results' ? T('الطلبات والمحادثات', 'Leads and conversations') : T('الطلبات بس', 'Leads only')} · {g === 'day' ? T('يومي', 'Daily') : g === 'week' ? T('أسبوعي (من الأحد)', 'Weekly (from Sunday)') : T('شهري', 'Monthly')}</CardDescription>
+        <CardDescription>{metric === 'spend' ? T('الصرف لكل المنصات', 'Spend on all platforms') : metric === 'results' ? T('طلبات الشراء من الإعلانات', 'Purchase orders from ads') : T('الطلبات بس', 'Orders only')} · {g === 'day' ? T('يومي', 'Daily') : g === 'week' ? T('أسبوعي (من الأحد)', 'Weekly (from Sunday)') : T('شهري', 'Monthly')}</CardDescription>
         <CardAction className="flex flex-wrap gap-2">
           <ToggleGroup type="single" variant="outline" value={metric} onValueChange={v => v && setMetric(v as Metric)} aria-label={T('الرقم', 'Metric')}>
             <ToggleGroupItem value="spend" className="px-3">{T('الصرف', 'Spend')}</ToggleGroupItem>
-            <ToggleGroupItem value="results" className="px-3">{T('الطلبات', 'Results')}</ToggleGroupItem>
-            <ToggleGroupItem value="leads" className="px-3">{T('الطلبات', 'Leads')}</ToggleGroupItem>
-=======
-        <CardTitle>الاتجاه</CardTitle>
-        <CardDescription>{metric === 'spend' ? 'الصرف لكل المنصات' : metric === 'results' ? 'الطلبات' : 'الطلبات بس'} · {g === 'day' ? 'يومي' : g === 'week' ? 'أسبوعي (من الأحد)' : 'شهري'}</CardDescription>
-        <CardAction className="flex flex-wrap gap-2">
-          <ToggleGroup type="single" variant="outline" value={metric} onValueChange={v => v && setMetric(v as Metric)} aria-label="الرقم">
-            <ToggleGroupItem value="spend" className="px-3">الصرف</ToggleGroupItem>
-            <ToggleGroupItem value="results" className="px-3">النتائج</ToggleGroupItem>
-            <ToggleGroupItem value="leads" className="px-3">الطلبات</ToggleGroupItem>
->>>>>>> hoven
+            <ToggleGroupItem value="results" className="px-3">{T('الطلبات', 'Orders')}</ToggleGroupItem>
+            <ToggleGroupItem value="leads" className="px-3">{T('الطلبات', 'Orders')}</ToggleGroupItem>
           </ToggleGroup>
           <ToggleGroup type="single" variant="outline" value={split} onValueChange={v => v && setSplit(v as 'total' | 'plat')} aria-label={T('العرض', 'View')}>
             <ToggleGroupItem value="total" className="px-3">{T('المجموع', 'Total')}</ToggleGroupItem>
@@ -117,11 +101,7 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
           ? <PlatBars all={all} plats={shown} metric={metric} gran={g} config={platConfig} />
           : <DayChart days={all} metric={metric} gran={g} />}
         <div>
-<<<<<<< well
-          <p className="mb-2 text-sm text-muted-foreground">{T('تكلفة الطلب حسب المنصة (ر.س، إعلانات الطلبات)', 'Cost per lead by platform (SAR, lead ads)')}</p>
-=======
-          <p className="mb-2 text-sm text-muted-foreground">تكلفة الطلب حسب المنصة (ر.س، إعلانات الطلبات)</p>
->>>>>>> hoven
+          <p className="mb-2 text-sm text-muted-foreground">{T('تكلفة الطلب حسب المنصة (ر.س، إعلانات الطلبات)', 'Cost per order by platform (SAR, lead ads)')}</p>
           {plats.length ? (
             <ChartContainer config={cplConfig} className="aspect-auto w-full" style={{ height: 200 }} dir="ltr">
               <LineChart data={cplRows}>
@@ -131,11 +111,7 @@ export function TrendChart({ data, from, to }: { data: Dash; from: string; to: s
                 <ChartTooltip content={<ChartTooltipContent labelFormatter={v => labelOf(g)(String(v))} indicator="dot" />} />
                 {plats.map(p => <Line key={p} dataKey={p} type="monotone" stroke={`var(--color-${p})`} strokeWidth={2} dot={false} connectNulls={false} />)}
               </LineChart>
-<<<<<<< well
-            </ChartContainer>) : <p className="text-sm text-muted-foreground">{T('ما فيه طلبات في هالفترة.', 'No leads in this period.')}</p>}
-=======
-            </ChartContainer>) : <p className="text-sm text-muted-foreground">ما فيه طلبات في هالفترة.</p>}
->>>>>>> hoven
+            </ChartContainer>) : <p className="text-sm text-muted-foreground">{T('ما فيه طلبات في هالفترة.', 'No orders in this period.')}</p>}
         </div>
       </CardContent>
     </Card>

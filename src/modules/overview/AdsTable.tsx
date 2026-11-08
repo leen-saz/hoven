@@ -44,17 +44,10 @@ const columns: ColumnDef<AdRow>[] = [
     accessorKey: 'live', header: () => T('الحالة', 'Status'),
     cell: ({ row }) => <Badge variant={row.original.live ? 'default' : 'outline'}>{row.original.live ? T('شغّال', 'Running') : T('متوقف', 'Paused')}</Badge>,
   },
-<<<<<<< well
   { accessorKey: 'spend', header: sortable('الصرف', 'Spend'), cell: ({ row }) => <span className="tabular-nums">{sar(row.original.spend)}</span> },
-  { accessorKey: 'results', header: sortable('الطلبات', 'Results'), cell: ({ row }) => <span className="tabular-nums">{qty(row.original.results)}</span> },
+  { accessorKey: 'results', header: sortable('الطلبات', 'Orders'), cell: ({ row }) => <span className="tabular-nums">{qty(row.original.results)}</span> },
   {
-    accessorKey: 'cpr', header: sortable('تكلفة الطلب', 'Cost per result'), sortUndefined: 'last',
-=======
-  { accessorKey: 'spend', header: sortable('الصرف'), cell: ({ row }) => <span className="tabular-nums">{sar(row.original.spend)}</span> },
-  { accessorKey: 'results', header: sortable('الطلبات'), cell: ({ row }) => <span className="tabular-nums">{qty(row.original.results)}</span> },
-  {
-    accessorKey: 'cpr', header: sortable('تكلفة الطلب'), sortUndefined: 'last',
->>>>>>> hoven
+    accessorKey: 'cpr', header: sortable('تكلفة الطلب', 'Cost per order'), sortUndefined: 'last',
     cell: ({ row }) => <span className="tabular-nums">{sar(row.original.cpr)}</span>,
   },
   { accessorKey: 'ctr', header: sortable('نسبة النقر', 'Click rate'), sortUndefined: 'last', cell: ({ row }) => <span className="tabular-nums">{pct(row.original.ctr)}</span> },
@@ -102,12 +95,8 @@ export function AdsTable({ data, from, to }: { data: Dash; from: string; to: str
             <DropdownMenuContent align="end">
               {table.getAllColumns().filter(c => c.getCanHide()).map(c => (
                 <DropdownMenuCheckboxItem key={c.id} checked={c.getIsVisible()} onCheckedChange={v => c.toggleVisibility(!!v)}>
-<<<<<<< well
-                  {(pageLang() === 'en' ? { platform: 'Platform', goal: 'Goal', live: 'Status', spend: 'Spend', results: 'Results', cpr: 'Cost per result', ctr: 'Click rate' } as Record<string, string>
+                  {(pageLang() === 'en' ? { platform: 'Platform', goal: 'Goal', live: 'Status', spend: 'Spend', results: 'Orders', cpr: 'Cost per order', ctr: 'Click rate' } as Record<string, string>
                     : { platform: 'المنصة', goal: 'الهدف', live: 'الحالة', spend: 'الصرف', results: 'الطلبات', cpr: 'تكلفة الطلب', ctr: 'نسبة النقر' } as Record<string, string>)[c.id] ?? c.id}
-=======
-                  {{ platform: 'المنصة', goal: 'الهدف', live: 'الحالة', spend: 'الصرف', results: 'الطلبات', cpr: 'تكلفة الطلب', ctr: 'نسبة النقر' }[c.id] ?? c.id}
->>>>>>> hoven
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuContent>
@@ -151,21 +140,12 @@ export function AdsTable({ data, from, to }: { data: Dash; from: string; to: str
               </SheetHeader>
               <div className="grid gap-4 overflow-y-auto px-4 pb-6">
                 <div className="grid grid-cols-2 gap-3 text-sm">
-<<<<<<< well
-                  {[[T('الصرف', 'Spend'), sar(open.spend)], [T('الطلبات', 'Results'), qty(open.results)], [T('تكلفة الطلب', 'Cost per result'), sar(open.cpr)], [T('نسبة النقر', 'Click rate'), pct(open.ctr)]].map(([l, v]) => (
+                  {[[T('الصرف', 'Spend'), sar(open.spend)], [T('الطلبات', 'Orders'), qty(open.results)], [T('تكلفة الطلب', 'Cost per order'), sar(open.cpr)], [T('نسبة النقر', 'Click rate'), pct(open.ctr)]].map(([l, v]) => (
                     <div key={l} className="rounded-lg border p-3"><div className="text-muted-foreground">{l}</div><div className="text-lg font-semibold tabular-nums">{v}</div></div>
                   ))}
                 </div>
                 <div><div className="mb-1 text-sm font-medium">{T('الصرف كل يوم', 'Spend per day')}</div><DayChart days={adDaily(data, open.key, from, to)} metric="spend" height={180} /></div>
-                <div><div className="mb-1 text-sm font-medium">{T('النتائج كل يوم', 'Results per day')}</div><DayChart days={adDaily(data, open.key, from, to)} metric="results" height={180} /></div>
-=======
-                  {[['الصرف', sar(open.spend)], ['الطلبات', qty(open.results)], ['تكلفة الطلب', sar(open.cpr)], ['نسبة النقر', pct(open.ctr)]].map(([l, v]) => (
-                    <div key={l} className="rounded-lg border p-3"><div className="text-muted-foreground">{l}</div><div className="text-lg font-semibold tabular-nums">{v}</div></div>
-                  ))}
-                </div>
-                <div><div className="mb-1 text-sm font-medium">الصرف كل يوم</div><DayChart days={adDaily(data, open.key, from, to)} metric="spend" height={180} /></div>
-                <div><div className="mb-1 text-sm font-medium">الطلبات كل يوم</div><DayChart days={adDaily(data, open.key, from, to)} metric="results" height={180} /></div>
->>>>>>> hoven
+                <div><div className="mb-1 text-sm font-medium">{T('الطلبات كل يوم', 'Orders per day')}</div><DayChart days={adDaily(data, open.key, from, to)} metric="results" height={180} /></div>
               </div>
             </>
           )}

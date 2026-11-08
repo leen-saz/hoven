@@ -54,7 +54,8 @@ describe('overview: funnel rules', () => {
   it('a rising cost per lead points at audience and creative fatigue (lower is better)', () => {
     const list = steps(as({ cpl: 80 }), base, usual);
     expect(list.find(s => s.key === 'cpl')!.score).toBeCloseTo(50 / 80);
-    expect(verdict(list)).toMatchObject({ step: 'cpl', where: 'تكلفة الليد' });
+    // Hoven counts orders only (ADR-0007)
+    expect(verdict(list)).toMatchObject({ step: 'cpl', where: 'تكلفة الطلب' });
   });
 
   it('no CRM, too few leads tied to ads, or paid closings with none tied to an ad: «غير مربوط», never the bottleneck', () => {

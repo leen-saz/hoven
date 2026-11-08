@@ -111,17 +111,7 @@ export async function serveSite(request: Request, bucket: R2Bucket, wait?: Wait)
 async function servePage(request: Request, bucket: R2Bucket, key: string, wait?: Wait): Promise<Response> {
   const ext = key.slice(key.lastIndexOf('.') + 1), html = ext === 'html', now = Date.now();
   // The page and its policy are read together, not one after the other
-<<<<<<< well
   const [page, csp] = await Promise.all([kept(bucket, key, now, wait), html ? kept(bucket, 'site/csp.txt', now, wait) : Promise.resolve(null)]);
-  if (!page) return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
-  // The HTML points at this deploy's versioned scripts (src/lib/assets.ts), so a new deploy is a new page for the browser
-  const etag = html && ASSET_V ? page.etag.replace(/"$/, `-${ASSET_V}"`) : page.etag;
-  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag, 'cache-control': 'private, no-cache' });
-  // The main dashboard fetches its numbers from a script at the end of the page: start that download with the
-  // page's headers instead (same mode as the script's fetch, so the browser hands it the preloaded response)
-  if (key === 'site/index.html') headers.set('link', '</dash.json>; rel=preload; as=fetch; crossorigin');
-=======
-  const [page, csp] = await Promise.all([kept(bucket, key), html ? kept(bucket, 'site/csp.txt') : Promise.resolve(null)]);
   if (!page) {
     // Before the first data pull the dashboards do not exist yet: say why and where to go, not a bare 404
     if (key.endsWith('.html')) return new Response(
@@ -132,8 +122,12 @@ async function servePage(request: Request, bucket: R2Bucket, key: string, wait?:
       { status: 404, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" } });
     return new Response('غير موجود', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8' } });
   }
-  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag: page.etag, 'cache-control': 'private, no-cache' });
->>>>>>> hoven
+  // The HTML points at this deploy's versioned scripts (src/lib/assets.ts), so a new deploy is a new page for the browser
+  const etag = html && ASSET_V ? page.etag.replace(/"$/, `-${ASSET_V}"`) : page.etag;
+  const headers = new Headers({ 'content-type': TYPES[ext] ?? 'application/octet-stream', etag, 'cache-control': 'private, no-cache' });
+  // The main dashboard fetches its numbers from a script at the end of the page: start that download with the
+  // page's headers instead (same mode as the script's fetch, so the browser hands it the preloaded response)
+  if (key === 'site/index.html') headers.set('link', '</dash.json>; rel=preload; as=fetch; crossorigin');
   // build.py hashes the page's inline scripts into this policy (same CSP the live site sends)
   if (csp) headers.set('content-security-policy', framable(new TextDecoder().decode(csp.bytes).trim()));
   if (etagIn(request.headers.get('if-none-match'), etag)) return new Response(null, { status: 304, headers });
