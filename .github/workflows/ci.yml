@@ -1,9 +1,8 @@
 name: ci
 
+# Free plan (2000 min/month): pushes to main run this through deploy.yml, so only pull requests trigger it here
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: read

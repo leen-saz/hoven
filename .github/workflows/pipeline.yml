@@ -3,9 +3,8 @@ name: pipeline
 # Hourly read-only export of data.json, the covers and the built dashboards from Supabase to the staging bucket.
 # Production is filled by refresh.yml (the only writer to Supabase since the cutover); this one only reads.
 
+# Free plan: no hourly schedule (refresh.yml fills production); run by hand when staging needs fresh data
 on:
-  schedule:
-    - cron: "37 * * * *"
   workflow_dispatch:
 
 permissions:

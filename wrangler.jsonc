@@ -24,7 +24,7 @@
       "ai": { "binding": "AI" },
       "workflows": [{ "name": "hoven-journey-run", "binding": "JOURNEY", "class_name": "JourneyRun" }],
       // Hourly data refresh (src/lib/cron.ts): GitHub's own schedule never fired for this repo; every 5 minutes: due social posts
-      "triggers": { "crons": ["7 * * * *", "*/5 * * * *"] }
+      "triggers": { "crons": ["7 */4 * * *", "*/5 * * * *"] }
     }
   },
   "vars": { "APP_ENV": "local", "OWNER_EMAIL": "leen@brandsforhome.sa" },
