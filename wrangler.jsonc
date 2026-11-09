@@ -19,7 +19,7 @@
     "production": {
       "name": "hoven",
       "workers_dev": false,
-      "vars": { "APP_ENV": "production", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+      "vars": { "APP_ENV": "production", "OWNER_EMAIL": "leen@brandsforhome.sa", "SALLA_CLIENT_ID": "19bb79a1-40f7-4568-8d6c-65228613b644" },
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files" }],
       "ai": { "binding": "AI" },
       "workflows": [{ "name": "hoven-journey-run", "binding": "JOURNEY", "class_name": "JourneyRun" }],
