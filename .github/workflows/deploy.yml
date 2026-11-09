@@ -3,9 +3,9 @@ name: deploy
 # Staging: automatic on every push to main, after CI passes.
 # Production: manual only (Actions > deploy > Run workflow > production), after CI passes, through the
 # `production` environment that only accepts main (ADR-0005).
+# Production deploys come from Cloudflare Workers Builds (connected to this repo, branch main, CLOUDFLARE_ENV=production):
+# free build minutes instead of GitHub Actions. This workflow stays for staging and for a manual production deploy.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       target:
