@@ -1,11 +1,9 @@
 name: upstream-well
 
 # Every new commit on Well's main (leen-saz/well-ads) becomes a pull request here (scripts/upstream-sync.sh).
-# Started hourly by the production Worker's Cron Trigger (src/lib/cron.ts) and by hand; the schedule is a fallback.
+# Started every 4 hours by the production Worker's Cron Trigger (src/lib/cron.ts) and by hand (no schedule: free plan minutes).
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "41 */6 * * *"
 
 permissions:
   contents: write

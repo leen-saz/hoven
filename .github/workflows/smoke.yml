@@ -2,11 +2,10 @@ name: smoke
 
 # End-to-end smoke tests (tests/smoke, docs/smoke-tests.md): the built Worker runs locally with a fake Supabase and
 # synthetic users. Needs no secrets. Also callable from other workflows (the deploy workflow runs it before deploying).
+# Free plan: runs once per deploy (deploy.yml calls it) and by hand, not on every pull request and push
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
