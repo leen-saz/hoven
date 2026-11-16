@@ -2,6 +2,15 @@
 export const EN = {
   'كلمة أو ادعاء ما ينكتب أبداً. الكلمة تنمسك ككلمة كاملة بس، فاكتب كل صيغة تبي تمنعها (مثل «سر» و«سرها»)': 'A word or claim never to be written. A word is matched as a whole word only, so add each form you want to ban (e.g. «سر» and «سرها»)',
   // التنقل والهيكل
+  // Hoven's menu and «احلم»
+  'احلم': 'Dream', 'الميديا باير': 'Media buyer', 'الرئيسية': 'Main', 'الأتمتة والرصد': 'Automation and listening', 'الربط والإعدادات': 'Connections and settings',
+  'احلم · Hoven': 'Dream · Hoven', 'وش الحملة اللي تحلم فيها؟': 'What campaign are you dreaming of?',
+  'اكتب الفكرة، ونتناقش فيها، وبعدها يطلع لك كل شي جاهز تعتمده وتنشره.': 'Write the idea, we think it through, then everything comes out ready for you to approve and publish.',
+  '١. تكتب الفكرة وتتناقش معه': '1. Write the idea and discuss it',
+  '٢. يطلع الاستراتيجية والجمهور والميزانية والنصوص والتصاميم والموشن والفويس أوفر': '2. Get the strategy, audience, budget, copy, designs, motion and voice-over',
+  '٣. تعدّل أي جزء وتعتمده': '3. Edit any part and approve it',
+  '٤. «انشر» ينشئ الحملة في المنصات موقوفة، وأنت تشغّلها': '4. «Publish» creates the campaign on the platforms paused; you switch it on',
+  'المحادثة تنفتح هنا قريب.': 'The chat opens here soon.',
   'التحليلات': 'Analytics', 'ملخص الأداء': 'Performance summary', 'المواد الإعلانية بالتفصيل': 'Creatives in detail', 'الحملات والمنصات': 'Campaigns & platforms', 'ملخص اليوم': 'Today', 'الأداء': 'Performance', 'إنشاء المحتوى': 'Content creation', 'المراجعة والتنفيذ': 'Review & execution', 'إدارة النظام': 'System', 'الصلاحيات': 'Permissions', 'اليوم': 'Today', 'إغلاق القائمة': 'Close menu', 'المادة الإعلانية': 'Creative', 'بموافقتي': 'With my approval', 'تنفيذ تلقائي': 'Auto-run', 'التنفيذ التلقائي': 'auto-run', 'الصلاحيات والدخول': 'Access & sign-in', 'السوشال': 'Social', 'صورة أو فيديو': 'Photo or video', 'أو حط رابط': 'Or paste a link', 'يرفع…': 'Uploading…', 'انرفع ✓': 'Uploaded ✓', 'الرحلات والرسائل': 'Journeys', 'المدير': 'Manager', 'الموديولات': 'Modules', 'موديولات الشركة': 'Company modules', 'الإعدادات': 'Settings', 'أساسي': 'Core', 'أساسية لتشغيل النظام': 'Needed to run the system',
   'حسابي': 'My account', 'خروج': 'Sign out', 'المالكة': 'Owner', 'عضو': 'Member', 'القائمة': 'Menu', 'التنقل': 'Navigation',
   'عربي': 'عربي', 'English': 'English', 'اللغة': 'Language',

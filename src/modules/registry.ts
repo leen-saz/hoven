@@ -14,8 +14,10 @@ import { meta as copyMeta } from './copy/module';
 import { meta as knowledgeMeta } from './knowledge/module';
 import { meta as overviewMeta } from './overview/module';
 import { meta as libraryMeta } from './library/module';
+import { meta as dreamMeta } from './dream/module';
+import { meta as buyerMeta } from './buyer/module';
 
 // Grouped by sidebar destination: performance, create, review, system
-export const MODULES: ModuleMeta[] = [overviewMeta, listeningMeta, designMeta, copyMeta, libraryMeta, voiceMeta, socialMeta, contentMeta, journeysMeta, complianceMeta, maestroMeta, knowledgeMeta, debuggerMeta];
+export const MODULES: ModuleMeta[] = [dreamMeta, buyerMeta, overviewMeta, listeningMeta, designMeta, copyMeta, libraryMeta, voiceMeta, socialMeta, contentMeta, journeysMeta, complianceMeta, maestroMeta, knowledgeMeta, debuggerMeta];
 export const LIVE = MODULES.filter(m => m.status === 'live').map(m => m.key);
 export const isModule = (k: string): boolean => MODULES.some(m => m.key === k);

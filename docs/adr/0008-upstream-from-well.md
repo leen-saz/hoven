@@ -10,3 +10,8 @@ Status: accepted (2026-11-02)
 - Well-only paths are skipped (PRD/plan docs, departments, CRM, generated pages).
 - Nothing merges or deploys by itself: Leen reviews and writes "ادمج".
 - Another project copies the three files (workflow, script, `.upstream/`) and edits the rewrite table.
+
+## Superseded (2026-11-16)
+
+Leen stopped the sync: Hoven is now simpler than Well and no longer pulls Well's commits. The workflow and the cron
+dispatch are removed; `scripts/upstream-sync.sh` stays for a one-off manual sync if ever wanted.

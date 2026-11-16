@@ -13,4 +13,5 @@ import * as knowledge from './knowledge/routes';
 import * as overview from './overview/routes';
 import * as library from './library/routes';
 
-export const ROUTES = { maestro, social, journeys, content, debugger: debuggerRoutes, compliance, listening, design, voice, copy, knowledge, overview, library };
+import * as dream from './dream/routes';
+export const ROUTES = { dream, maestro, social, journeys, content, debugger: debuggerRoutes, compliance, listening, design, voice, copy, knowledge, overview, library };

@@ -24,7 +24,7 @@ export const HUBS: Record<string, [Need, string][]> = {
 const HOVEN_NEEDS: Need[] = ['ceo', 'creative', 'control', 'connectors', 'media'];
 const HUB = /^\/(performance|create|review|system)\/?$/;
 // Short and earlier links of the same places
-const ALIAS: Record<string, string> = { '/analytics': '/', '/home': '/today/', '/start': '/today/', '/history': '/control/?tab=log', '/review/history': '/control/?tab=log', '/permissions': '/admin/',
+const ALIAS: Record<string, string> = { '/analytics': '/', '/home': '/dream/', '/start': '/dream/', '/history': '/control/?tab=log', '/review/history': '/control/?tab=log', '/permissions': '/admin/',
   // Motion graphics moved from Maestro into Design, then from /design/video/ into Design's type switch; ?id= rides along
   '/maestro/video': '/design/?type=motion', '/design/video': '/design/?type=motion' };
 
