@@ -64,7 +64,9 @@ def plan(s):
 def build(data, today=None):
     ads, rows = data.get("ads") or {}, data.get("rows") or []
     today = date.fromisoformat(today or (data.get("range") or {}).get("today") or date.today().isoformat())
-    d7, d30 = (today - timedelta(days=7)).isoformat(), (today - timedelta(days=30)).isoformat()
+    # "last 7 days" = the 7 full days before today. `day >= today-7` used to include today's partial figures too (8 days),
+    # while every threshold below multiplies the daily target by 7.
+    d7, d30, today_s = (today - timedelta(days=7)).isoformat(), (today - timedelta(days=30)).isoformat(), today.isoformat()
     # الأرقام لكل إعلان (مواضع ميتا مع بعض)
     agg = defaultdict(lambda: {"s7": 0.0, "l7": 0.0, "m7": 0.0, "i7": 0, "c7": 0, "days": set(), "keys": set()})
     plat30 = defaultdict(lambda: [0.0, 0.0])
@@ -78,7 +80,7 @@ def build(data, today=None):
         x = agg[b]; x["keys"].add(k)
         if sp:
             x["days"].add(day)
-        if day >= d7:
+        if d7 <= day < today_s:
             x["s7"] += sp; x["l7"] += ld; x["m7"] += cv; x["i7"] += im; x["c7"] += cl
             camp_spend7[(p, a.get("campaign") or "")] += sp
         if day >= d30 and a.get("goal") == "lead":
@@ -112,7 +114,15 @@ def build(data, today=None):
         first = min(x["days"]) if x["days"] else None
         ev = {"spend": round(x["s7"], 2), "leads": round(x["l7"], 2), "days": 7, "target_cpl": round(t, 2) if t else None,
               "target_source": (tg.get(p) or {}).get("source"), "first_day": first}
-        if a.get("goal") == "lead" and t:
+        wa = a.get("dest") == "whatsapp"
+        if wa and t:
+            # TikTok ads that open WhatsApp never report leads on the platform: zero leads is not failure. Judged on clicks
+            # instead; only an ad that gets no clicks at all for the same spend is a pause.
+            if x["c7"] == 0 and x["s7"] >= rules.KILL_MULTIPLIER * t and (rules.days_running(first, today) or 0) >= rules.MIN_DAYS_BEFORE_PAUSE:
+                add(p, "ad", tid, a.get("name"), a.get("campaign"), "pause",
+                    f"صرف {x['s7']:.0f} ريال آخر 7 أيام بدون ولا نقرة. توجيه للواتساب: الطلبات ما تنقاس من المنصة، فالحكم على النقرات.",
+                    {**ev, "metric": "clicks", "clicks": x["c7"], "dest": "whatsapp"}, 90)
+        elif a.get("goal") == "lead" and t:
             if x["l7"] == 0 and x["s7"] >= rules.KILL_MULTIPLIER * t and (rules.days_running(first, today) or 0) >= rules.MIN_DAYS_BEFORE_PAUSE:
                 add(p, "ad", tid, a.get("name"), a.get("campaign"), "pause",
                     f"صرف {x['s7']:.0f} ريال آخر 7 أيام بدون ولا طلب، وهذا ضعف تكلفة الطلب المستهدفة ({t:.2f}) أو أكثر.", ev, 90)

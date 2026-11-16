@@ -1,6 +1,6 @@
 // /api/social/*: the post calendar of the user's company. Reads need the `social` dashboard, writes are same-origin.
 // Publishing itself runs from the Worker cron (src/modules/social/cron.ts), never from the browser.
-import { sb, json, readJson, handle, requireUser, audit, isOwner, type Cfg } from '../../lib/auth';
+import { sb, json, readJson, handle, requireUser, audit, isOwner, levelsOf, type Cfg, type Profile } from '../../lib/auth';
 import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { SOCIAL, readiness, validate, canApprove, cleanApprovers, suggestPrompt, cleanSuggestion, retryPlan, checkConnection, type SocialPlatform, type Results } from './social';
 import { saveValues } from '../../lib/vault';
@@ -9,8 +9,13 @@ import { check } from '../compliance/compliance';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
+<<<<<<< well
+import { MEDIA_TYPES, limitOf, tooBig, sniff, mediaKey } from './media';
+import { cachedStatus, postizPlatforms, withEngineSecrets, type EngineStatus } from './postiz';
+=======
 import { MEDIA_TYPES, MEDIA_MAX, mediaKey } from './media';
 import { guard, meter } from '../../lib/quotas';
+>>>>>>> hoven
 
 type Row = Record<string, unknown>;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);
@@ -23,13 +28,19 @@ const ONLY = (names: string[]) => names.length ? `الاعتماد لـ ${names.
 const day = (s: string | null, fallback: number) => { const t = Date.parse(s || ''); return new Date(Number.isFinite(t) ? t : fallback).toISOString(); };
 
 // The connected accounts, as the publisher sees them (src/modules/social/cron.ts): Hoven's vault today
-async function tokensFor(cfg: Cfg, co: string): Promise<Record<string, string>> {
+async function tokensFor(cfg: Cfg, co: string, e?: unknown): Promise<Record<string, string>> {
   if (co !== HOVEN_COMPANY) return {};
   const v = await sb<{ name: string; value: string }[]>(cfg, '/rest/v1/rpc/connector_env', { method: 'POST', admin: true, body: {} });
-  return Object.fromEntries((v.ok && Array.isArray(v.data) ? v.data : []).map(x => [x.name, x.value]));
+  return withEngineSecrets(Object.fromEntries((v.ok && Array.isArray(v.data) ? v.data : []).map(x => [x.name, x.value])), e);
 }
+// What the extra publishing engine reports (asked at most once a minute per Worker). A platform it carries is "ready" only when
+// the engine is set up AND that account is connected there. Not asked at all when no Postiz platform is involved or none is set up.
+const engineState = (t: Record<string, string>): Promise<EngineStatus> => cachedStatus(t);
 // Per platform: '' when it can go out, else why not (no token values leave the server)
-const readyOf = (t: Record<string, string>) => Object.fromEntries((Object.keys(SOCIAL) as SocialPlatform[]).map(p => [p, readiness(p, t)]));
+const readyOf = (t: Record<string, string>, s: EngineStatus | null) => Object.fromEntries((Object.keys(SOCIAL) as SocialPlatform[]).map(p => [p, readiness(p, t, s)]));
+// The platform list the page gets: `live` = can go out by itself right now (nothing says which engine does it)
+const platformsView = (ready: Record<string, string>) => Object.fromEntries((Object.entries(SOCIAL) as [SocialPlatform, (typeof SOCIAL)[SocialPlatform]][]).map(([k, s]) =>
+  [k, { name: s.name, max: s.max, ...('needsMedia' in s && s.needsMedia ? { needsMedia: true } : {}), live: s.live && !ready[k]!.startsWith('غير متاح') }]));
 
 // What each platform did, for the page: a code the page words in plain language. The platform's own message
 // (and the ids and Instagram container, which only matter to the server) go to the owner alone.
@@ -57,21 +68,25 @@ export const posts = {
     const { cfg, user } = await requireUser(request, e, 'social');
     const q = new URL(request.url).searchParams;
     const from = day(q.get('from'), Date.now() - 7 * 864e5), to = day(q.get('to'), Date.now() + 31 * 864e5);
-    const r = await sb(cfg, scoped(`/rest/v1/social_posts?select=*&publish_at=gte.${from}&publish_at=lte.${to}&order=publish_at.asc&limit=500`, user.co), { admin: true });
-    if (!r.ok) return json(500, { error: 'ما قدرت أقرأ المنشورات' });
-    // Each post carries its compliance notice, so an auto post shows it until it goes out
-    const extra = await rulesFor(cfg, user.co);
+    // The posts and everything the page needs beside them are asked together, not one after the other (each is a subrequest and a
+    // round trip). Rows are small (media is a list of links, never the file) and capped by the date window and the limit.
     const owner = isOwner(user, cfg);
-    return json(200, { posts: rows(r.data).map(p => ({ ...p, results: shownResults(p.results, owner), compliance: check(String(p.body || ''), extra) })), platforms: SOCIAL,
-      ready: readyOf(await tokensFor(cfg, user.co)), account: await accountOf(cfg, user.co) });
+    const [r, extra, tk] = await Promise.all([
+      sb(cfg, scoped(`/rest/v1/social_posts?select=*&publish_at=gte.${from}&publish_at=lte.${to}&order=publish_at.asc&limit=300`, user.co), { admin: true }),
+      rulesFor(cfg, user.co), tokensFor(cfg, user.co, e)]);
+    if (!r.ok) return json(500, { error: 'ما قدرت أقرأ المنشورات' });
+    const [state, account] = await Promise.all([engineState(tk), accountOf(cfg, user.co)]);
+    const ready = readyOf(tk, state);
+    return json(200, { posts: rows(r.data).map(p => ({ ...p, results: shownResults(p.results, owner), compliance: check(String(p.body || ''), extra) })), platforms: platformsView(ready),
+      ready, account });
   }),
   POST: handle(async (request, e) => {
     const { cfg, user } = await requireUser(request, e, 'social', { write: true });
-    const v = validate(await readJson(request), Date.now(), await rulesFor(cfg, user.co));
+    const tk = await tokensFor(cfg, user.co, e), ready = readyOf(tk, await engineState(tk));
+    const v = validate(await readJson(request), Date.now(), await rulesFor(cfg, user.co), p => SOCIAL[p].live && !ready[p]!.startsWith('غير متاح'));
     if (!v.draft) return json(400, { error: v.error, notices: v.notices });
     // A platform whose account is not connected would fail at its time: said now, while it can still be fixed
-    const ready = readyOf(await tokensFor(cfg, user.co));
-    for (const pl of v.draft.platforms) if (ready[pl] && SOCIAL[pl].live) v.notices.push(`${SOCIAL[pl].name}: ${ready[pl]}`);
+    for (const pl of v.draft.platforms) if (ready[pl] && SOCIAL[pl].live && !ready[pl].startsWith('غير متاح')) v.notices.push(`${SOCIAL[pl].name}: ${ready[pl]}`);
     const r = await sb<Row[]>(cfg, '/rest/v1/social_posts', { method: 'POST', admin: true, headers: { Prefer: 'return=representation' },
       body: { ...v.draft, company_id: user.co, status: 'scheduled', created_by: user.email } });
     if (!r.ok) return json(500, { error: 'ما انحفظ المنشور' });
@@ -112,6 +127,17 @@ export const posts = {
   }),
 };
 
+// Only people who hold «approve» on the Social tab (or the owner) can be named as approvers, so nobody else is listed or shown.
+const maskEmail = (e: string) => e.replace(/^(.).*(@.*)$/, '$1***$2');
+type Person = { email: string; name: string; eligible: boolean };
+async function peopleOf(cfg: Cfg, company: string): Promise<Person[]> {
+  const r = await sb<Profile[]>(cfg, scoped('/rest/v1/profiles?select=email,name,role,dashboards,access&active=eq.true&order=name.asc', company), { admin: true });
+  return (r.ok && Array.isArray(r.data) ? r.data : []).map(p => {
+    const email = String(p.email || '').toLowerCase();
+    return { email, name: p.name || '', eligible: p.role === 'owner' || email === cfg.owner || levelsOf(p).social === 'approve' };
+  });
+}
+
 // Who approves posts. Everyone in the tab reads it (the form says who will approve); only the owner changes it,
 // and only to people of the same company.
 export const approvers = {
@@ -119,22 +145,21 @@ export const approvers = {
     const { cfg, user } = await requireUser(request, e, 'social');
     const list = await approversOf(cfg, user.co);
     const owner = isOwner(user, cfg);
-    let people: { email: string; name: string }[] = [];
-    if (owner) {
-      const r = await sb<{ email: string; name?: string | null }[]>(cfg, scoped('/rest/v1/profiles?select=email,name&active=eq.true&order=name.asc', user.co), { admin: true });
-      people = r.ok && Array.isArray(r.data) ? r.data.map(p => ({ email: String(p.email || '').toLowerCase(), name: p.name || '' })) : [];
-    }
-    return json(200, { approvers: list, canApprove: canApprove(user.email, list, owner), owner, people });
+    const all = await peopleOf(cfg, user.co);
+    // `who`: what the form shows to everyone (a name, else a masked address); the addresses themselves go to the owner only
+    const who = list.map(e => all.find(p => p.email === e)?.name || maskEmail(e));
+    // The owner picks from eligible people only, so other accounts are neither listed nor one click from approving
+    const people = owner ? all.filter(p => p.eligible).map(({ email, name }) => ({ email, name })) : [];
+    return json(200, { approvers: owner ? list : [], who, canApprove: canApprove(user.email, list, owner), owner, people });
   }),
   PUT: handle(async (request, e) => {
     const { cfg, user } = await requireUser(request, e, 'social', { write: true });
     if (!isOwner(user, cfg)) return json(403, { error: 'تحديد المعتمد للمالك بس' });
     const want = cleanApprovers((await readJson(request)).approvers);
     // Only people of this company
-    const r = await sb<{ email: string }[]>(cfg, scoped('/rest/v1/profiles?select=email&active=eq.true', user.co), { admin: true });
-    const mine = new Set(r.ok && Array.isArray(r.data) ? r.data.map(p => String(p.email || '').toLowerCase()) : []);
+    const mine = new Set((await peopleOf(cfg, user.co)).filter(p => p.eligible).map(p => p.email));
     const bad = want.filter(x => !mine.has(x));
-    if (bad.length) return json(400, { error: `مو من يوزرز الشركة: ${bad.join('، ')}` });
+    if (bad.length) return json(400, { error: `مو من اللي عندهم صلاحية الموافقة في السوشال: ${bad.join('، ')}` });
     const u = await sb(cfg, `/rest/v1/companies?id=eq.${user.co}`, { method: 'PATCH', admin: true, body: { social_approvers: want } });
     if (!u.ok) return json(500, { error: 'ما انحفظ المعتمد' });
     await audit(cfg, user, 'social_approvers_set', { target: { approvers: want } });
@@ -176,7 +201,7 @@ export const pages = {
 export const connection = { GET: handle(async (request, e) => {
   const { cfg, user } = await requireUser(request, e, 'social', { well: true });
   if (!isOwner(user, cfg)) return json(403, { error: 'فحص الربط للمالك بس' });
-  return json(200, await checkConnection(await tokensFor(cfg, user.co)));
+  return json(200, await checkConnection(await tokensFor(cfg, user.co, e)));
 }) };
 
 // Upload a photo or video for a post: stored in R2 under social/<company>/<random>.<ext> and served at /m/… (public,
@@ -189,13 +214,20 @@ export const upload = { POST: handle(async (request, e) => {
   const type = (request.headers.get('content-type') || '').split(';')[0]!.trim().toLowerCase();
   const ext = MEDIA_TYPES[type];
   if (!ext) return json(415, { error: 'الملف لازم صورة (JPG / PNG / WebP) أو فيديو (MP4 / MOV)' });
+  // The size is judged from the header before the body is touched; the body then goes to R2 as a stream (R2 stops at the
+  // declared length, so a client that lies about it fails the put). Nothing is ever held in memory: a big video used to be
+  // read whole by arrayBuffer(), which could take the Worker's 128 MB and every other request on that isolate with it.
   const size = Number(request.headers.get('content-length') || 0);
-  if (size > MEDIA_MAX) return json(413, { error: 'الملف أكبر من 95 ميقا' });
-  const body = await request.arrayBuffer();
-  if (!body.byteLength) return json(400, { error: 'الملف فاضي' });
-  if (body.byteLength > MEDIA_MAX) return json(413, { error: 'الملف أكبر من 95 ميقا' });
+  if (request.headers.get('content-length') === '0') return json(400, { error: 'الملف فاضي' });
+  if (!(size > 0) || !request.body) return json(411, { error: 'ما قدرنا نعرف حجم الملف، جرّب ترفعه مرة ثانية' });
+  if (size > limitOf(type)) return json(413, { error: tooBig(type) });
   const key = mediaKey(user.co, ext);
-  await files.put(key, body, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } });
+  try { await files.put(key, request.body, { httpMetadata: { contentType: type, cacheControl: 'public, max-age=31536000, immutable' } }); }
+  catch { return json(502, { error: 'انقطع الرفع، جرّب مرة ثانية' }); }
+  // The first bytes must be what the type says (a renamed file is not a photo or video); a mismatch is deleted again
+  const head = await files.get(key, { range: { offset: 0, length: 16 } }).catch(() => null);
+  const real = head?.body ? sniff(new Uint8Array(await new Response(head.body).arrayBuffer())) : null;
+  if (!real || (real !== type && !(real.startsWith('video/') && type.startsWith('video/')))) { await files.delete(key).catch(() => {}); return json(415, { error: 'محتوى الملف ما يطابق نوعه. ارفع صورة أو فيديو سليم' }); }
   const url = new URL('/m/' + key.slice('social/'.length), request.url).toString();
   return json(200, { ok: true, url, type: type.startsWith('video/') ? 'video' : 'image' });
 }) };
@@ -216,4 +248,13 @@ export const suggest = { POST: handle(async (request, e: Parameters<typeof requi
   const text = cleanSuggestion(out.response, platforms);
   if (text.length < 20) return json(502, { error: 'ما طلع نص واضح، جرّب مرة ثانية' });
   return json(200, { body: text, engine: out.engine, compliance: check(text, await rulesFor(cfg, user.co)) });
+}) };
+
+// Owner only: is the extra publishing engine reachable, is its key valid, and which platforms have a connected account there.
+// Reads only (nothing is posted); channel names only, never a key. Asked fresh every time (the page caches nothing).
+export const engine = { GET: handle(async (request, e) => {
+  const { cfg, user } = await requireUser(request, e, 'social', { well: true });
+  if (!isOwner(user, cfg)) return json(403, { error: 'فحص النشر للمالك بس' });
+  const s = await cachedStatus(await tokensFor(cfg, user.co, e), fetch, Date.now(), true);
+  return json(200, { status: s.code, channels: s.channels, platforms: postizPlatforms.map(p => ({ key: p, name: SOCIAL[p].name })) });
 }) };

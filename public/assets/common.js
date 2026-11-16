@@ -1,6 +1,7 @@
 // أدوات مشتركة: الطلبات، والأيقونات، والتواريخ، وهيكل التطبيق (القائمة الجانبية والشريط العلوي)
 import { LANG, t, langSwitch, restoreDraft } from './i18n.js';
-import { sections, TIP } from './sidebar.js';
+import { sections, TIP, startsShut, wireGroups } from './sidebar.js';
+import { agentDots } from './agentdots.js';
 import { ME_KEY, FRESH, readMe, slim } from './me-cache.js';
 export { LANG, t, langSwitch };
 // Pages switch with Astro's ClientRouter: listeners on document/window of one page are removed when it leaves
@@ -16,6 +17,8 @@ window.addEventListener('unhandledrejection', e => {
 export const pageSignal = () => PAGE.signal;
 export const $ = (s, el = document) => el.querySelector(s);
 export const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+import { friendly, safeUrl, safeSrc, arabicOr } from './safe.js';
+export { friendly, safeUrl, safeSrc, arabicOr };
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Every failure reaches the page as an Error with a message in Arabic: a dropped connection, a request that hangs
@@ -44,7 +47,7 @@ export async function api(path, { method = 'GET', body, timeout = 90000 } = {}) 
 // Streaming POST (the shared live-text component). The route answers JSON (a question or an error) or text/event-stream:
 // `delta` text, `reset` (the writer changed, drop what you showed), then `result` with the final payload. `onText(text)` gets the whole text so far.
 // Abort `signal` to stop. Returns the JSON, or the `result` event; a stopped run returns null.
-export async function apiStream(path, body, { onText = () => {}, signal } = {}) {
+export async function apiStream(path, body, { onText = () => {}, onStep = () => {}, signal } = {}) {
   let res;
   try { res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), credentials: 'same-origin', signal }); }
   catch (err) { if (signal?.aborted) return null; throw Object.assign(new Error('ما قدرت أوصل للخادم. تأكد من الاتصال وجرّب مرة ثانية'), { status: 0, retryable: true }); }
@@ -56,15 +59,16 @@ export async function apiStream(path, body, { onText = () => {}, signal } = {}) 
     return data;
   }
   const reader = res.body.getReader(), dec = new TextDecoder();
-  let buf = '', text = '', result = null, failed = false;
+  let buf = '', text = '', result = null, failed = false, why = '';
   const take = block => {
     const line = block.split('\n').find(l => l.startsWith('data:'));
     if (!line) return;
     let ev; try { ev = JSON.parse(line.slice(5)); } catch { return; }
     if (ev.type === 'delta') { text += ev.text; onText(text); }
     else if (ev.type === 'reset') { text = ''; onText(text); }
+    else if (ev.type === 'step') onStep(ev);
     else if (ev.type === 'result') result = ev;
-    else if (ev.type === 'error') failed = true;
+    else if (ev.type === 'error') { failed = true; if (/[\u0600-\u06FF]/.test(ev.message || '')) why = ev.message; }   // an Arabic sentence is for the user; a code is not
   };
   try {
     for (;;) {
@@ -75,7 +79,7 @@ export async function apiStream(path, body, { onText = () => {}, signal } = {}) 
     }
   } catch (err) { if (signal?.aborted) return null; throw err; }
   if (signal?.aborted) return null;
-  if (failed || !result) throw new Error('ما طلع جواب أقدر أقراه، جرّب مرة ثانية');
+  if (failed || !result) throw new Error(why || 'ما طلع جواب أقدر أقراه، جرّب مرة ثانية');
   return result;
 }
 // The readable part of a JSON answer still being written: its string values, one per line, keys left out
@@ -84,7 +88,7 @@ export const liveText = raw => [...String(raw).matchAll(/"((?:[^"\\]|\\.)*)"(\s*
 // `retry` runs again the load that failed. Used by every tab's first load.
 export function failure(el, err, retry) {
   if (!el) return;
-  el.innerHTML = `<div class="card empty failure" role="alert">${icon('alert')}<div>${esc(err?.message || 'صار خطأ')}</div>`
+  el.innerHTML = `<div class="card empty failure" role="alert">${icon('alert')}<div>${esc(friendly(err?.message || 'صار خطأ'))}</div>`
     + (retry ? `<button class="btn secondary" type="button" data-retry style="margin-top:12px">${icon('refresh')}حاول مرة ثانية</button>` : '') + '</div>';
   const b = $('[data-retry]', el);
   if (b) b.onclick = () => { b.disabled = true; el.innerHTML = '<p class="muted">يحمّل…</p>'; Promise.resolve().then(retry).catch(e => failure(el, e, retry)); };
@@ -115,6 +119,7 @@ const P = {
   out: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>',
   panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   x: '<path d="M18 6 6 18M6 6l12 12"/>',
@@ -140,13 +145,22 @@ export const day = iso => iso ? DD.format(new Date(iso)) : '—';
 export const fmt = (n, d = 0) => n == null || !isFinite(n) ? '—' : Number(n).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 export const sar = n => n == null || !isFinite(n) ? '—' : fmt(n, Math.abs(n) < 100 ? 2 : 0);
 
+// One-key shortcuts (c, /, 1-5 …) can be switched off (WCAG 2.1.4: a single-key shortcut must have a way to turn it off). Kept on this device.
+export const shortcutsOn = () => { try { return localStorage.getItem('wl-keys') !== 'off'; } catch { return true; } };
+export function shortcutSwitch(host) {
+  if (!host || host.querySelector('[data-keys]')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sm ghost'; b.dataset.keys = '1';
+  const paint = () => { const on = shortcutsOn(); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'اختصارات الكيبورد: شغّالة' : 'اختصارات الكيبورد: موقفة'; if (LANG === 'en') b.textContent = t(b.textContent); };
+  b.onclick = () => { try { localStorage.setItem('wl-keys', shortcutsOn() ? 'off' : 'on'); } catch { /* storage blocked */ } paint(); };
+  paint(); host.append(b);
+}
 export function say(el, text, ok = false) {
   el.className = 'msg ' + (text ? (ok ? 'ok' : 'err') : '');
-  el.innerHTML = text ? (ok ? icon('check') : icon('alert')) + `<span>${esc(text)}</span>` : '';
+  el.innerHTML = text ? (ok ? icon('check') : icon('alert')) + `<span>${esc(ok ? text : friendly(text))}</span>` : '';
 }
 export function toast(text, bad = false) {
   const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', bad ? 'alert' : 'status');
-  t.innerHTML = icon(bad ? 'alert' : 'check') + `<span>${esc(text)}</span>`; document.body.appendChild(t);
+  t.innerHTML = icon(bad ? 'alert' : 'check') + `<span>${esc(bad ? friendly(text) : text)}</span>`; document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);
 }
 export function busy(btn, on) { if (!btn) return; btn.classList.toggle('loading', on); btn.disabled = on; }
@@ -179,22 +193,25 @@ function drawSide(side, me, active) {
   const initials = (me.name || me.email || '·').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   // كل الأقسام تطلع للكل: اللي ما له صلاحية عليه أو مقفل لشركته يطلع بقفل
   // Quick create (shadcn dashboard-01 'Quick Create'): only what this user can open
-  const NEW = [['control', '/control/new/', 'قرار جديد', 'gavel'], ['social', '/social/', 'منشور جديد', 'calendar'], ['design', '/design/', 'تصميم جديد', 'image'], ['copy', '/copy/', 'نص إعلان جديد', 'pen']];
+  const NEW = [['control', '/control/new/', 'قرار جديد', 'gavel'], ['social', '/social/', 'منشور جديد', 'calendar'], ['design', '/design/', 'تصميم جديد', 'image'], ['copy', '/content/?tab=copy', 'نص إعلان جديد', 'pen']];
   const can = new Set(sections(me, L).flatMap(sec => sec.items).filter(it => it.state === 'ok').map(it => it.key));
   const quick = NEW.filter(([k]) => can.has(k));
   side.innerHTML = `<div class="side-top"><a class="brand mark" href="/today/" aria-label="Hoven">Hoven<i>.</i></a><button type="button" class="btn icon ghost side-fold" id="sideFold" aria-label="${L('طي القائمة', 'Collapse menu')}" aria-pressed="false">${icon('panel')}</button><button class="btn icon ghost side-x" type="button" data-close-side aria-label="${L('إغلاق القائمة', 'Close menu')}">${icon('x')}</button></div>
     ${quick.length ? `<div class="qc"><button type="button" class="btn primary qc-btn" id="qcBtn" aria-haspopup="menu" aria-expanded="false">${icon('plus')}<span>${L('جديد', 'New')}</span></button>
       <div class="menu qc-menu" id="qcMenu" role="menu" hidden>${quick.map(([, href, t, ic]) => `<a href="${href}" role="menuitem">${icon(ic)}${t}</a>`).join('')}</div></div>` : ''}
-    ${sections(me, L).map(sec => `<div class="side-sec"><small class="side-h">${esc(sec.label)}</small>${sec.items.map(it => {
+    ${sections(me, L).map(sec => `<div class="side-sec${startsShut(sec, active) ? ' shut' : ''}"><button type="button" class="side-h" data-g="${sec.key}" aria-expanded="${!startsShut(sec, active)}" aria-controls="sg-${sec.key}"><span>${esc(sec.label)}</span>${icon('chev', 'chv')}</button><div class="side-items" id="sg-${sec.key}">${sec.items.map(it => {
       const ic = it.svg ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${it.svg}</svg>` : icon(it.ic);
       if (it.state === 'ok' || it.state === 'soon') return `<a class="navi${it.state === 'soon' ? ' soon' : ''}" href="${it.href}" data-k="${esc(it.key)}"${FULL(it.href)}${it.key === active ? ' aria-current="page"' : ''}>${ic}<span>${esc(it.text)}</span>${it.state === 'soon' ? `<small class="tag">${L('قريباً', 'Soon')}</small>` : ''}</a>`;
-      return `<span class="navi locked" aria-disabled="true" data-tip="${L(...TIP[it.state])}">${ic}<span>${esc(it.text)}</span>${icon('lock', 'lk')}</span>`;
-    }).join('')}</div>`).join('')}
+      // A locked entry can be reached by keyboard and says why (a screen reader reads the reason, the tooltip shows it on hover and focus)
+      return `<span class="navi locked" role="link" tabindex="0" aria-disabled="true" aria-label="${esc(it.text)}، ${L(...TIP[it.state])}" data-tip="${L(...TIP[it.state])}">${ic}<span>${esc(it.text)}</span>${icon('lock', 'lk')}</span>`;
+    }).join('')}</div></div>`).join('')}
     <div class="grow"></div>
     <a class="navi" href="/settings/" data-k="settings"${active === 'settings' ? ' aria-current="page"' : ''}>${icon('settings')}<span>الإعدادات</span></a>
     <button class="me" id="meBtn" aria-haspopup="menu" aria-expanded="false"><span class="avatar">${esc(initials)}</span>
-      <span class="who"><b>${esc(me.name || me.email || '')}</b><span class="muted">${me.role === 'owner' ? 'المالكة' : (me.departments || []).length ? 'مدير قسم' : 'عضو'}</span></span></button>
+      <span class="who"><b>${esc(me.name || me.email || '')}</b><span class="muted">${me.role === 'owner' ? 'المالك' : (me.departments || []).length ? 'مدير قسم' : 'عضو'}</span></span></button>
     <div class="menu" id="meMenu" role="menu" hidden><a href="/account/" role="menuitem">${icon('user')}حسابي</a><form method="post" action="/api/auth/logout" style="margin:0"><button type="submit" role="menuitem">${icon('out')}خروج</button></form></div>`;
+  wireGroups(side);
+  if (!side.dataset.dots) { side.dataset.dots = '1'; agentDots(side, L); }
   side.querySelector('form')?.addEventListener('submit', () => { try { localStorage.removeItem(ME_KEY); } catch { /* storage blocked */ } });
   // Navigation labels as tooltips, used when the menu is folded to icons
   side.querySelectorAll('.navi').forEach(a => { const t = a.querySelector('span')?.textContent; if (t && !a.title) a.title = t; });
@@ -219,7 +236,7 @@ function bindMe() {
 }
 
 // الهيكل: قائمة جانبية بأيقونات + شريط علوي. tools = HTML لأدوات الشريط.
-export async function shell({ active, title, badge = '', tools = '' }) {
+export async function shell({ active, title, badge = '', tools = '', section = active }) {
   const app = $('#app'), side = $('#side', app);
   // The title bar needs nothing from the server: it goes up before the user is known
   $('#top', app).innerHTML = `<div class="t"><button class="btn icon ghost burger" id="burger" aria-label="القائمة" aria-controls="side" aria-expanded="false">${icon('menu')}</button><h1>${esc(title)}</h1>${badge}</div><div class="tools"><span id="tools">${tools}</span>${langSwitch()}</div>`;
@@ -237,9 +254,11 @@ export async function shell({ active, title, badge = '', tools = '' }) {
   drawer(app, side);
   restoreDraft();
   warmAnalytics(app);
+  // Old numbers are said out loud on every page, in plain words (public/assets/freshness.js)
+  import('./freshness.js').then(m => m.staleBanner($('#content', app))).catch(() => {});
   import('./vitals.js').then(m => m.measure()).catch(() => {});
   // Every live tab ends with its lessons card (learning loop, docs/learning-loops.md)
-  if ((me.modules || []).some(m => m.key === active && m.status === 'live' && m.ok && !m.locked)) import('./lessons.js').then(m => m.lessonsCard(active)).catch(() => {});
+  if ((me.modules || []).some(m => m.key === section && m.status === 'live' && m.ok && !m.locked)) import('./lessons.js').then(m => m.lessonsCard(section)).catch(() => {});
   return me;
 }
 
@@ -278,10 +297,35 @@ function warmAnalytics(app) {
 // تبويبات الإعدادات فوق المحتوى: حسابي للكل، والصلاحيات والدخول للمالكة بس
 export function settingsTabs(current, me) {
   const tabs = [['/account/', 'حسابي', 'user', 'account', true], ['/admin/', 'الصلاحيات والدخول', 'users', 'admin', me.role === 'owner'],
+<<<<<<< well
+    ['/admin/modules/', 'الموديولات', 'grid', 'modules', me.role === 'owner']];
+  // The pages carry an empty <nav id="settingsTabs"> so the row has its height from the first paint; it is filled here
+  const slot = $('#settingsTabs'), nav = document.createElement('nav');
+=======
     ['/admin/modules/', 'الموديولات', 'grid', 'modules', me.role === 'owner'],
     ['/admin/usage/', 'الاستخدام', 'chart', 'usagemgr', me.role === 'owner']];
   const nav = document.createElement('nav');
+>>>>>>> hoven
   nav.className = 'tabs settings-tabs'; nav.setAttribute('aria-label', 'الإعدادات');
   nav.innerHTML = tabs.filter(x => x[4]).map(([h, t, ic, k]) => `<a href="${h}"${k === current ? ' aria-current="page"' : ''}>${icon(ic)}<span>${t}</span></a>`).join('');
-  $('#content').prepend(nav);
+  // A new element replaces the placeholder (the English page translates new nodes, not attributes changed on old ones)
+  if (slot) slot.replaceWith(nav); else $('#content').prepend(nav);
+}
+
+// One tab with sections (voice: text and voiceover, content: content and copywriter): a switch at the top of the page.
+// The sections come from the server's module list (modules with `into`); a section this user cannot open, or that is locked
+// for the company, shows with its lock like the sidebar does. Each section is its own page, so a click is a navigation.
+export function sectionTabs(me, host, active, first) {
+  const el = $('#tabsw'); if (!el) return;
+  const L = (ar, en) => (LANG === 'en' ? en : ar);
+  const mods = me.modules || [];
+  const self = mods.find(m => m.key === host);
+  const kids = mods.filter(m => m.into === host && m.status === 'live');
+  if (!self || !kids.length) { el.hidden = true; return; }
+  const items = [{ key: host, href: `/${host}/`, text: L(first[0], first[1]), on: !self.locked && self.ok, why: self.locked ? 'locked' : 'noaccess' },
+    ...kids.map(k => ({ key: k.key, href: `/${host}/?tab=${k.key}`, text: L(k.ar, k.en), on: !k.locked && k.ok, why: k.locked ? 'locked' : 'noaccess' }))];
+  el.innerHTML = items.map(it => it.on
+    ? `<a class="sec-tab" href="${it.href}"${it.key === active ? ' aria-current="page"' : ''}>${esc(it.text)}</a>`
+    : `<span class="sec-tab locked" role="link" tabindex="0" aria-disabled="true" aria-label="${esc(it.text)}، ${esc(L(...TIP[it.why]))}" title="${esc(L(...TIP[it.why]))}">${esc(it.text)}</span>`).join('');
+  el.hidden = false;
 }

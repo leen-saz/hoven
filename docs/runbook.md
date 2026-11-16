@@ -13,7 +13,12 @@ Production is deployed by hand (ADR-0005): Actions → **deploy** → Run workfl
    never drop or rename in the same release). Migrations are not rolled back with the Worker.
 4. **Secrets and variables.** A new secret named in the release goes into Cloudflare → Workers → upstream → Settings first
    (`docs/secrets/worker.env.example` lists them). `/api/health` shows `supabase: down` if the Supabase ones are wrong.
-5. Write down the current version for a rollback: `npx wrangler deployments list --env production` (top line = live version id), or the
+5. **Owner email.** `OWNER_EMAIL` is a Worker secret per environment, not a line in the public `wrangler.jsonc`. If it is missing the Worker answers every
+   request with an error, so `deploy` stops before deploying. Set it once per environment: `npx wrangler secret put OWNER_EMAIL --env production` (and `--env staging`),
+   and type the owner's sign-in email. A secret survives every deploy; a plain variable set in the dashboard would be wiped by the next `wrangler deploy`.
+6. **Scheduled jobs token.** `GH_DISPATCH_TOKEN` (fine-grained token, Actions read and write on this repo) must be a Worker secret too: without it the hourly refresh,
+   the weekly backup and the monthly restore test never start, and the only sign is a console error and a note in R2. Check it after every deploy.
+7. Write down the current version for a rollback: `npx wrangler deployments list --env production` (top line = live version id), or the
    last "deploy" run's summary.
 
 ## Deploy
@@ -27,6 +32,7 @@ and every dependency `up`. A red health step means the version is live but wrong
 - Sign in as the owner: start page loads, sidebar shows every tab, open two tabs you did not change.
 - Cloudflare → Workers → upstream → Logs: no burst of errors after the deploy time.
 - Cron: the next `*/5` run is not erroring (`scheduled` events in the same logs).
+- Watchdog (hourly Cron trigger, minute 7, `src/lib/watchdog.ts`): alerts when `dash.json` is older than 3 hours, repeats at most every 6 hours, and says once when it recovers. Channels are the Worker secrets `ALERT_WEBHOOK_URL` and/or `RESEND_API_KEY` + `ALERT_EMAIL_FROM` + `ALERT_EMAIL_TO` (`docs/secrets/worker.env.example`). With none set it only logs: set one, or nobody is told. Its state is `site/watchdog-state.json` in R2.
 
 ## Roll back (under 5 minutes)
 Decide fast: if the health step is red, or a tab people use is broken, roll back first and debug after.
@@ -58,6 +64,34 @@ Notes
 | `storage: down` | R2 binding/bucket changed | check `wrangler.jsonc` bucket names and the bucket's existence |
 | `ai: unset` | no Workers AI binding in this env | expected locally; production must have it |
 
+## Google Ads in the hourly data pull (سحب البيانات)
+Every Google Ads call needs these secrets in the `production` environment (Settings → Environments → production → Secrets, or `gh secret set NAME --env production`):
+`GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`, `GOOGLE_ADS_REFRESH_TOKEN`, `GOOGLE_ADS_CUSTOMER_ID`, `GOOGLE_ADS_DEVELOPER_TOKEN`
+(and `GOOGLE_ADS_LOGIN_CUSTOMER_ID` when the account sits under a manager account). Google rejects any call without the developer token.
+- **Token missing:** only the google part of the pull fails. Its status in `dash.json` is `ok: false` with an Arabic message that names `GOOGLE_ADS_DEVELOPER_TOKEN`;
+  Meta, Snapchat and TikTok keep working and Google keeps showing its last good figures as stale. The connectors page shows Google as not connected until the token is set.
+- Explorer access on the Google Ads API is enough for reading. Nothing here changes campaigns.
+
+## TikTok history (private bucket, not a git branch)
+- **Where:** `hoven-files` at `private/tiktok/tiktok.json`. The Worker only serves the mapped `site/…` and `thumbs/…` keys, so this key is never public. The old public branch `tiktok-data` is no longer read by anything.
+- **How it works:** every hourly run restores the file, the TikTok MCP step merges the last ~90 days into it, and the run writes it back only if it passes `pipeline/tiktok/history_check.py` (valid rows, same first and last day, no more than 5% fewer rows). Days older than the MCP window exist only in this file.
+- **No file in the bucket:** the MCP step is skipped (warning `tiktok-history`) and the dashboard keeps the previous TikTok numbers. Nothing is lost, but TikTok stops updating until the file is seeded.
+- **One-time seed (Leen, from the last good snapshot):**
+  `git clone --branch tiktok-data --single-branch https://github.com/leen-saz/hoven.git /tmp/tt && npx wrangler r2 object put hoven-files/private/tiktok/tiktok.json --file /tmp/tt/tiktok.json --content-type application/json --remote`
+  then delete the clone. Do this before the PR that drops the checkout is merged, or right after: until then TikTok shows the previous numbers.
+- **Delete the old branch (after the seed and one green hourly run):** `gh api -X DELETE repos/leen-saz/hoven/git/refs/heads/tiktok-data`
+
+## Data pull safety (what the hourly run does when something goes wrong)
+- **Windows are replaced after the write:** the last 3 days (90 at 05:00 Riyadh) of a platform are upserted first and only the rows the fresh fetch no longer returns are deleted, and only if the fetch returned rows. A failed or empty pull never leaves a hole.
+- **Nothing is saved to the database from a bad pull:** the pull is validated first (shape, and a platform that had spend and now has neither spend nor ads is refused).
+- **Currency is read per platform** (Meta account currency, Google `customer.currency_code`, Snap `adaccount.currency`). SAR and USD are converted, any other currency fails that platform. If the lookup itself fails the old assumption stays (Meta USD, Google and Snap SAR) with a note.
+- **Retries:** 429, 5xx, network errors and Meta throttle codes are retried with growing waits and jitter, within `RETRY_BUDGET_SECONDS` (default 1200) for the whole run.
+- **Errors are short codes** (`auth`, `rate_limit`, `http_5xx`, `network`, `http_4xx`, `error`) in `data.json` and the public log, never the upstream text.
+- **Steps report failure:** `data-status.json` marks the TikTok pull, observe, outcomes and execute steps as failed when they crash (they used to report ok).
+- **Upload order:** per-audience data, `data.json` and the pages go up first, `dash.json` and `data-status.json` last, each with up to 3 tries.
+- **Workflow tokens:** the Cloudflare token is on the steps that run wrangler only, `npm ci --ignore-scripts` everywhere, and the deploy checkout keeps no git credentials.
+- **`execute-smoke`** needs an `approval_id` (an approved decision from the last 48 hours) and writes its audit row before it pauses anything. Add required reviewers to the `production` environment for a second pair of eyes.
+
 ## Settings only the repository owner can change
 - **Branch protection / rulesets on `main`**: add the status check `smoke` (the job of `.github/workflows/smoke.yml`) next to `ci / gate`, so a PR cannot merge with a red smoke run.
   The deploy workflow already needs it: `deploy` calls `smoke.yml` through `workflow_call` and `needs: [ci, smoke]`, no setting required.
@@ -68,3 +102,15 @@ Notes
 Failed smoke runs upload `test-results/` (the repo is public). The suite uses synthetic accounts (`*@example.test`), a fake Supabase and synthetic pages only;
 traces, screenshots and videos are switched off in `playwright.smoke.config.ts`, so the artifact holds only text error context of those synthetic pages.
 Never point the suite at staging or production, and never add real data to `tests/smoke/`.
+
+## Backups (weekly, encrypted, private)
+- **What:** `db-backup` dumps every table in `supabase/backup.py` plus the Auth users, encrypts the archive (AES-256, `BACKUP_PASSPHRASE`) and stores it in the private R2 bucket `well-ads-backups` as `weekly/<date>.enc` and `latest.enc`. It is never an Actions artifact and never goes into the repo (public). Before uploading it decrypts its own file and runs the restore checks; a backup that does not open is not uploaded.
+- **When:** every Sunday 02:00 UTC (the hourly Worker trigger of that hour starts it) (GitHub's own `schedule` does not fire for this repo; the workflow keeps one as a second path). Run now: Actions → **db-backup** → Run workflow.
+- **Restore test (monthly):** `db-restore-test` runs on the 1st at 03:00 UTC (after a backup could have run that day): downloads `latest.enc`, decrypts it with the passphrase, and checks `supabase/backup_check.py` (fresh within 9 days, every table file equals its manifest, core tables not empty, migrations included). The log has table names only. A red run = the backup cannot be trusted: fix the same day.
+- **Quarterly drill (by hand, 30 min):** create a scratch Supabase project, run `supabase/migrations/*.sql` in order, then load the `backup/<table>.json` files with the service key, and open the app against it. Delete the scratch project after. Record the date here: _not done yet_.
+- **Retention:** 90 days, enforced by a bucket lifecycle rule (so the weekly files of the last ~13 weeks stay). Keep your own offline copy of the passphrase: without it nothing opens.
+- **One-time setup (Leen):** (1) create the bucket `well-ads-backups` in Cloudflare R2 and keep it private (no public domain, no `r2.dev` URL, no Worker binding); (2) `npx wrangler r2 bucket lifecycle add well-ads-backups expire-90d --expire-days 90`; (3) make sure the production environment has `BACKUP_PASSPHRASE`, `CLOUDFLARE_API_TOKEN` (R2 write on that bucket) and `CLOUDFLARE_ACCOUNT_ID`; (4) run **db-backup** once by hand, then **db-restore-test**, and expect both green.
+- **Decrypt by hand:** `npx wrangler r2 object get well-ads-backups/latest.enc --file backup.enc --remote`, then `openssl enc -d -aes-256-cbc -pbkdf2 -in backup.enc | tar xz`.
+
+## Cron triggers (limit: 5 per account on Workers Free)
+This Worker has two: `*/5 * * * *` (due social posts, listening, transcription) and `7 * * * *` (hourly). The hourly one runs, by the scheduled time in UTC (`hourlyTasks` in `src/lib/cron.ts`): the data refresh dispatch and the watchdog every hour, the backup on Sunday at 02, and the restore test on the 1st at 03. A new periodic job goes into `hourlyTasks`, not into a new trigger: a deploy with more than the account allows fails (code 10072) and leaves the triggers half-updated. `tests/unit/cron-syntax.test.ts` keeps it at 3 or fewer.

@@ -73,6 +73,7 @@ import { ClientRouter } from 'astro:transitions';
 .dz-size{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
 .dz-size span{grid-column:2;font-size:12px;color:var(--muted)}
 .dz-size:has(input:checked){border-color:var(--accent,#294036)}
+.dz-bg{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--tint);border-inline-start:4px solid var(--pulse,#B3261E);font-size:14px}.dz-bg span{flex:1 1 260px}
 .dz-more{margin-top:12px}.dz-more summary{cursor:pointer;font-weight:600;padding:6px 0}
 .dz-kind{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 14px}.dz-kind .seg button{height:36px}
 .mv-grid{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:16px;align-items:start}
@@ -116,9 +117,9 @@ import { ClientRouter } from 'astro:transitions';
               <label for="photo">صورة منتجك الأصلية <span class="muted">(اختياري: المصمم يحطها في مشهد جديد، وبدونها يصمم خلفية)</span></label><input id="photo" type="file" accept="image/*">
               <div class="dz-thumbs" id="thumbs" aria-live="polite"></div>
               <fieldset class="dz-sizes"><legend>وين بينشر؟</legend>
-                <label class="dz-size"><input type="checkbox" name="size" value="square" checked><b>بوست</b><span>إنستغرام وفيسبوك · مربع 1:1</span></label>
+                <label class="dz-size"><input type="checkbox" name="size" value="square" checked><b>بوست</b><span>انستقرام وفيسبوك · مربع 1:1</span></label>
                 <label class="dz-size"><input type="checkbox" name="size" value="story" checked><b>ستوري وريلز</b><span>سناب، تيك توك، ستوري · طولي 9:16</span></label>
-                <label class="dz-size"><input type="checkbox" name="size" value="portrait"><b>بوست طولي</b><span>إنستغرام · 4:5</span></label>
+                <label class="dz-size"><input type="checkbox" name="size" value="portrait"><b>بوست طولي</b><span>انستقرام · 4:5</span></label>
                 <label class="dz-size"><input type="checkbox" name="size" value="landscape"><b>إعلان رابط</b><span>فيسبوك وقوقل · عرضي</span></label></fieldset>
               <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit">صمّم</button></div>
               <div class="msg" id="msg" role="status"></div>
@@ -133,10 +134,11 @@ import { ClientRouter } from 'astro:transitions';
               <p class="muted dz-note">صورة المنتج تنرسل لخدمة التصميم بالذكاء الاصطناعي بمقاس 1024 عشان يحطها في مشهد جديد. الصور المرجعية تنرسل نسخة صغيرة عشان يوصف أسلوبها بس. ولا وحدة تنحفظ عندنا.</p>
             </form>
           </section>
-          <div class="ls-out"><section class="card pad" id="ref"><p class="muted">املأ التفاصيل واضغط "صمّم".</p></section><section class="card pad" id="vars"></section></div>
+          <div class="ls-out"><section class="card pad" id="ref"><p class="muted">املأ التفاصيل واضغط "صمّم".</p></section><section class="card pad" id="vars" hidden></section></div>
         </div>
         <h2 style="margin:18px 0 10px">المعاينة</h2>
-        <div class="dz-prev" id="prev"></div>
+      <div class="dz-bg" id="bgNote" hidden role="alert"><span id="bgMsg"><span id="bgWhy"></span> <span id="bgNow"></span> <a href="/connectors/" id="bgLink" hidden>افتح صفحة الربط</a></span><button class="btn sm secondary" type="button" id="bgRetry">جرّب الخلفية مرة ثانية</button></div>
+        <div class="dz-prev" id="prev"><p class="muted dz-empty">المعاينة تظهر هنا بعد ما تضغط «صمّم».</p></div>
       </div>
       <div id="motionFlow" hidden>
         <div id="setup"></div>

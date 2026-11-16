@@ -20,7 +20,7 @@ class Lines(unittest.TestCase):
 
     def test_tiktok_vault_row_is_what_refresh_passes_to_the_job(self):
         token = "vault-tiktok-token"
-        ids = "7532842350553514000"
+        ids = "7000000000000000001"
         out = "".join(lines([
             {"name": "TIKTOK_ACCESS_TOKEN", "value": token},
             {"name": "TIKTOK_ADVERTISER_IDS", "value": ids},
@@ -43,11 +43,11 @@ class Lines(unittest.TestCase):
         try:
             os.environ["TIKTOK_ACCESS_TOKEN"] = "github-tiktok-token"
             os.environ["V_TIKTOK_ACCESS_TOKEN"] = "vault-tiktok-token"
-            os.environ["TIKTOK_ADVERTISER_IDS"] = "6948010864247046146"
-            os.environ["V_TIKTOK_ADVERTISER_IDS"] = "7532842350553514000"
+            os.environ["TIKTOK_ADVERTISER_IDS"] = "7000000000000000002"
+            os.environ["V_TIKTOK_ADVERTISER_IDS"] = "7000000000000000001"
             got = env()
             self.assertEqual(got["TIKTOK_ACCESS_TOKEN"], "github-tiktok-token")
-            self.assertEqual(got["TIKTOK_ADVERTISER_IDS"], "6948010864247046146")
+            self.assertEqual(got["TIKTOK_ADVERTISER_IDS"], "7000000000000000002")
         finally:
             for k, v in old.items():
                 if v is None:
@@ -58,3 +58,15 @@ class Lines(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MaskLines(unittest.TestCase):
+    def test_single_line_is_masked_whole(self):
+        from modules.core.connections import mask_lines
+        self.assertEqual(mask_lines("abc"), ["abc"])
+        self.assertEqual(mask_lines("  "), [])
+
+    def test_multi_line_json_skips_structural_lines(self):
+        from modules.core.connections import mask_lines
+        value = '{\n  "private_key": "-----BEGIN KEY-----abcdef",\n  "a": 1\n}'
+        self.assertEqual(mask_lines(value), ['"private_key": "-----BEGIN KEY-----abcdef",'])

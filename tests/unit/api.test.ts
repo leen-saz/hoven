@@ -7,7 +7,7 @@ describe('api', () => {
     const res = await api.request('/api/health');
     expect(res.status).toBe(200);
     // No bindings in the test: the version defaults to dev and nothing is configured
-    expect(await res.json()).toEqual({ ok: false, version: 'dev', env: 'local', checks: { supabase: 'unset', storage: 'unset', ai: 'unset' } });
+    expect(await res.json()).toMatchObject({ ok: false, version: 'dev', env: 'local', checks: { supabase: 'unset', storage: 'unset', ai: 'unset' }, data: { level: 'unknown' } });
   });
 
   it('unknown /api route is a JSON 404', async () => {
@@ -21,6 +21,10 @@ describe('security headers', () => {
   it('adds noindex and the hardening headers', () => {
     const res = withSecurityHeaders(new Response('x'));
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) expect(res.headers.get(k)).toBe(v);
+  });
+
+  it('isolates the browsing context from cross-origin windows', () => {
+    expect(withSecurityHeaders(new Response('x')).headers.get('Cross-Origin-Opener-Policy')).toBe('same-origin');
   });
 
   it('locks down responses that have no CSP', () => {

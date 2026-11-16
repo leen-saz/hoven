@@ -11,6 +11,22 @@ export default async function mount() {
       <header><b>${esc(t.name)}</b><span class="chip line">${esc(KINDS[t.kind] || t.kind)}</span>${t.category ? `<span class="chip line">${esc(t.category)}</span>` : ''}${t.favorite ? '<span class="chip">★</span>' : ''}</header>
       ${t.description ? `<small>${esc(t.description)}</small>` : ''}</button>`).join('') : '<p class="muted">ما فيه قوالب للحين. اضغط «أضف الحزمة الأساسية» أو سوّ قالبك.</p>';
   }
+<<<<<<< well
+  let seq = 0;   // typing in the filters starts many loads: only the last one is drawn
+  async function load() {
+    const mine = ++seq;
+    try {
+      const got = await api('/api/library' + (query() ? '?' + query() : ''));
+      if (mine !== seq) return;
+      D = got;
+      if (!$('#fmod').dataset.done) {
+        $('#fmod').insertAdjacentHTML('beforeend', D.modules.filter(m => m.ok).map(m => `<option value="${esc(m.key)}">${esc(m.ar)}</option>`).join(''));
+        $('#fkind').insertAdjacentHTML('beforeend', Object.entries(D.kinds).map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join(''));
+        $('#fmod').dataset.done = '1';
+      }
+      draw();
+    } catch (err) { say($('#msg'), err.message); }
+=======
 
   function drawForm() {
     $('#tformTitle').textContent = CUR ? 'تعديل القالب' : 'قالب جديد';
@@ -42,6 +58,7 @@ export default async function mount() {
   async function loadDocs() {
     const r = await api('/api/library/documents' + ($('#ffolder').value ? `?folder=${$('#ffolder').value}` : ''));
     DOCS = r.documents; STATUS = r.statuses || STATUS; drawDocs();
+>>>>>>> hoven
   }
 
   $('#tkind').onchange = () => loadAll().catch(e => say($('#tmsg'), e.message));

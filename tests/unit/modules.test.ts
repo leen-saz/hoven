@@ -45,7 +45,9 @@ describe('locked modules', () => {
     expect(A.can(s, 'social', cfg)).toBe(true);
     const cookie = await cookieFor(leen);
     const page = await gate(req('/journeys/', cookie), E);
-    expect(page instanceof Response && page.status).toBe(403);
+    // A page is a screen in Hoven's own shell that says the section is off, not a bare white page with a «sign in» link
+    expect(page instanceof Response && page.status).toBe(302);
+    expect(page instanceof Response && page.headers.get('location')).toBe('https://hoven.example/soon/?t=journeys&why=locked');
     stubProfile(leen);
     const { ROUTES: R } = await import('../../src/modules/routes');
     const res = await R.journeys.list.GET(req('/api/journeys/list', cookie), E);
@@ -69,5 +71,51 @@ describe('locked modules', () => {
     const r = await modules.PATCH!(req('/api/admin/modules', await cookieFor(leen), { method: 'PATCH', body: JSON.stringify({ off: ['journeys', 'voice', 'hack', 'journeys'] }) }), E);
     expect(r.status).toBe(200);
     expect(saved).toEqual({ disabled_modules: ['journeys', 'voice'] });
+  });
+});
+
+describe('tabs with sections (voiceover in voice, copy in content)', () => {
+  const dest = (r: unknown) => (r instanceof Response ? r.headers.get('location') : null);
+  it('the section is picked with ?tab= and keeps its own access, on pages only', () => {
+    expect(need('/voice/', '?tab=voiceover')).toBe('voiceover');
+    expect(need('/content/', '?tab=copy')).toBe('copy');
+    expect(need('/voice/', '?tab=copy')).toBe('voice');            // a section of another tab: not this one's
+    expect(need('/api/voice/guide', '?tab=voiceover')).toBe('voice');
+    expect(need('/api/voiceover/guide', '')).toBe('voiceover'); expect(need('/api/copy/projects', '')).toBe('copy');
+  });
+  it('the old addresses open the section inside the tab', async () => {
+    const cookie = await cookieFor({ ...leen, company: { disabled_modules: [] } });
+    expect(dest(await gate(req('/voiceover/', cookie), E))).toBe('https://hoven.example/voice/?tab=voiceover');
+    expect(dest(await gate(req('/copy/', cookie), E))).toBe('https://hoven.example/content/?tab=copy');
+  });
+  it('a locked section stays locked, at the old address and inside the tab', async () => {
+    const cookie = await cookieFor({ ...leen, company: { disabled_modules: ['voiceover'] } });
+    for (const p of ['/voiceover/', '/voice/?tab=voiceover']) { const r = await gate(req(p, cookie), E); expect(r instanceof Response && r.status).toBe(302); expect(r instanceof Response && r.headers.get('location')).toContain('/soon/?t=voiceover&why=locked'); }
+    expect(await gate(req('/voice/', cookie), E)).toEqual({ pass: true });
+  });
+  it('the sections have no sidebar entry; the tab opens its only section for a user who has just that', async () => {
+    const { sections } = await import('../../public/assets/sidebar.js');
+    const all = (m: unknown) => (sections(m, (ar: string) => ar) as { items: { href: string; key: string; state: string }[] }[]).flatMap(s => s.items);
+    const base = (ok: (k: string) => boolean) => ({ role: 'member', email: 'x@x', dashboards: [], modules: MODULES.map(m => ({ ...m, ok: ok(m.key), locked: false })) });
+    const full = all(base(() => true));
+    expect(full.map(i => i.key)).not.toContain('voiceover'); expect(full.map(i => i.key)).not.toContain('copy');
+    expect(full.find(i => i.key === 'voice')?.href).toBe('/voice/');
+    const only = all(base(k => k === 'voiceover' || k === 'copy'));
+    expect(only.find(i => i.key === 'voice')).toMatchObject({ href: '/voice/?tab=voiceover', state: 'ok' });
+    expect(only.find(i => i.key === 'content')).toMatchObject({ href: '/content/?tab=copy', state: 'ok' });
+  });
+});
+
+describe('the Media buyer is a tab of the decisions board, not a module of its own', () => {
+  it('is in no module registry, route list or dashboard list; its API asks for the decisions board; its old page redirects', async () => {
+    expect(MODULES.some(m => m.key === 'buyer')).toBe(false);
+    expect(LIVE).not.toContain('buyer');
+    expect(Object.keys(ROUTES)).not.toContain('buyer');
+    expect(Object.keys(A.DASHBOARDS)).not.toContain('buyer');
+    expect(need('/api/buyer/report', '')).toBe('control');
+    expect(need('/api/buyer/apply', '')).toBe('control');
+    const d = await gate(req('/buyer/', ''), E);
+    expect(d instanceof Response && d.status).toBe(301);
+    expect(d instanceof Response && d.headers.get('location')).toBe('/control/?tab=buyer');
   });
 });

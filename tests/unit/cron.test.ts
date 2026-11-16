@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DISPATCH_URL, dispatchRefresh } from '../../src/lib/cron';
+import { DISPATCH_TIMEOUT_MS, DISPATCH_URL, dispatchRefresh, dispatchUrl, dispatchWorkflow, hourlyTasks } from '../../src/lib/cron';
 
 describe('cron dispatch', () => {
   it('starts refresh.yml on main with the token', async () => {
@@ -14,5 +14,84 @@ describe('cron dispatch', () => {
     const f = vi.fn();
     expect(await dispatchRefresh({}, f as unknown as typeof fetch)).toBe(0);
     expect(f).not.toHaveBeenCalled();
+  });
+  it('a failed dispatch is saved for the health page, a good one too', async () => {
+    const put = vi.fn(async () => ({}));
+    const files = { put };
+    await dispatchRefresh({ GH_DISPATCH_TOKEN: 't', FILES: files }, (async () => new Response('no', { status: 403 })) as unknown as typeof fetch);
+    expect(JSON.parse(String((put.mock.calls[0] as unknown[])[1]))).toMatchObject({ ok: false, status: 403 });
+    await dispatchRefresh({ GH_DISPATCH_TOKEN: 't', FILES: files }, (async () => new Response(null, { status: 204 })) as unknown as typeof fetch);
+    expect(JSON.parse(String((put.mock.calls[1] as unknown[])[1]))).toMatchObject({ ok: true, status: 204 });
+  });
+  it('a network error or a missing token is a failure signal too, and a broken bucket does not throw', async () => {
+    const put = vi.fn(async () => { throw new Error('r2'); });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(await dispatchRefresh({ GH_DISPATCH_TOKEN: 't', FILES: { put } }, (async () => { throw new Error('net'); }) as unknown as typeof fetch)).toBe(0);
+    expect(await dispatchRefresh({ FILES: { put } })).toBe(0);
+    expect(put).toHaveBeenCalledTimes(2);
+    err.mockRestore();
+  });
+});
+
+describe('cron dispatch of the backup workflows', () => {
+  it('starts the named workflow on main and leaves the refresh status alone', async () => {
+    const f = vi.fn(async () => new Response(null, { status: 204 }));
+    const put = vi.fn();
+    expect(await dispatchWorkflow({ GH_DISPATCH_TOKEN: 'tok', FILES: { put } }, 'db-backup.yml', f as unknown as typeof fetch)).toBe(204);
+    expect((f.mock.calls[0] as unknown as [string])[0]).toBe(dispatchUrl('db-backup.yml'));
+    expect(put).not.toHaveBeenCalled();
+  });
+  it('does nothing without a token and survives a network error', async () => {
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const f = vi.fn();
+    expect(await dispatchWorkflow({}, 'db-backup.yml', f as unknown as typeof fetch)).toBe(0);
+    expect(f).not.toHaveBeenCalled();
+    expect(await dispatchWorkflow({ GH_DISPATCH_TOKEN: 't' }, 'db-backup.yml', (async () => { throw new Error('x'); }) as unknown as typeof fetch)).toBe(0);
+    err.mockRestore();
+  });
+});
+
+describe('cron dispatch timeout', () => {
+  const hang = ((_u: string, init: RequestInit) => new Promise((_r, rej) => {
+    if (init.signal?.aborted) rej(init.signal.reason);
+    else init.signal?.addEventListener('abort', () => rej(init.signal?.reason));
+  })) as unknown as typeof fetch;
+  it('passes an abort signal, and a hung GitHub call is a saved failure, not a hang', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => AbortSignal.abort(new DOMException('t', 'TimeoutError')));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const put = vi.fn(async () => ({}));
+    const p = dispatchRefresh({ GH_DISPATCH_TOKEN: 't', FILES: { put } }, hang);
+    expect(await p).toBe(0);
+    expect(JSON.parse(String((put.mock.calls[0] as unknown[])[1]))).toMatchObject({ ok: false, status: 0 });
+    const w = dispatchWorkflow({ GH_DISPATCH_TOKEN: 't' }, 'db-backup.yml', hang);
+    expect(await w).toBe(0);
+    expect(timeout).toHaveBeenCalledWith(DISPATCH_TIMEOUT_MS);
+    timeout.mockRestore();
+    err.mockRestore();
+  });
+});
+
+describe('hourly trigger: which jobs are due (UTC)', () => {
+  const at = (iso: string) => hourlyTasks(new Date(iso));
+  it('every hour: the refresh and the watchdog', () => {
+    expect(at('2026-11-12T10:07:00Z')).toEqual(['refresh', 'watchdog']); // a Thursday
+  });
+  it('backup only on Sunday at 02 UTC', () => {
+    expect(at('2026-11-15T02:07:00Z')).toContain('backup'); // Sunday
+    expect(at('2026-11-15T03:07:00Z')).not.toContain('backup');
+    expect(at('2026-11-15T01:07:00Z')).not.toContain('backup');
+    expect(at('2026-11-16T02:07:00Z')).not.toContain('backup'); // Monday
+  });
+  it('restore test only on the 1st at 03 UTC', () => {
+    expect(at('2026-12-01T03:07:00Z')).toContain('restore');
+    expect(at('2026-12-01T02:07:00Z')).not.toContain('restore');
+    expect(at('2026-12-02T03:07:00Z')).not.toContain('restore');
+  });
+  it('a week has exactly one backup and a month one restore test', () => {
+    let backups = 0, restores = 0;
+    for (let h = 0; h < 24 * 7; h++) if (at(new Date(Date.UTC(2026, 10, 9, h, 7)).toISOString()).includes('backup')) backups++;
+    for (let h = 0; h < 24 * 30; h++) if (at(new Date(Date.UTC(2026, 10, 1, h, 7)).toISOString()).includes('restore')) restores++;
+    expect(backups).toBe(1);
+    expect(restores).toBe(1);
   });
 });

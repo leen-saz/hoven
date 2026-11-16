@@ -3,6 +3,9 @@
 // secret: false = رقم حساب أو معرّف، ينعرض في الصفحة. fetch: true = عندنا سحب بيانات لها اليوم.
 // إضافة منصة جديدة = عنصر جديد هنا بس.
 
+import { postizStatus } from '../modules/social/postiz';
+import { SOCIAL } from '../modules/social/engine';
+
 export interface Field { env: string; label: string; secret: boolean; type: string; optional?: boolean; manual?: boolean; placeholder?: string }
 export interface Platform { id: string; name: string; group: string; core?: string; fetch?: boolean; mcp?: boolean; docs?: string; help?: string; fields: Field[]; logo?: string | null; color?: string | null }
 type FieldOpts = Partial<Omit<Field, 'env' | 'label'>>;
@@ -27,12 +30,16 @@ export const PLATFORMS: Platform[] = [
   { id: 'google_ads', name: 'Google Ads و YouTube', group: 'ads', fetch: true,
     docs: 'https://developers.google.com/google-ads/api/docs/get-started/introduction', help: 'Google Cloud ← OAuth client، و Google Ads ← API Center ← Developer token.',
     fields: [ID('GOOGLE_ADS_CUSTOMER_ID', 'رقم الحساب (Customer ID)', { placeholder: '123-456-7890' }), ID('GOOGLE_ADS_LOGIN_CUSTOMER_ID', 'رقم حساب المدير (MCC)', { optional: true }),
-      F('GOOGLE_ADS_DEVELOPER_TOKEN', 'Developer Token', { optional: true }),
+      F('GOOGLE_ADS_DEVELOPER_TOKEN', 'Developer Token'),
       F('GOOGLE_ADS_CLIENT_ID', 'OAuth Client ID', { manual: true }), F('GOOGLE_ADS_CLIENT_SECRET', 'OAuth Client Secret', { manual: true }), F('GOOGLE_ADS_REFRESH_TOKEN', 'Refresh Token', { manual: true })] },
+<<<<<<< well
+  { id: 'tiktok', name: 'TikTok', group: 'ads', fetch: true, mcp: true, docs: 'https://ads.tiktok.com/', help: 'زر "اربط" يسجّل دخولك على خدمة TikTok for Business الرسمية (بدون تطبيق مطوّرين). الدخول يخلص كل 30 يوم. وبعد ما يخلص يكمّل السحب بالطريقة القديمة، وأرقامك تتأخر لين تعيد الربط.', fields: [] },
+=======
   { id: 'salla', name: 'سلة (Salla)', group: 'analytics', fetch: true,
     docs: 'https://salla.partners/', help: 'Salla Partners ← تطبيقك ← بيانات التطبيق (Client ID و Secret)، ورابط الرجوع هو رابط الربط. الطلبات تنسحب كل ساعة للقراءة بس.',
     fields: [F('SALLA_CLIENT_ID', 'Client ID', { manual: true }), F('SALLA_CLIENT_SECRET', 'Client Secret', { manual: true }), F('SALLA_REFRESH_TOKEN', 'Refresh Token', { manual: true })] },
   { id: 'tiktok', name: 'TikTok', group: 'ads', fetch: true, mcp: true, docs: 'https://ads.tiktok.com/', help: 'زر "اربط" يسجّل دخولك على سيرفر MCP الرسمي حق TikTok for Business (بدون تطبيق مطوّرين). الدخول يخلص كل 30 يوم. بدونه يكمّل السحب من فرع tiktok-data.', fields: [] },
+>>>>>>> hoven
   { id: 'x', name: 'X (تويتر)', group: 'ads', docs: 'https://developer.x.com/en/portal/dashboard', help: 'X Developer Portal ← تطبيق بصلاحية Ads API (مدفوع) ← Keys and tokens.',
     fields: [F('X_ADS_CONSUMER_KEY', 'API Key', { manual: true }), F('X_ADS_CONSUMER_SECRET', 'API Key Secret', { manual: true }), F('X_ADS_ACCESS_TOKEN', 'Access Token', { manual: true }), F('X_ADS_ACCESS_SECRET', 'Access Token Secret', { manual: true }), ID('X_ADS_ACCOUNT_ID', 'رقم الحساب الإعلاني')] },
   { id: 'linkedin', name: 'LinkedIn', group: 'ads', docs: 'https://www.linkedin.com/developers/apps', help: 'LinkedIn Developers ← تطبيق بمنتج Advertising API (يحتاج موافقة) ← Auth.',
@@ -91,6 +98,9 @@ export const PLATFORMS: Platform[] = [
   { id: 'meta_pages', name: 'صفحة فيسبوك وحساب انستقرام (للنشر)', group: 'ads', docs: 'https://developers.facebook.com/apps/',
     help: 'زر "اربط" بنفس تطبيق ميتا: يطلب صلاحيات النشر ويحفظ مفتاح الصفحة ورقمها ورقم انستقرام المربوط فيها. السوشال يستخدمها للنشر.',
     fields: [ID('META_PAGE_ID', 'رقم صفحة فيسبوك'), ID('IG_USER_ID', 'رقم حساب انستقرام (Business)', { optional: true }), F('META_PAGE_ACCESS_TOKEN', 'مفتاح الصفحة', { manual: true })] },
+  { id: 'postiz', name: 'Postiz (محرك نشر إضافي: تيك توك وX ولينكدإن)', group: 'ads', docs: 'https://docs.postiz.com/public-api/introduction',
+    help: 'Postiz برنامج مفتوح المصدر تستضيفه أنت (docker compose على سيرفر صغير) وننشر من خلاله لتيك توك وX ولينكدإن بعد اعتماد المنشور. العنوان: https://دومينك (نكمل مسار /api/public/v1 بنفسنا). المفتاح: Postiz ← Settings ← Public API. ما ينشر شي قبل الاعتماد، ولا نستخدم الجدولة ولا المسودات في Postiz. التفاصيل في docs/social-engine.md.',
+    fields: [ID('POSTIZ_URL', 'عنوان Postiz (https فقط)', { placeholder: 'https://postiz.example.com' }), F('POSTIZ_API_KEY', 'مفتاح Public API')] },
   { id: 'meta_capi', name: 'Meta Conversions API (Pixel)', group: 'ads', docs: 'https://business.facebook.com/events_manager2', help: 'Events Manager ← البيكسل ← Settings ← Conversions API ← Generate access token.',
     fields: [F('META_CAPI_TOKEN', 'Conversions API token'), ID('META_PIXEL_ID', 'Pixel / Dataset ID')] },
   { id: 'tiktok_events', name: 'TikTok Events API (Pixel)', group: 'ads', docs: 'https://ads.tiktok.com/i18n/events_manager', help: 'Events Manager ← البيكسل ← Settings ← Generate access token.',
@@ -331,6 +341,13 @@ export async function check(p: Platform, v: Values): Promise<{ ok: boolean; msg:
     if (!r.ok) return { ok: false, msg: 'Meta رفض المفتاح أو رقم الحساب' };
     const d = (await r.json().catch(() => ({}))) as Obj;
     return { ok: true, msg: d.name ? `Meta: ${d.name}` : 'Meta قبل المفتاح' };
+  }
+  if (p.id === 'postiz' && (v.POSTIZ_URL || v.POSTIZ_API_KEY)) {
+    // One read: is the address reachable over https, is the key valid, which platforms already have a connected account
+    const s = await postizStatus(v);
+    if (s.code !== 'ok') return { ok: false, msg: ({ off: 'ما انكتب عنوان ولا مفتاح', url: 'العنوان لازم https ومن دومين (مو IP ولا localhost)', key: 'Postiz رفض المفتاح أو المفتاح ناقص', down: 'ما قدرت أوصل لـ Postiz. تأكد من العنوان وإن السيرفر شغال' } as const)[s.code] };
+    const on = s.channels.filter(c => c.code === 'ok').map(c => SOCIAL[c.platform].name);
+    return { ok: true, msg: on.length ? `Postiz شغال. حسابات مربوطة: ${on.join('، ')}` : 'Postiz شغال بس ما فيه حساب مربوط لتيك توك أو X أو لينكدإن. اربطها من داخل Postiz' };
   }
   return null;
 }
