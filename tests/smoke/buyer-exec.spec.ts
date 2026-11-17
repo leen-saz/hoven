@@ -1,0 +1,128 @@
+// Media buyer, as the «توصيات القواعد» tab of the decisions board (/control/?tab=buyer): the approved-execution section is there in Arabic and in English, real execution is off by default, the
+// emergency stop is one click away, and a member who is not the owner has no limits form and no real-execution switch. Synthetic data only: the smoke Worker has
+// no ad-platform key, so nothing here can reach an ad account.
+import { test, expect } from '@playwright/test';
+import { login, addSession } from './helpers';
+
+const TEXT = {
+  ar: { box: 'التنفيذ بموافقتك', stop: 'إيقاف طوارئ', trial: 'تجربة بدون تنفيذ', missing: 'مفتاح التنفيذ ناقص', hand: 'ينفّذ يدوياً' },
+  en: { box: 'Execution with your approval', stop: 'Emergency stop', trial: 'Trial without execution', missing: 'Execution key missing', hand: 'Applied by hand' },
+} as const;
+
+for (const lang of ['ar', 'en'] as const) {
+  test(`owner, ${lang}: the section shows every platform's state, real execution off, key missing, stop button`, async ({ page, context, request }) => {
+    await addSession(context, await login(request, 'owner'));
+    await page.goto(`/control/?tab=buyer&lang=${lang}`);
+    const box = page.locator('#by-execBox');
+    await expect(box).toBeVisible();
+    await expect(box).toContainText(TEXT[lang].box);
+    await expect(box.locator('.by-plat').first()).toContainText(TEXT[lang].missing);
+    await expect(box.locator('.by-plat').first()).toContainText(TEXT[lang].trial);
+    await expect(box).toContainText(TEXT[lang].hand);
+    // one emergency stop for everything: the board's own button, and the pane has no second one
+    await expect(page.locator('#killBtn')).toContainText(TEXT[lang].stop);
+    await expect(page.locator('#by-killBtn')).toHaveCount(0);
+    // with no key, the real-execution switch cannot be turned on
+    await expect(box.locator('button[data-live="meta"]')).toBeDisabled();
+    if (lang === 'en') await expect(box).not.toContainText(/[؀-ۿ]/);
+  });
+}
+
+test('a member (approver, not the owner) can press the stop but has no limits form and no real-execution switch', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'member'));
+  await page.goto('/control/?tab=buyer');
+  await expect(page.locator('#by-execBox')).toBeVisible();
+  await expect(page.locator('#killBtn')).toBeVisible();
+  await expect(page.locator('#by-killBtn')).toHaveCount(0);
+  await expect(page.locator('#by-unkillBtn')).toHaveCount(0);
+  await expect(page.locator('#by-limitsForm')).toBeHidden();
+  await expect(page.locator('button[data-live]')).toHaveCount(0);
+});
+
+// The confirmation dialog, with the API answers made up here: figures shown, dry run first, real execution needs the tick, and the
+// request carries the figures the dialog showed. Nothing real is called: every buyer API answer is stubbed.
+const ACTION = {
+  id: '00000000-0000-4000-8000-000000000001', platform: 'meta', level: 'campaign', entity_id: '111', entity_name: 'TEST_C1', kind: 'budget_up', status: 'proposed', mode: 'auto',
+  change: { op: 'budget', from: 100, to: 120, pct: 20 }, reason: 'سبب تجريبي كافي', risk: 'خطر تجريبي كافي', success: { metric: 'م', goal: 'ه' }, manual_why: null, dry_run: null, applied_at: null,
+  guards: { blocks: [], live: true, impact: { dayDelta: 20, weekDelta: 140, pct: 20, dailyUsed: 0, dailyCap: 50 } },
+};
+const STATE = { missing: false, actions: [ACTION], usedToday: 0, can: { approve: true, owner: true },
+  settings: { kill: false, maxPct: 20, dailyCap: 50, live: { meta: true, snapchat: false, tiktok: false, google: false }, configured: { meta: true, snapchat: false } } };
+
+test('«approve and apply» opens the second confirmation with the money summary; dry run is first and real execution needs the tick', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'owner'));
+  const sent: Record<string, unknown>[] = [];
+  await page.route('**/api/buyer/actions*', r => r.fulfill({ json: STATE }));
+  await page.route('**/api/buyer/apply', async r => { sent.push(r.request().postDataJSON()); await r.fulfill({ json: { ok: true, dry: true, wrote: false, blocks: [], stale: false } }); });
+  await page.goto('/control/?tab=buyer');
+  const card = page.locator('.by-a').first();
+  await expect(card).toContainText('TEST_C1');
+  await expect(card).toContainText('100');
+  await expect(card).toContainText('120');
+  await card.locator('[data-apply]').click();
+  const dlg = page.locator('#by-dlg');
+  await expect(dlg).toBeVisible();
+  await expect(dlg).toContainText('140.00');                       // the week's difference if it stays
+  const live = dlg.locator('#by-dlgLive');
+  await expect(live).toBeDisabled();                               // needs the «I understand» tick
+  await dlg.locator('#by-dlgDry').click();
+  await expect(dlg.locator('#by-dlgOut')).toContainText('ما تغيّر شي');
+  expect(sent).toEqual([{ id: ACTION.id, confirm: true, mode: 'dry', expect: { from: 100, to: 120 } }]);
+  await dlg.locator('#by-ack').check();
+  await expect(live).toBeEnabled();
+  await dlg.locator('#by-dlgCancel').click();
+  await expect(dlg).toBeHidden();
+  expect(sent).toHaveLength(1);                                    // cancelling sends nothing
+});
+
+test('a blocked action shows its guards in the dialog and offers no real execution', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'owner'));
+  const blocked = { ...ACTION, guards: { ...ACTION.guards, blocks: [{ code: 'cap_pct', detail: 10 }] } };
+  await page.route('**/api/buyer/actions*', r => r.fulfill({ json: { ...STATE, actions: [blocked] } }));
+  await page.goto('/control/?tab=buyer&lang=en');
+  await page.locator('.by-a [data-apply]').first().click();
+  await expect(page.locator('#by-dlg')).toContainText('Exceeds the change-rate cap');
+  await expect(page.locator('#by-dlgLive')).toBeHidden();
+  await expect(page.locator('#by-dlg')).not.toContainText(/[؀-ۿ]/);
+});
+
+// «قواعد الإدارة»: the owner's own section of the decisions board. Import preview, editing a limit and the open decision, save.
+// Nothing real: the rules API answer is stubbed and the save request is only recorded.
+test('the owner edits a limit and an open decision in «قواعد الإدارة», and the saved list carries the edit', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'owner'));
+  const RULES = [{ id: 'r-scale', kind: 'scale', platform: 'snapchat', match: ['alpha'], maxCpl: 9, stepPct: 20, everyDays: 3, open: 'الحد مو محسوم' },
+    { id: 'r-resume', kind: 'resume', platform: 'tiktok', match: ['beta'], minCtr: 0.5 }];
+  const sent: { rules: { id: string; maxCpl?: number; open?: string }[] }[] = [];
+  await page.route('**/api/buyer/rules', async r => {
+    if (r.request().method() === 'GET') return r.fulfill({ json: { rules: RULES } });
+    sent.push(r.request().postDataJSON()); return r.fulfill({ json: { ok: true, rules: 2 } });
+  });
+  await page.goto('/control/?tab=rules');
+  const row = page.locator('#by-rulesEdit tr[data-i="0"]');
+  await expect(row).toBeVisible();
+  await expect(page.locator('#by-rulesInfo')).toContainText('1');
+  await row.locator('[data-f="maxCpl"]').fill('10');
+  await row.locator('[data-f="open"]').fill('');
+  await page.locator('#by-rulesSaveEdit').click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]!.rules[0]).toMatchObject({ id: 'r-scale', maxCpl: 10 });
+  expect(sent[0]!.rules[0]!.open).toBeUndefined();
+  expect(sent[0]!.rules[1]).toMatchObject({ id: 'r-resume', minCtr: 0.5 });
+});
+
+test('a member who is not the owner has no «قواعد الإدارة» tab, even with ?tab=rules', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'member'));
+  await page.goto('/control/?tab=rules');
+  await expect(page.locator('#tabs')).toBeVisible();
+  await expect(page.locator('#tabs [data-t="rules"]')).toHaveCount(0);
+  await expect(page.locator('#by-rulesBox')).toBeHidden();
+});
+
+// The standalone page is gone: /buyer/ goes to the decisions board's tab, and the sidebar has no Media buyer entry
+test('/buyer/ redirects to the decisions board tab, and the sidebar has no Media buyer link', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'owner'));
+  await page.goto('/buyer/');
+  await expect(page).toHaveURL(/\/control\/\?tab=buyer$/);
+  await expect(page.locator('#by-execBox')).toBeVisible();
+  expect(await page.locator('#side a[href^="/buyer"]').count()).toBe(0);
+});

@@ -1,7 +1,7 @@
 // صفحة الربط: حالة كل منصة، وزر "اربط" (OAuth) أو الخانات اليدوية حسب توثيق المنصة.
 // القيم السرية تروح للسيرفر وما ترجع أبداً: الخانة المحفوظة تطلع "محفوظ" بس.
 import { t } from './i18n.js';
-import { $, $$, api, esc, icon, shell, say, toast, busy, when } from './common.js';
+import { $, $$, api, esc, icon, shell, say, toast, busy, when, friendly } from './common.js';
 
 // Runs on every visit of this page (assets/router.js calls it after each ClientRouter navigation).
 export default async function mount() {
@@ -10,7 +10,7 @@ export default async function mount() {
   const GROUP = { ads: 'منصات الإعلانات', analytics: 'التحليلات والقياس' };
   const STATUS = {
     ok: ['ok', 'check', 'مربوط'], partial: ['warn', 'alert', 'ناقص'], expired: ['warn', 'alert', 'انتهى الربط'],
-    none: ['line', 'plug', 'مو مربوط'], mcp: ['ok', 'check', 'مربوط عن طريق MCP'], github: ['ok', 'check', 'يعمل عبر GitHub'],
+    none: ['line', 'plug', 'مو مربوط'], mcp: ['ok', 'check', 'مربوط'], github: ['ok', 'check', 'يشتغل تلقائياً'],
   };
   const ERR = { state: 'انتهت مهلة الربط، جرّب مرة ثانية.', denied: 'انلغى الربط من صفحة المنصة.', access: 'ما عندك صلاحية الربط أو بيانات التطبيق ناقصة.', exchange: 'المنصة ما رجّعت مفتاح صالح. تأكد إن رابط الرجوع مضاف في إعدادات التطبيق.' };
 
@@ -51,10 +51,10 @@ export default async function mount() {
       : `<button class="btn sm primary" data-key="${p.id}" aria-expanded="${S.open === p.id}">${icon('plug')}${label}</button>`;
     // بعد زر الربط: إذا ناقص رقم الحساب نطلبه بدون ما نرجع للمفاتيح
     const needIds = direct && p.status === 'partial' && p.fields.some(f => !f.manual && !f.saved && !f.optional);
-    const meta = [p.fetch ? 'أرقامها تظهر في الداشبورد' : 'ربط بس، سحب أرقامها لسا ما انبنى'];
+    const meta = [p.fetch ? 'أرقامها تظهر في الداشبورد' : 'يخدم النشر أو تتبع التحويلات'];
     if (p.at) meta.push(`آخر ربط ${when(p.at)}${p.by ? ` · ${esc(p.by)}` : ''}`);
     if (p.expires) meta.push(`ينتهي ${when(p.expires)}`);
-    if (p.status === 'github' && p.lastPull) meta.push(`آخر سحب ناجح ${when(p.lastPull)} · المفاتيح في أسرار GitHub، مو مربوطة من هذي الصفحة`);
+    if (p.status === 'github' && p.lastPull) meta.push(`آخر سحب ناجح ${when(p.lastPull)} · يشتغل تلقائياً من إعدادات النظام، مو من هذي الصفحة`);
     if (p.checked) meta.push(esc(p.checked));
     const drop = !['none', 'mcp', 'github'].includes(p.status) && !p.fields.length
       ? `<button class="btn sm ghost" type="button" data-drop="${p.id}">${icon('x')}فك الربط</button>` : '';
@@ -65,13 +65,22 @@ export default async function mount() {
       ${needIds ? `<button class="btn sm secondary" data-key="${p.id}">${icon('pen')}أضف رقم الحساب</button>` : ''}${drop}</div></div>
       <p class="muted cx-meta">${meta.join(' · ')}</p>${note}${S.open === p.id ? form(p) : ''}</article>`;
   }
-  function render() {
+  // What is typed in an open key form survives a redraw (the search box, opening another card): keys are long, losing them is the worst case
+  const DRAFT = {};
+  const keep = () => $$('[data-save]', $('#list')).forEach(f => { for (const i of $$('input,textarea', f)) if (i.name) (DRAFT[f.dataset.save] ||= {})[i.name] = i.value; });
+  const restore = () => $$('[data-save]', $('#list')).forEach(f => { const d = DRAFT[f.dataset.save]; if (d) for (const i of $$('input,textarea', f)) if (i.name in d) i.value = d[i.name]; });
+  function render() { keep(); draw(); restore(); }
+  function draw() {
     const q = S.q.trim().toLowerCase();
-    const list = S.list.filter(p => !q || p.name.toLowerCase().includes(q) || p.id.includes(q));
+    // Platforms nothing is built for yet (no numbers pulled, no publishing, no conversions) are not listed: a long list of
+    // «مو مربوط» suggests abilities that do not exist. One that is already connected, or that the system needs, stays.
+    const BUILT = new Set(['meta_pages', 'postiz', 'meta_capi', 'tiktok_events', 'snap_capi', 'search_console']);
+    const shown = S.list.filter(p => p.fetch || p.core || BUILT.has(p.id) || p.status !== 'none');
+    const list = shown.filter(p => !q || p.name.toLowerCase().includes(q) || p.id.includes(q));
     const isOn = p => ['ok', 'mcp', 'github'].includes(p.status);
-    const ok = S.list.filter(isOn).length;
-    const core = S.list.filter(p => p.core), coreOk = core.filter(isOn).length;
-    $('#sum').textContent = `الأساسية ${coreOk} من ${core.length} · الكل ${ok} من ${S.list.length}`;
+    const ok = shown.filter(isOn).length;
+    const core = shown.filter(p => p.core), coreOk = core.filter(isOn).length;
+    $('#sum').textContent = `الأساسية ${coreOk} من ${core.length} · الكل ${ok} من ${shown.length}`;
     const coreList = list.filter(p => p.core);
     $('#list').innerHTML = (coreList.length ? `<h2 class="cx-h">أساسية لتشغيل النظام <span class="muted">(${coreOk} من ${core.length} مربوطة)</span></h2><div class="cx-list">${coreList.map(card).join('')}</div>` : '') + Object.entries(GROUP).map(([g, t]) => {
       const items = list.filter(p => p.group === g && !p.core);
@@ -87,13 +96,13 @@ export default async function mount() {
       }
       render();
     }
-    catch (err) { $('#list').innerHTML = `<div class="card empty">${icon('alert')}<div>${esc(err.message)}</div><button class="btn secondary" id="retry" style="margin-top:12px">${icon('refresh')}حاول مرة ثانية</button></div>`; $('#retry').onclick = load; }
+    catch (err) { $('#list').innerHTML = `<div class="card empty">${icon('alert')}<div>${esc(friendly(err))}</div><button class="btn secondary" id="retry" style="margin-top:12px">${icon('refresh')}حاول مرة ثانية</button></div>`; $('#retry').onclick = load; }
   }
 
   $('#list').addEventListener('click', async e => {
     const k = e.target.closest('[data-key]'), x = e.target.closest('[data-close]'), d = e.target.closest('[data-drop]');
     if (k) { S.open = S.open === k.dataset.key ? null : k.dataset.key; render(); $(`#cx_${k.dataset.key} input, #cx_${k.dataset.key} textarea`)?.focus(); }
-    if (x) { S.open = null; render(); }
+    if (x) { delete DRAFT[S.open]; S.open = null; render(); }
     if (d) {
       const p = S.list.find(y => y.id === d.dataset.drop);
       if (!confirm(t(`فك ربط ${p.name}؟ المفاتيح المحفوظة تنمسح من الخزنة.`))) return;
@@ -109,7 +118,7 @@ export default async function mount() {
     const btn = $('button[type=submit]', f); busy(btn, true);
     try {
       const r = await api('/api/connectors/save', { method: 'POST', body: { platform: f.dataset.save, values } });
-      S.open = null; toast(r.checked || 'انحفظ'); await load();
+      delete DRAFT[f.dataset.save]; S.open = null; toast(r.checked || 'انحفظ'); await load();
     } catch (err) { busy(btn, false); say($('.msg', f), err.message); }
   });
   $('#q').addEventListener('input', e => { S.q = e.target.value; render(); });

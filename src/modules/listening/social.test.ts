@@ -1,6 +1,6 @@
 // Social listening: source parsing, dedupe, sentiment parsing, watch cleaning, the cron/refresh flow and scoping.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { adLibraryUrl, cleanWatch, dedupe, due, missingTable, normUrl, parseBing, parseGdelt, parseNews, parseReddit, parseSentiment, parseTikTok, parseX, parseYouTube, query, sentimentPrompt, sources, terms } from './social';
+import { adLibraryUrl, cleanWatch, dedupe, due, missingTable, normUrl, parseBing, parseGdelt, parseNews, isHttps, parseReddit, parseSentiment, parseTikTok, parseX, parseYouTube, mentionsTerm, query, relevant, sentimentPrompt, sources, terms } from './social';
 import { batch, collect, cost, store } from './fetcher';
 import { raw } from './probe';
 // The page's own maths (plain JS in public/)
@@ -11,6 +11,8 @@ afterEach(() => vi.unstubAllGlobals());
 const RSS = `<rss><channel><item><title><![CDATA[هوفن للرعاية المنزلية تطلق خدمة]]></title><link>https://news.example.com/a?utm_source=x</link>
 <pubDate>Sun, 01 Nov 2026 10:00:00 GMT</pubDate><description>&lt;b&gt;خبر&lt;/b&gt; جديد</description><source url="https://s">صحيفة</source></item>
 <item><title>بدون رابط</title></item></channel></rss>`;
+// The same feed with the watch names in the text: collect() keeps only mentions that are about the watch
+const RSS_ON = RSS.replace('جديد</description>', 'جديد عن هوفن يونيون و Hoven و wellcare</description>');
 
 describe('sources', () => {
   it('reads Google News RSS without an XML parser', () => {
@@ -88,7 +90,7 @@ describe('fetch flow', () => {
   it('collects the news and skips the keyed sources without keys', async () => {
     const seen: string[] = [];
     const f = (async (u: string) => { seen.push(String(u));
-      if (String(u).includes('news.google')) return new Response(RSS, { status: 200 });
+      if (String(u).includes('news.google')) return new Response(RSS_ON, { status: 200 });
       return new Response('', { status: 500 }); }) as unknown as typeof fetch;
     const r = await collect({ id: 9, kind: 'brand', name: 'Hoven', keywords: [] }, {} as never, f);
     expect(r.bySource).toEqual({ google: 1 });
@@ -96,7 +98,7 @@ describe('fetch flow', () => {
   });
   it('falls back to Bing, one term each, when Google refuses, and says why', async () => {
     const seen: string[] = [];
-    const bing = (n: number) => `<rss><item><title>t${n}</title><link>http://www.bing.com/news/apiclick.aspx?url=https%3a%2f%2fn.example%2f${n}</link></item></rss>`;
+    const bing = (n: number) => `<rss><item><title>evercare t${n}</title><link>http://www.bing.com/news/apiclick.aspx?url=https%3a%2f%2fn.example%2f${n}</link></item></rss>`;
     let n = 0;
     const f = (async (u: string) => { seen.push(String(u));
       if (String(u).includes('news.google')) return new Response('', { status: 503 });
@@ -110,7 +112,7 @@ describe('fetch flow', () => {
   it('asks Google one quoted term at a time and keeps what each gives', async () => {
     const seen: string[] = [];
     const f = (async (u: string) => { seen.push(decodeURIComponent(String(u)));
-      if (String(u).includes('news.google')) return new Response(seen.length === 1 ? RSS : '<rss></rss>', { status: 200 });
+      if (String(u).includes('news.google')) return new Response(seen.length === 1 ? RSS_ON : '<rss></rss>', { status: 200 });
       return new Response('', { status: 500 }); }) as unknown as typeof fetch;
     const r = await collect({ id: 9, kind: 'brand', name: 'هوفن للمفارش', keywords: ['hovenhome', 'تطبيق هوفن', 'رابع'] }, {} as never, f);
     expect(r.bySource).toEqual({ google: 1 });
@@ -119,8 +121,13 @@ describe('fetch flow', () => {
   it('searches every term of a 4-term brand watch, and Refresh keeps its calls under the Worker limit', async () => {
     const seen: string[] = [];
     const f = (async (u: string) => { seen.push(decodeURIComponent(String(u)));
+<<<<<<< well
+      return new Response(String(u).includes('wellcare') ? RSS_ON : '<rss></rss>', { status: 200 }); }) as unknown as typeof fetch;
+    const brand = { id: 1, kind: 'brand' as const, name: 'هوفن يونيون', keywords: ['تطبيق هوفن', 'wellunion', 'wellcare'] };
+=======
       return new Response(String(u).includes('hovenhome') ? RSS : '<rss></rss>', { status: 200 }); }) as unknown as typeof fetch;
     const brand = { id: 1, kind: 'brand' as const, name: 'هوفن للمفارش', keywords: ['تطبيق هوفن', 'hovensa', 'hovenhome'] };
+>>>>>>> hoven
     const r = await collect(brand, {} as never, f);
     expect(seen.filter(u => u.includes('news.google')).map(u => u.match(/q=([^&]*)/)![1])).toEqual(['"هوفن للمفارش"', '"تطبيق هوفن"', 'hovensa', 'hovenhome']);
     expect(r.bySource).toEqual({ google: 1 });
@@ -146,8 +153,8 @@ describe('fetch flow', () => {
     const seen: { u: string; auth: string }[] = [];
     const f = (async (u: string, init?: RequestInit) => { seen.push({ u: String(u), auth: String((init?.headers as Record<string, string>)?.authorization || '') });
       if (String(u).includes('access_token')) return new Response(JSON.stringify({ access_token: 'tok' }), { status: 200 });
-      if (String(u).includes('oauth.reddit.com')) return new Response(JSON.stringify({ data: { children: [{ data: { permalink: '/r/x/1', title: 'a' } }] } }), { status: 200 });
-      if (String(u).includes('news.google')) return new Response(RSS, { status: 200 });
+      if (String(u).includes('oauth.reddit.com')) return new Response(JSON.stringify({ data: { children: [{ data: { permalink: '/r/x/1', title: 'Hoven a' } }] } }), { status: 200 });
+      if (String(u).includes('news.google')) return new Response(RSS_ON, { status: 200 });
       return new Response('', { status: 500 }); }) as unknown as typeof fetch;
     const r = await collect({ id: 9, kind: 'brand', name: 'Hoven', keywords: [] }, { REDDIT_CLIENT_ID: 'id', REDDIT_CLIENT_SECRET: 'sec' } as never, f);
     expect(r.bySource).toEqual({ google: 1, reddit: 1 });
@@ -186,8 +193,13 @@ describe('page maths', () => {
     const s = summarize(W, M, now, 30);
     expect(s.share.map((r: { name: string; total: number }) => [r.name, r.total])).toEqual([['Hoven', 10], ['منافس', 1]]);
     expect(s.share[0]?.share).toBeCloseTo(10 / 11);
-    expect(s.weeks).toHaveLength(8);
+    expect(s.weeks).toHaveLength(5); // 30 days: five bars of a week, the last one shorter
     expect(s.alerts.map((a: { type: string }) => a.type).sort()).toEqual(['keyword', 'negative']);
+  });
+  it('says when the sample is small', () => {
+    expect(summarize(W, M, now, 30).sample).toEqual({ total: 11, small: true, min: 30 });
+    const big = Array.from({ length: 30 }, () => ({ watch_id: 1, published_at: d(2), sentiment: 'positive' }));
+    expect(summarize(W, big, now, 30).sample.small).toBe(false);
   });
   it('filters mentions', () => {
     expect(filterMentions(M, { sentiment: 'negative' })).toHaveLength(3);
@@ -216,5 +228,49 @@ describe('our brand and missing keys (page)', () => {
     expect(brandAdd([comp, brand], ['hoven.sa'])).toEqual({ id: 2, kind: 'brand', name: 'هوفن', keywords: ['HOVEN', 'hoven.sa'], links: { x: '@hoven' } });
     expect(brandAdd([comp, brand], ['hoven'])).toBeNull();
     expect(missingKeys({ news: true, youtube: true }).map(k => k.src)).toEqual(['x', 'reddit']);
+  });
+});
+
+describe('listening: only https links are kept', () => {
+  const item = (link: string) => `<item><title>t</title><link>${link}</link><description>d</description></item>`;
+  it('news items with http, javascript or data links are dropped', () => {
+    const xml = `<rss><channel>${item('https://news.example.com/a')}${item('http://news.example.com/b')}${item('javascript:alert(1)')}${item('data:text/html;base64,AAAA')}${item('//news.example.com/c')}${item('')}</channel></rss>`;
+    expect(parseNews(xml, 1).map(m => m.url)).toEqual(['https://news.example.com/a']);
+  });
+  it('isHttps accepts only https', () => {
+    expect(isHttps(' https://a.example/x ')).toBe(true);
+    for (const u of ['http://a.example', 'javascript:x', 'JAVASCRIPT:x', 'ftp://a', '', null, undefined]) expect(isHttps(u)).toBe(false);
+  });
+  it('gdelt and bing drop plain http too', () => {
+    expect(parseGdelt(JSON.stringify({ articles: [{ url: 'http://a.example/1', title: 't' }] }), 1)).toEqual([]);
+  });
+});
+
+describe('only mentions about the watch are kept', () => {
+  it('Arabic: diacritics, alef and taa marbuta forms, and attached prefixes', () => {
+    expect(mentionsTerm('تعلن هوفن للرعاية المنزلية عن خدمة', 'هوفن')).toBe(true);
+    expect(mentionsTerm('عيادة الرِّعايه', 'الرعاية')).toBe(true);
+    expect(mentionsTerm('اتفاق سياسي دولي', 'هوفن')).toBe(false);
+  });
+  it('Latin: whole words only, and a short name keeps its capital', () => {
+    expect(mentionsTerm('Hoven Care launches a service', 'Hoven')).toBe(true);
+    expect(mentionsTerm('WELL announces', 'Hoven')).toBe(true);
+    expect(mentionsTerm('as well as stocks', 'Hoven')).toBe(false);
+    expect(mentionsTerm('Wellington markets', 'Hoven')).toBe(false);
+    expect(mentionsTerm('everything is wellcare', 'wellcare')).toBe(true);
+    expect(mentionsTerm('x', '')).toBe(false);
+  });
+  it('relevant() looks at the title and the snippet for the name or any keyword', () => {
+    const w = { kind: 'brand' as const, name: 'Hoven', keywords: ['هوفن'] };
+    expect(relevant({ title: 'أسهم وأخبار دولية', snippet: 'Stocks fell as well as bonds' }, w)).toBe(false);
+    expect(relevant({ title: 'هوفن تفتح فرع', snippet: '' }, w)).toBe(true);
+    expect(relevant({ title: 'a', snippet: 'Hoven is hiring' }, w)).toBe(true);
+  });
+  it('collect drops off-topic news and says how many', async () => {
+    const rss = (t: string) => `<rss><channel><item><title>${t}</title><link>https://n.example/${encodeURIComponent(t)}</link></item></channel></rss>`;
+    const f = (async (u: string) => new Response(String(u).includes('news.google') ? rss(String(u).includes('%D9%88%D9%8A%D9%84') ? 'هوفن تطلق خدمة' : 'Stocks rally as well as bonds') : '', { status: 200 })) as unknown as typeof fetch;
+    const r = await collect({ id: 9, kind: 'brand', name: 'Hoven', keywords: ['هوفن'] }, {} as never, f);
+    expect(r.found.map(m => m.title)).toEqual(['هوفن تطلق خدمة']);
+    expect(r.dropped).toBe(1);
   });
 });

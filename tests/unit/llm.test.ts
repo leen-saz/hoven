@@ -1,7 +1,7 @@
 // Text models: each tab's provider, Workers AI when the key is missing or the provider fails, the Responses API body,
 // and live search that never falls back.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULTS, aiFor, body, generate, grokSearch, openaiImage, pick, textOf } from '../../src/lib/llm';
+import { DEFAULTS, aiFor, body, generate, grokSearch, imageOf, openaiImage, pick, textOf } from '../../src/lib/llm';
 import { AI_MODEL } from '../../src/modules/content/content';
 import { cleanSuggestion, suggestPrompt } from '../../src/modules/social/social';
 
@@ -60,6 +60,16 @@ describe('generate', () => {
     }
     await expect(generate({ XAI_API_KEY: 'k' }, 'social', { messages: MSG, max_tokens: 10 }, (async () => { throw new Error('down'); }) as unknown as typeof fetch)).rejects.toThrow();
   });
+  it('a provider that is rate-limited, down or too slow says so (llm_busy) when there is no fallback, and every call has a timeout', async () => {
+    for (const r of [new Response('', { status: 429 }), new Response('', { status: 503 })])
+      await expect(generate({ OPENAI_API_KEY: 'k' }, 'content', { messages: MSG, max_tokens: 10 }, (async () => r) as unknown as typeof fetch)).rejects.toThrow('llm_busy');
+    await expect(generate({ OPENAI_API_KEY: 'k' }, 'content', { messages: MSG, max_tokens: 10 }, (async () => new Response('', { status: 400 })) as unknown as typeof fetch)).rejects.toThrow('llm_failed');
+    const slow = Object.assign(new Error('t'), { name: 'TimeoutError' });
+    await expect(generate({ XAI_API_KEY: 'k' }, 'social', { messages: MSG, max_tokens: 10 }, (async () => { throw slow; }) as unknown as typeof fetch)).rejects.toThrow('llm_busy');
+    const f = vi.fn(async () => ok({ output_text: 'x' }));
+    await generate({ OPENAI_API_KEY: 'k' }, 'content', { messages: MSG, max_tokens: 10 }, f as unknown as typeof fetch);
+    expect((f.mock.calls[0] as unknown as [string, RequestInit])[1].signal).toBeInstanceOf(AbortSignal);
+  });
   it('live search goes to Grok only and never falls back', async () => {
     const f = vi.fn(async () => ok({ output_text: '[]' }));
     expect(await grokSearch({ XAI_API_KEY: 'k', AI }, MSG, ['x'], 100, f as unknown as typeof fetch)).toBe('[]');
@@ -87,6 +97,12 @@ describe('openaiImage', () => {
     expect(await openaiImage({ OPENAI_API_KEY: 'k' }, 'bg', f)).toBe('data:image/jpeg;base64,QUJD');
     expect(calls[0]!.url).toBe('https://api.openai.com/v1/images/generations');
     expect(calls[0]!.body.model).toBe('gpt-image-2');
+  });
+  it('asks for the size it is given', async () => {
+    let size = '';
+    const f = (async (_u: string, init: RequestInit) => { size = JSON.parse(String(init.body)).size; return new Response(JSON.stringify({ data: [{ b64_json: 'QUJD' }] })); }) as unknown as typeof fetch;
+    expect((await imageOf({ OPENAI_API_KEY: 'k' }, 'bg', f, undefined, undefined, '1024x1024')).image).toBe('data:image/jpeg;base64,QUJD');
+    expect(size).toBe('1024x1024');
   });
   it('is off without a key and null on a failure', async () => {
     expect(await openaiImage({}, 'bg')).toBeNull();

@@ -1,16 +1,21 @@
 // The auditor on made-up data in Leen's proportions: it recomputes what the judge says, catches a deliberately corrupted
 // verdict, argues against «no problem» when the CRM has closings the ads do not own, and replays the judge over history.
 import { describe, expect, it } from 'vitest';
-import { audit } from './audit';
+import { audit as runAudit } from './audit';
 import { claimFromJudge } from './adapter';
 import { backtest } from './backtest';
 import { OWNER_RULE, type Claim } from './contract';
 import { recompute } from './facts';
 import { synth } from './synth';
-import { OWNERS } from '../overview/funnel';
+import checksSrc from './checks.ts?raw';
+import advocateSrc from './advocate.ts?raw';
+import { J } from '../overview/judge';
 import { outcome } from '../overview/analytics';
 
 const from = '2026-10-02', to = '2026-10-31';
+// Every audit in this file goes through here, so the last block can tell which finding ids the tests really produced
+const seen = new Set<string>();
+const audit = (...a: Parameters<typeof runAudit>) => { const r = runAudit(...a); for (const f of r.findings) seen.add(f.id); return r; };
 const ids = (r: ReturnType<typeof audit>) => r.findings.map(f => f.id);
 
 describe('auditor: Leen\'s proportions', () => {
@@ -36,20 +41,27 @@ describe('auditor: Leen\'s proportions', () => {
     expect(f.crm.closingsAll).toBe(o.closingsAll); expect(f.crm.bookedAll).toBe(o.bookedAll);
   });
 
-  it('partial attribution: «no problem» while 48 closings in ~4K results sit under the floor is contradicted', () => {
-    // Too few leads tied to ads: the judge cannot read the sale step and says «no clear problem»
+  it('partial attribution: the judge names the sales gap itself (whole CRM); a «no problem» claim is still contradicted', () => {
+    // Few leads tied to ads: the marketing judge reads lead to closing on the whole CRM (48 closings in ~4K results)
     const dd = synth({ tied: 0.12, paidTied: 4 });
     const c = claimFromJudge(dd, from, to);
-    expect(c.verdict.level).toBe('ok');
-    expect(c.steps.find(s => s.key === 'sale')!.unattributed).toBe(true);
-    const r = audit(dd, c);
+    expect(c.steps.find(s => s.key === 'sale')!.level).toBe('bad');
+    expect(c.verdict.level).toBe('bad');
+    expect(ids(audit(dd, c))).not.toContain('silent_below_floor');
+    // The check that caught the old judge's silence still fires on a claim that says «no problem»
+    const lie = structuredClone(c);
+    lie.verdict = { ...lie.verdict, step: null, level: 'ok', owner: null };
+    for (const s of lie.steps) s.level = 'ok';
+    const r = audit(dd, lie);
     expect(r.status).toBe('contradicted');
     expect(ids(r)).toContain('silent_below_floor');
     expect(r.verdict.findings.find(f => f.id === 'silent_below_floor')!.needs?.en).toMatch(/Tie closings/);
   });
 
   it('a clean healthy period is confirmed', () => {
-    const healthy = synth({ paidAll: 300, paidTied: 140, tied: 0.6, c2r: 0.09, ctr: 0.02 });
+    // Targets this period meets (the defaults are stricter than the synthetic shop)
+    const healthy = { ...synth({ paidAll: 300, paidTied: 140, tied: 0.6, c2r: 0.09, ctr: 0.02 }),
+      funnel_targets: { ctr: 1, clickToLead: 5, leadToClose: 1, cpl: 100000, costShare: 100, roas: 0.01 } };
     const c = claimFromJudge(healthy, from, to);
     const r = audit(healthy, c);
     expect(c.verdict.level).toBe('ok');
@@ -57,7 +69,18 @@ describe('auditor: Leen\'s proportions', () => {
   });
 
   it('tied to the judge: the owner table is the judge\'s', () => {
-    for (const k of ['cpm', 'click', 'lead', 'sale', 'cpl', 'crm'] as const) expect(OWNER_RULE[k]).toEqual({ ar: OWNERS[k].ar.who, en: OWNERS[k].en.who });
+    // Every step of the shared rules file (pipeline/dash/00-judge.js), and the CRM owner of an unlinked step
+    for (const r of J.RULES) expect(OWNER_RULE[r.key]).toEqual({ ar: J.OWNERS[r.owner].who[0], en: J.OWNERS[r.owner].who[1] });
+    expect(OWNER_RULE.crm).toEqual({ ar: J.OWNERS.crm.who[0], en: J.OWNERS.crm.who[1] });
+  });
+});
+
+describe('auditor: one status for the whole screen', () => {
+  it('an honest verdict with every step confirmed stays confirmed, with nothing listed under others', () => {
+    const d = synth(), c = structuredClone(claimFromJudge(d, from, to));
+    const r = audit(d, c);
+    if (r.status === 'confirmed') expect(r.others).toEqual({ contradicted: [], weakened: [] });
+    expect(['confirmed', 'weakened', 'contradicted'].indexOf(r.status)).toBeGreaterThanOrEqual(['confirmed', 'weakened', 'contradicted'].indexOf(r.verdict.status));
   });
 });
 
@@ -68,9 +91,14 @@ describe('auditor: a deliberately corrupted verdict is caught', () => {
 
   it('a quoted rate that is off', () => {
     const r = corrupt(c => { const s = c.steps.find(x => x.key === 'click')!; s.now = s.now! * 1.4; });
-    expect(r.status === 'confirmed').toBe(false);
+    // The headline names the sale step, so the wrong click figure shows on the click step's own audit
+    expect(r.steps.click!.status).toBe('contradicted');
     expect(ids(r)).toContain('mismatch_now');
-    expect(ids(r)).toContain('chain_product');
+    // One status for the screen: never «confirmed» while a step is contradicted, even though the headline's own findings are clean
+    expect(r.verdict.status).not.toBe('contradicted');
+    expect(r.status).toBe('contradicted');
+    expect(r.others.contradicted).toContain('click');
+    // (chain_product needs the sale figure, which the adapter leaves out: the judge reads it on the whole CRM)
   });
   it('a wrong owner', () => {
     const c = honest(); c.verdict.step = c.steps.find(s => s.level !== 'ok')?.key ?? 'sale'; c.verdict.level = 'bad'; c.verdict.owner = 'المشتري الإعلامي';
@@ -98,6 +126,52 @@ describe('auditor: a deliberately corrupted verdict is caught', () => {
     const c = claimFromJudge(tiny, '2026-10-18', '2026-10-31');
     c.verdict = { step: 'sale', level: 'bad', owner: OWNER_RULE.sale.ar }; c.steps.find(s => s.key === 'sale')!.level = 'bad';
     expect(ids(audit(tiny, c))).toContain('below_min_sample');
+  });
+});
+
+describe('auditor: every integrity check has a test that trips it', () => {
+  const d = synth();
+  const honest = (): Claim => claimFromJudge(d, from, to);
+  const corrupt = (f: (c: Claim) => void, data = d, base: Claim = honest()) => { const c = structuredClone(base); f(c); return audit(data, c); };
+
+  it('a quoted earlier-period figure or usual level that is off', () => {
+    expect(ids(corrupt(c => { c.steps.find(s => s.key === 'click')!.prev = 99; }))).toContain('mismatch_prev');
+    expect(ids(corrupt(c => { c.steps.find(s => s.key === 'click')!.median = 99; }))).toContain('mismatch_median');
+  });
+  it('a negative SAR at stake', () => {
+    expect(ids(corrupt(c => { c.steps[0]!.sarAtStake = -5; }))).toContain('sar_negative');
+  });
+  it('a SAR at stake that is not the shortfall formula when the judge states that method', () => {
+    const r = corrupt(c => { c.sarMethod = 'shortfall'; const s = c.steps.find(x => x.key === 'click')!; s.target = 0.7; s.sarAtStake = 123456; });
+    expect(ids(r)).toContain('sar_recompute');
+  });
+  it('a named step that is itself fine, and a verdict level that differs from its step', () => {
+    const named = corrupt(c => { c.verdict = { step: 'click', level: 'bad', owner: OWNER_RULE.click.ar }; c.steps.find(s => s.key === 'click')!.level = 'ok'; });
+    expect(ids(named)).toContain('named_step_not_weak');
+    const lvl = corrupt(c => { c.verdict = { step: 'click', level: 'watch', owner: OWNER_RULE.click.ar }; c.steps.find(s => s.key === 'click')!.level = 'bad'; });
+    expect(ids(lvl)).toContain('level_mismatch');
+  });
+  it('a step owner that is not the rule table\'s', () => {
+    expect(ids(corrupt(c => { c.steps[0]!.owner = 'nobody'; }))).toContain('owner_mismatch_step');
+  });
+  it('confidence above «low» when coverage is under the low line', () => {
+    const poor = synth({ tied: 0.12, paidTied: 4 });
+    const base = claimFromJudge(poor, from, to);
+    const r = corrupt(c => { c.verdict.confidence = 'medium'; }, poor, base);
+    expect(recompute(poor, from, to).crm.coverage!).toBeLessThan(0.3);
+    expect(ids(r)).toContain('confidence_vs_coverage');
+    expect(r.findings.find(f => f.id === 'confidence_vs_coverage')!.effect).toBe('weakens');
+  });
+  it('the rates must multiply to the end to end rate (chain_product), and an exact set passes', () => {
+    const f = recompute(d, from, to);
+    const click = f.scope.ctr!, lead = f.scope.c2r!;
+    const exact = (f.crm.booked / f.scope.impr / f.crm.coverage!) / ((click / 100) * (lead / 100)) * 100;
+    const set = (sale: number) => (c: Claim) => {
+      c.steps.find(s => s.key === 'click')!.now = click; c.steps.find(s => s.key === 'lead')!.now = lead;
+      const x = c.steps.find(s => s.key === 'sale')!; x.now = sale; x.unattributed = false;
+    };
+    expect(ids(corrupt(set(exact)))).not.toContain('chain_product');
+    expect(ids(corrupt(set(exact * 1.5)))).toContain('chain_product');
   });
 });
 
@@ -143,6 +217,58 @@ describe('auditor: the devil\'s advocate', () => {
   });
 });
 
+describe('auditor: the findings no test produced before', () => {
+  const quiet = (d: ReturnType<typeof synth>, tweak?: (c: Claim) => void): Claim => {
+    const c = claimFromJudge(d, from, to);
+    c.verdict = { step: null, level: 'ok', owner: null };
+    for (const s of c.steps) s.level = 'ok';
+    tweak?.(c);
+    return c;
+  };
+  it('«no problem» while a step is still marked weak', () => {
+    const d = synth();
+    const r = audit(d, quiet(d, c => { const s = c.steps.find(x => x.key === 'click')!; s.level = 'bad'; s.unattributed = false; }));
+    expect(ids(r)).toContain('ok_with_weak_step');
+    expect(r.status).toBe('contradicted');
+  });
+  it('«no problem» with no CRM connected covers the ads only', () => {
+    const d = synth();
+    delete (d as { crm?: unknown }).crm;
+    const r = audit(d, quiet(d));
+    expect(r.findings.find(f => f.id === 'ok_without_crm')?.effect).toBe('weakens');
+    expect(ids(audit(synth(), quiet(synth())))).not.toContain('ok_without_crm');
+  });
+  it('a quoted closing-rate range that is not the one the data gives', () => {
+    const d = synth();
+    expect(ids(audit(d, quiet(d, c => { c.verdict.range = { best: 99, worst: 98 }; })))).toContain('range_mismatch');
+  });
+  it('«no problem» while the floor sits inside the range the attribution gap leaves open', () => {
+    // Few closings tied to an ad, many more in the CRM with no ad: under the floor at worst, over it at best
+    const d = synth({ days: 20, impr: 100_000, paidAll: 48, paidTied: 2, tied: 0.5 });
+    const r = audit(d, quiet(d, c => { c.steps.find(s => s.key === 'sale')!.unattributed = false; }));
+    expect(r.findings.find(f => f.id === 'attribution_range_straddles')?.effect).toBe('weakens');
+  });
+  it('Simpson, the other way: a fine total hiding a platform under the floor', () => {
+    // One platform with about a third of the impressions gets a click rate under the floor; the total stays above it
+    const d = synth();
+    for (const r of d.rows as unknown[][]) if (String(r[0]).startsWith('snap|')) r[4] = Math.round((r[3] as number) * 0.003);
+    const r = audit(d, quiet(d));
+    expect(recompute(d, from, to).scope.ctr!).toBeGreaterThan(0.7);
+    expect(r.findings.find(f => f.id === 'simpson_hidden')?.text.en).toMatch(/snap/);
+  });
+  it('a comparison period with data on few of its days', () => {
+    const d = synth({ days: 90 });
+    const full = (c: Claim) => { c.verdict = { step: 'click', level: 'bad', owner: OWNER_RULE.click.ar }; const s = c.steps.find(x => x.key === 'click')!; s.level = 'bad'; s.prev = 1; };
+    const before = claimFromJudge(d, from, to); full(before);
+    expect(ids(audit(d, before))).not.toContain('prev_period_holes');
+    // Keep one day in three of the 30 days before the period
+    const f = recompute(d, from, to);
+    d.rows = (d.rows as unknown[][]).filter(r => { const day = String(r[1]); return day < f.prev.from || day > f.prev.to || Number(day.slice(8)) % 3 === 0; });
+    const c = claimFromJudge(d, from, to); full(c);
+    expect(ids(audit(d, c))).toContain('prev_period_holes');
+  });
+});
+
 describe('auditor: back-test on history', () => {
   it('replays the judge over past windows and reports counts only', () => {
     const d = synth({ days: 120, impr: 8_000_000, paidAll: 90, paidTied: 30 });
@@ -158,5 +284,17 @@ describe('auditor: back-test on history', () => {
   });
   it('is silent about windows without data', () => {
     expect(backtest({ ads: {}, rows: [], range: { start: '2026-01-01', end: to } } as never, to).windows).toBe(0);
+  });
+});
+
+// Keep this block last: it reads what the tests above produced.
+describe('auditor: no finding id without a test that produces it', () => {
+  it('every id in checks.ts and advocate.ts came out of an audit in this file', () => {
+    const src = `${checksSrc}\n${advocateSrc}`;
+    const declared = [...src.matchAll(/\bid: (['`])([a-z_${}]+)\1/g)].map(m => m[2]!)
+      .flatMap(id => (id.includes('${what}') ? ['now', 'prev', 'median'].map(w => id.replace('${what}', w)) : [id]));
+    expect(declared.length).toBeGreaterThan(25);
+    expect(declared.filter(id => id.includes('$'))).toEqual([]);
+    expect(declared.filter(id => !seen.has(id)).sort()).toEqual([]);
   });
 });

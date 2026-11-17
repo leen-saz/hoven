@@ -2,9 +2,9 @@
 // البيانات من /api/overview/data (نفس /dash.json)، والحساب كله في numbers.ts.
 import * as React from 'react';
 import { Direction } from 'radix-ui';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Skeleton } from '@/components/ui/skeleton';
-import { addDays, lastDay } from './numbers';
+import { lastDay } from './numbers';
+import { PeriodFilter, type Period } from './PeriodFilter';
 import { useDash } from './useDash';
 import { T, pageLang } from './lang';
 import { SectionCards } from './SectionCards';
@@ -34,6 +34,11 @@ function WhenNear({ minHeight, children }: { minHeight: number; children: React.
   return near ? <React.Suspense fallback={box}>{children}</React.Suspense> : <div ref={ref}>{box}</div>;
 }
 
+<<<<<<< well
+export default function Overview() {
+  const { data, error } = useDash();
+  const [period, setPeriod] = React.useState<Period | null>(null);
+=======
 // Same choices as the main analytics page: today, yesterday, week, month, the whole history, or any dates
 const RANGES = [['t', 'اليوم', 'Today'], ['y', 'أمس', 'Yesterday'], ['7', 'أسبوع', 'Week'], ['30', 'شهر', 'Month'], ['m', 'هذا الشهر', 'This month'], ['all', 'كل المدة', 'All time'], ['c', 'تاريخ مخصص', 'Custom dates']] as const;
 type Range = (typeof RANGES)[number][0];
@@ -49,11 +54,18 @@ export default function Overview() {
   const { data, error } = useDash();
   const [range, setRange] = React.useState<Range>('30');
   const [custom, setCustom] = React.useState<{ from: string; to: string }>({ from: '', to: '' });
+>>>>>>> hoven
 
   if (error) return <p className="ui text-destructive">{error}</p>;
   if (!data) return <OverviewSkeleton />;
   const to = lastDay(data);
   if (!to) return <p className="ui text-muted-foreground">{T('ما فيه أرقام للحين.', 'No numbers yet.')}</p>;
+<<<<<<< well
+  // Days are the data's own (Riyadh) days: today, the last full day (range.end) and the first day the data has
+  const ctx = { today: data.range?.today || to, last: to, min: data.range?.start || to };
+  const from = period?.from ?? to;
+  const end = period?.to ?? to;
+=======
   const min = firstDay(data) || to;
   const today = (data.range?.today && DAY.test(data.range.today)) ? data.range.today : to;
   const clamp = (x: string) => (x < min ? min : x > today ? today : x);
@@ -66,6 +78,7 @@ export default function Overview() {
     const a = DAY.test(custom.from) ? clamp(custom.from) : addDays(to, -29), b = DAY.test(custom.to) ? clamp(custom.to) : to;
     [from, end] = a <= b ? [a, b] : [b, a];
   } else from = clamp(addDays(to, -(Number(range) - 1)));
+>>>>>>> hoven
 
   return (
     // Radix menus, selects and the sheet open in their own layer: tell them the page direction (Arabic RTL, English LTR)
@@ -73,6 +86,14 @@ export default function Overview() {
     {/* min-w-0: a wide table or chart scrolls inside its card instead of widening the page on a phone */}
     <div className="ui grid gap-4 [&>*]:min-w-0 [&>.grid>*]:min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
+<<<<<<< well
+        <p className="text-sm text-muted-foreground">{period ? T(`من ${longDay(from)} إلى ${longDay(end)}، مقارنة بنفس المدة اللي قبلها`, `${longDay(from)} to ${longDay(end)}, compared with the same length before`) : ''}</p>
+        <PeriodFilter id="overview" def="30" ctx={ctx} onChange={setPeriod} />
+      </div>
+      {/* The full dashboard (campaigns, platforms, organic) lives on «/»: it is not in the menu when this page is on, so it is linked here */}
+      <p className="text-sm"><a className="underline underline-offset-4" href="/">{T('افتح اللوحة الكاملة (الحملات والمنصات والعضوي) ←', 'Open the full dashboard (campaigns, platforms, organic) →')}</a></p>
+      {period && <>
+=======
         <p className="text-sm text-muted-foreground">{T(`من ${longDay(from)} إلى ${longDay(end)}`, `${longDay(from)} to ${longDay(end)}`)}{range === 'all' ? '' : T('، مقارنة بنفس المدة اللي قبلها', ', compared with the same length before')}{range === 't' ? T(' (اليوم جزئي)', ' (today is partial)') : ''}</p>
         <ToggleGroup type="single" variant="outline" value={range} onValueChange={v => v && setRange(v as Range)} aria-label={T('الفترة', 'Period')} className="flex-wrap">
           {RANGES.map(([v, ar, en]) => <ToggleGroupItem key={v} value={v} className="px-3">{T(ar, en)}</ToggleGroupItem>)}
@@ -84,6 +105,7 @@ export default function Overview() {
           <label className="grid gap-1">{T('إلى', 'To')}<input type="date" className="rounded-md border px-2 py-1" min={min} max={today} value={custom.to || end} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} /></label>
         </div>
       )}
+>>>>>>> hoven
       <SectionCards data={data} from={from} to={end} />
       <OutcomeCards data={data} from={from} to={end} />
       <React.Suspense fallback={<Skeleton className="h-[640px] rounded-xl" />}><TrendChart data={data} from={from} to={end} /></React.Suspense>
@@ -99,6 +121,10 @@ export default function Overview() {
         <HeatCard data={data} from={from} to={end} />
       </div>
       <WhenNear minHeight={1040}><AdsTable data={data} from={from} to={end} /></WhenNear>
+<<<<<<< well
+      </>}
+=======
+>>>>>>> hoven
     </div>
     </Direction.Provider>
   );
