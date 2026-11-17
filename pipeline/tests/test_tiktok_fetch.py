@@ -14,8 +14,13 @@ from tiktok.fetch import (
 
 FIXTURE = json.load(open(os.path.join(ROOT, "tests", "fixtures", "tiktok_api.json"), encoding="utf-8"))
 TOKEN = "super-secret-token-value"
+<<<<<<< well
+WELL = "7000000000000000001"
+ROSE = "7000000000000000002"
+=======
 HOVEN = "7532842350553514000"
 ROSE = "6948010864247046146"
+>>>>>>> hoven
 RIYADH = timezone(timedelta(hours=3))
 NOW = datetime(2026, 10, 18, 21, 5, tzinfo=RIYADH)
 START = datetime(2026, 10, 1, tzinfo=RIYADH)
@@ -95,22 +100,26 @@ class PullTests(unittest.TestCase):
         self.assertTrue(any("data_level=AUCTION_AD" in url and "stat_time_day" in url for url in transport.urls))
         self.assertTrue(any("STATUS_ALL" in url for url in transport.urls))
         by = _rows_by_day(rows)
-        live = by[("t1878109843378193", "2026-10-17")]
+        live = by[("t9000000000000000001", "2026-10-17")]
         self.assertEqual(live[2:], [50.29, 17367, 86, 2.0, 3])
-        talks = by[("t1878109843378193", "2026-10-15")]
+        talks = by[("t9000000000000000001", "2026-10-15")]
         self.assertEqual(talks[6], 4)
-        self.assertNotIn(("t1878109843378193", "2026-10-18"), by)
+        self.assertNotIn(("t9000000000000000001", "2026-10-18"), by)
         self.assertNotIn(("t9", "2026-10-17"), by)
         self.assertEqual(by[("t555", "2026-10-16")][3:5], [10, 1])
         deleted = by[("t777", "2026-10-17")]
         self.assertEqual(deleted[2], 3.5)
         self.assertEqual(deleted[5], 0.5)
         self.assertNotIn("2026-10-13", {r[1] for r in rows})
-        lead = ads["t1878109843378193"]
+        lead = ads["t9000000000000000001"]
         self.assertEqual(lead["name"], "Hoven lead video")
+<<<<<<< well
+        self.assertEqual(lead["campaign"], "Sample_TikTok_Leads_iv")
+=======
         self.assertEqual(lead["campaign"], "Tiktok_Leads_HOVEN_iv")
+>>>>>>> hoven
         self.assertEqual(lead["group"], "Female2")
-        self.assertEqual(lead["link"], "https://www.tiktok.com/embed/v2/7692055113619442965")
+        self.assertEqual(lead["link"], "https://www.tiktok.com/embed/v2/9000000000000000002")
         self.assertTrue(lead["live"])
         self.assertEqual(lead["status"], "نشط")
         self.assertEqual(lead["goal"], "lead")
@@ -134,16 +143,25 @@ class PullTests(unittest.TestCase):
             info=FIXTURE["usd_advertiser_info"],
             report_pages={"1": FIXTURE["usd_report"]},
         )
+<<<<<<< well
+        _ads, rows = pull(_env(WELL), START, END, usd)
+        self.assertEqual(rows, [["t9000000000000000001", "2026-10-17", 37.5, 100, 4, 1.0, 0]])
+=======
         _ads, rows = pull(_env(HOVEN), START, END, usd)
         self.assertEqual(rows, [["t1878109843378193", "2026-10-17", 37.5, 100, 4, 1.0, 0]])
+>>>>>>> hoven
         eur = FixtureTransport(info=FIXTURE["eur_advertiser_info"])
         with self.assertRaises(RuntimeError):
             pull(_env(HOVEN), START, END, eur)
         self.assertFalse(any("/report/" in url for url in eur.urls))
 
+<<<<<<< well
+    def test_excluded_named_account_is_not_reported(self):
+=======
     @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 
     def test_named_spring_rose_account_is_not_reported(self):
+>>>>>>> hoven
         transport = FixtureTransport(info=FIXTURE["rose_named_advertiser_info"])
         with self.assertRaises(RuntimeError):
             pull(_env(HOVEN), START, END, transport)
@@ -156,8 +174,8 @@ class PullTests(unittest.TestCase):
         self.assertIn("messaging_total_conversation", transport.report_metrics[0])
         self.assertNotIn("messaging_total_conversation", transport.report_metrics[1])
         self.assertIn("spend", transport.report_metrics[1])
-        self.assertEqual(_rows_by_day(rows)[("t1878109843378193", "2026-10-17")][2], 50.29)
-        self.assertTrue(ads["t1878109843378193"]["live"])
+        self.assertEqual(_rows_by_day(rows)[("t9000000000000000001", "2026-10-17")][2], 50.29)
+        self.assertTrue(ads["t9000000000000000001"]["live"])
 
     def test_stat_time_day_windows_stay_within_thirty_days(self):
         seen = []
@@ -208,8 +226,13 @@ class IngestTests(unittest.TestCase):
     def test_recent_window_keeps_older_days_and_skips_the_gap(self):
         prev = {
             "ads": {
+<<<<<<< well
+                "tOLD": {"platform": "tiktok", "family": "tiktok", "name": "قديم", "campaign": "Sample_TikTok_Leads", "live": True, "status": "نشط"},
+                "tKEEP": {"platform": "tiktok", "family": "tiktok", "name": "متوقف سابقاً", "campaign": "Sample_TikTok_Leads", "live": False, "status": "المجموعة متوقفة"},
+=======
                 "tOLD": {"platform": "tiktok", "family": "tiktok", "name": "قديم", "campaign": "Tiktok_Leads_HOVEN", "live": True, "status": "نشط"},
                 "tKEEP": {"platform": "tiktok", "family": "tiktok", "name": "متوقف سابقاً", "campaign": "Tiktok_Leads_HOVEN", "live": False, "status": "المجموعة متوقفة"},
+>>>>>>> hoven
             },
             "rows": [
                 ["tOLD", "2026-09-01", 7, 5, 1, 0, 0],
@@ -245,7 +268,11 @@ class IngestTests(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump({
                     "generated_at": "2026-10-12T12:38+03:00",
+<<<<<<< well
+                    "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Sample_TikTok_Leads", "group": "g"}},
+=======
                     "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Tiktok_Leads_HOVEN", "group": "g"}},
+>>>>>>> hoven
                     "rows": [
                         ["t2", "2026-09-01", 10, 5, 1, 0, 0],
                         ["t2", "2026-10-16", 99, 9, 1, 0, 0],
@@ -255,7 +282,7 @@ class IngestTests(unittest.TestCase):
         marked = {(r[0], r[1], r[2]) for r in got["rows"]}
         self.assertIn(("t2", "2026-09-01", 10), marked)
         self.assertNotIn(("t2", "2026-10-16", 99), marked)
-        self.assertTrue(any(r[0] == "t1878109843378193" and r[1] == "2026-10-17" and r[2] == 50.29 for r in got["rows"]))
+        self.assertTrue(any(r[0] == "t9000000000000000001" and r[1] == "2026-10-17" and r[2] == 50.29 for r in got["rows"]))
         self.assertEqual(got["status"]["source"], "api")
         self.assertNotIn("2026-10-13", {r[1] for r in got["rows"]})
 
@@ -288,16 +315,20 @@ class IngestTests(unittest.TestCase):
             json.dump({
                 "generated_at": "2026-10-12T12:38+03:00",
                 "organic": {"status": "ok", "name": "تيك توك", "followers": 10, "posts": []},
+<<<<<<< well
+                "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Sample_TikTok_Leads", "group": "g", "text": "", "live": False}},
+=======
                 "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Tiktok_Leads_HOVEN", "group": "g", "text": "", "live": False}},
+>>>>>>> hoven
                 "rows": [
                     ["t2", "2026-09-01", 10, 5, 1, 0, 0],
                     ["t2", "2026-10-12", 4, 8, 2, 1, 0],
                     ["t9", "2026-10-12", 80, 9, 1, 0, 0],
                 ],
             }, open(path, "w", encoding="utf-8"))
-            # ملف فيه إعلان زهرة الربيع يُسقَط كما في المسار القديم.
+            # ملف فيه إعلان شركة العرض التجريبي يُسقَط كما في المسار القديم.
             blob = json.load(open(path, encoding="utf-8"))
-            blob["ads"]["t9"] = {"platform": "tiktok", "name": "Rose install", "campaign": "SR | iOS14 | AppInstall", "group": "", "text": ""}
+            blob["ads"]["t9"] = {"platform": "tiktok", "name": "Rose install", "campaign": "Demo | ad_demo_x1 | AppInstall", "group": "", "text": ""}
             json.dump(blob, open(path, "w", encoding="utf-8"))
 
             def boom(*_a, **_k):
@@ -387,3 +418,75 @@ class IngestTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WhatsAppDestination(unittest.TestCase):
+    def test_detected_only_from_evidence(self):
+        from tiktok.merge import whatsapp_dest
+        none = {}
+        self.assertTrue(whatsapp_dest({"deeplink": "https://wa.me/966500000000"}, config=none))
+        self.assertTrue(whatsapp_dest({"landing_page_url": "whatsapp://send?phone=1"}, config=none))
+        self.assertTrue(whatsapp_dest({}, {"messaging_app_type": "WHATSAPP"}, config=none))
+        self.assertTrue(whatsapp_dest({"campaign_id": "9"}, config={"campaign_ids": [9]}))
+        self.assertTrue(whatsapp_dest({"campaign_name": "Promo WhatsApp"}, config={"campaign_name_words": ["whatsapp"]}))
+        # no link, no group info, nothing listed: unknown, so False (never guessed)
+        self.assertFalse(whatsapp_dest({"campaign_name": "Promo whatsapp"}, config=none))
+        self.assertFalse(whatsapp_dest({"landing_page_url": "https://example.com/offer"}, config=none))
+
+
+class DestinationUnknownAndRecomputed(unittest.TestCase):
+    def test_no_evidence_is_unknown_for_lead_ads_only(self):
+        from tiktok.merge import destination, dest_for
+        none = {}
+        self.assertEqual(destination({}, config=none), "unknown")
+        self.assertEqual(destination({"landing_page_url": "https://example.com/offer"}, config=none), None)
+        self.assertEqual(destination({}, {"messaging_app_type": "MESSENGER"}, config=none), None)
+        self.assertEqual(dest_for({}, goal="lead", config=none), "unknown")
+        self.assertIsNone(dest_for({}, goal="traffic", config=none))
+        self.assertEqual(dest_for({"deeplink": "https://wa.me/1"}, goal="traffic", config=none), "whatsapp")
+        self.assertIsNone(dest_for({"landing_page_url": "https://example.com"}, goal="lead", config=none))
+
+    def test_whatsapp_tag_is_not_sticky(self):
+        # a previous run tagged the ad WhatsApp; today its link is a web page, so the tag must go
+        import subprocess, tempfile, shutil
+        from tiktok.merge import GOAL
+        tmp = tempfile.mkdtemp()
+        try:
+            out = os.path.join(tmp, "t.json")
+            json.dump({"ads": {"t1": {"platform": "tiktok", "dest": "whatsapp", "goal": "lead"}}, "rows": [], "objectives": {}}, open(out, "w"))
+            ad = {"ad_id": "1", "ad_name": "x", "campaign_id": "c1", "campaign_name": "y", "adgroup_name": "g", "operation_status": "ENABLE",
+                  "secondary_status": "AD_STATUS_DELIVERY_OK", "landing_page_url": "https://example.com/offer", "advertiser_id": WELL}
+            ads = os.path.join(tmp, "a.json"); json.dump({"list": [ad]}, open(ads, "w"))
+            days = os.path.join(tmp, "d.json")
+            json.dump({"page_info": {"total_page": 1}, "list": [{"dimensions": {"ad_id": "1", "stat_time_day": "2026-10-01 00:00:00"}, "metrics": {"spend": "5", "impressions": "100", "clicks": "3", "leads": "0"}}]}, open(days, "w"))
+            obj = os.path.join(tmp, "o.json"); json.dump({"c1": "LEAD_GENERATION"}, open(obj, "w"))
+            subprocess.check_call([sys.executable, os.path.join(ROOT, "tiktok", "merge.py"), out, "--ads", ads, "--days", days, "--objectives", obj],
+                                  stdout=subprocess.DEVNULL, env={**os.environ, "PYTHONPATH": ROOT})
+            got = json.load(open(out))["ads"]["t1"]
+            self.assertNotIn("dest", got)
+            # and with no link at all it becomes unknown, not whatsapp
+            del ad["landing_page_url"]; json.dump({"list": [ad]}, open(ads, "w"))
+            subprocess.check_call([sys.executable, os.path.join(ROOT, "tiktok", "merge.py"), out, "--ads", ads, "--days", days, "--objectives", obj],
+                                  stdout=subprocess.DEVNULL, env={**os.environ, "PYTHONPATH": ROOT})
+            self.assertEqual(json.load(open(out))["ads"]["t1"]["dest"], "unknown")
+        finally:
+            shutil.rmtree(tmp)
+
+    def test_exclusion_comes_from_the_environment(self):
+        from tiktok import merge
+        old = {k: os.environ.pop(k, None) for k in ("TIKTOK_EXCLUDED_ADVERTISER_IDS", "TIKTOK_EXCLUDED_MARKERS")}
+        try:
+            self.assertFalse(merge.exclusions_configured())
+            self.assertFalse(merge.is_excluded_account("7999999999999999999", "Other Co"))
+            os.environ["TIKTOK_EXCLUDED_ADVERTISER_IDS"] = "7999999999999999999, 7888888888888888888"
+            os.environ["TIKTOK_EXCLUDED_MARKERS"] = "other co;zz_marker"
+            self.assertTrue(merge.exclusions_configured())
+            self.assertTrue(merge.is_excluded_account("7888888888888888888", ""))
+            self.assertTrue(merge.is_excluded_account("", "The OTHER CO account"))
+            self.assertTrue(merge.is_excluded_ad({"platform": "tiktok", "campaign": "ZZ_Marker | x"}))
+            self.assertFalse(merge.is_excluded_account("7000000000000000001", "Hoven"))
+        finally:
+            for k, v in old.items():
+                os.environ.pop(k, None)
+                if v is not None:
+                    os.environ[k] = v

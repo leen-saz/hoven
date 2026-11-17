@@ -17,7 +17,7 @@ function cardsList(c){
     for(const [k,a] of Object.entries(ADS)) if(!have.has(k) && matchesSlice(a)) list.push({k,...derive({spend:0,impr:0,clicks:0,leads:0,conv:0,leadSpend:0}),a});
   }
   if(S.q){ const q=S.q.toLowerCase(); list=list.filter(x=>(x.a.name+' '+x.a.campaign+' '+x.a.group+' '+(x.a.text||'')).toLowerCase().includes(q)); }
-  const key={spend:x=>-x.spend,leads:x=>-(x.leads+x.conv),cpl:x=>(x.a.goal==='lead'?x.cpl:null)??1e12,ctr:x=>-(x.ctr??-1),impr:x=>-x.impr}[S.sort];
+  const key={spend:x=>-x.spend,leads:x=>-(x.leads+x.conv),cpl:x=>(x.a.goal==='lead'&&x.a.dest!=='whatsapp'?x.cpl:null)??1e12,ctr:x=>-(x.ctr??-1),impr:x=>-x.impr}[S.sort];
   return list.sort((x,y)=>key(x)-key(y));
 }
 // Winner: the ad got 30+ orders in its first 3 days (launch day = its first day with spend or impressions).
@@ -73,7 +73,11 @@ function openIdea(k){
       <div class="sub">${fmt(y.members.length)} ${ui('إعلان بنفس الفكرة',y.members.length===1?'ad with this idea':'ads with this idea')} · ${esc(plats)}</div>
       ${hookRow(sumVid(y.members.map(m=>m.a)))}
       <div class="row">${viewControl(y.a)}</div></div></div>
+<<<<<<< well
+    <div class="tbl"><table><thead><tr><th>${ui('الإعلان','Ad')}</th><th>${ui('المنصة','Platform')}</th><th class="n">${ui('الصرف','Spend')}</th><th class="n">${ui('النتائج','Results')}</th><th class="n">${ui('تكلفة النتيجة','Cost per result')}</th><th class="n">${ui('نسبة النقر','CTR')}</th>${vids?`<th class="n">${ui('وقفوا يشوفون','Hook')}</th>`:''}</tr></thead>
+=======
     <div class="tbl"><table><thead><tr><th>${ui('الإعلان','Ad')}</th><th>${ui('المنصة','Platform')}</th><th class="n">${ui('الصرف','Spend')}</th><th class="n">${ui('النتايج','Results')}</th><th class="n">${ui('تكلفة الطلب','Cost per order')}</th><th class="n">${ui('نسبة النقر','CTR')}</th>${vids?`<th class="n">${ui('وقفوا يشوفون','Hook')}</th>`:''}</tr></thead>
+>>>>>>> hoven
     <tbody>${y.members.filter(m=>m.spend>0||(m.leads+m.conv)>0).sort((p,q)=>q.spend-p.spend).map(m=>`<tr class="click" data-ad="${esc(m.k)}"><td>${esc(m.a.name)} ${WIN.has(m.k)?'🏆':''}<div class="sub">${esc(m.a.campaign)}${m.a.group?' · '+esc(m.a.group):''}</div></td><td>${platCell(m.a.platform)}</td><td class="n">${sar(m.spend)}</td><td class="n">${resCell(m)}</td><td class="n">${m.a.goal==='lead'?sar(m.cpl):m.a.goal==='messages'?sar(m.cpm2):'—'}</td><td class="n">${pct(m.ctr)}</td>${vids?`<td class="n">${m.a.vid&&m.a.vid.v?pct(hookRate(m.a.vid)):ui('صورة','Image')}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
   const dlg=$('#dlg'); if(!dlg.open) dlg.showModal(); $('#dlgClose').onclick=()=>dlg.close();
   $('#dlgBody').onclick=e=>{ const r=e.target.closest('tr[data-ad]'); if(r) openAd(r.dataset.ad); };
@@ -91,7 +95,11 @@ function cmpItem(k){
 }
 function openCompare(){
   const items=[...CMP].map(cmpItem).filter(Boolean); if(items.length<2) return;
+<<<<<<< well
+  const metrics=[[ui('الصرف','Spend'),i=>i.x.spend,0],[ui('الليدز','Leads'),i=>i.x.leads,1],[ui('تكلفة الليد','CPL'),i=>i.a.goal==='lead'&&i.a.dest!=='whatsapp'?i.x.cpl:null,-1],[ui('نسبة النقر','CTR'),i=>i.x.ctr,1],[ui('الظهور','Impressions'),i=>i.x.impr,0],[ui('وقفوا يشوفون','Hook'),i=>hookRate(i.vid),1],[ui('كمّلوا للنهاية','Watched to end'),i=>holdRate(i.vid),1]];
+=======
   const metrics=[[ui('الصرف','Spend'),i=>i.x.spend,0],[ui('الطلبات','Leads'),i=>i.x.leads,1],[ui('تكلفة الطلب','CPL'),i=>i.a.goal==='lead'?i.x.cpl:null,-1],[ui('نسبة النقر','CTR'),i=>i.x.ctr,1],[ui('الظهور','Impressions'),i=>i.x.impr,0],[ui('وقفوا يشوفون','Hook'),i=>hookRate(i.vid),1],[ui('كمّلوا للنهاية','Watched to end'),i=>holdRate(i.vid),1]];
+>>>>>>> hoven
   const best=metrics.map(([,f,dir])=>{ if(!dir) return null; const v=items.map(f).filter(x=>x!=null&&isFinite(x)); if(v.length<2) return null; return dir>0?Math.max(...v):Math.min(...v); });
   const show=(j,v)=> j===0||j===2? sar(v) : j===1? qty(v) : j===4? fmt(v) : pct(v);
   $('#dlgBody').innerHTML = `<div class="panel-h"><h2 id="dlgTitle">${ui('مقارنة','Compare')}</h2><button type="button" class="btn" id="dlgClose">إغلاق</button></div>
@@ -103,8 +111,13 @@ function openCompare(){
   const dlg=$('#dlg'); if(!dlg.open) dlg.showModal(); $('#dlgClose').onclick=()=>dlg.close(); $('#dlgBody').onclick=null; localize();
 }
 function resultCells(x){
+<<<<<<< well
+  const g=x.a.dest==='whatsapp'?'traffic':x.a.goal;   // opens WhatsApp: no platform leads, so clicks and cost per click
+  // Cost per lead counts only the spend of lead-goal ads; say so when the card's spend has more in it
+=======
   const g=x.a.goal;
   // Cost per order counts only the spend of purchase-goal ads; say so when the card's spend has more in it
+>>>>>>> hoven
   if(g==='lead'){ const ls=x.leadSpend??x.spend, ln=x.leadN??x.leads, part=Math.round(ls)<Math.round(x.spend)||ln!==x.leads;
     return statCell('الطلبات',qty(x.leads))+statCell('تكلفة الطلب',sar(x.cpl),part?`${sar(ls)} ${ui('صرف إعلانات الطلبات','spend of lead ads')} ÷ ${qty(ln)} ${ui('طلب منها','of their leads')}`:''); }
   if(g==='messages') return statCell('الإيراد',fmt(x.conv))+statCell('تكلفة الطلب',sar(x.cpm2));
@@ -196,15 +209,20 @@ function wallCard({key, wall, label, thumb, badges, title, sub, stats, flag, vie
 }
 function renderCards(c){
   let list = cardsList(c);
-  { list=ideaList(list); const key={spend:x=>-x.spend,leads:x=>-(x.leads+x.conv),cpl:x=>(x.a.goal==='lead'?x.cpl:null)??1e12,ctr:x=>-(x.ctr??-1),impr:x=>-x.impr}[S.sort]; list.sort((p,q)=>key(p)-key(q)); IDEAS={}; list.forEach(x=>IDEAS[x.k]=x); }
+  { list=ideaList(list); const key={spend:x=>-x.spend,leads:x=>-(x.leads+x.conv),cpl:x=>(x.a.goal==='lead'&&x.a.dest!=='whatsapp'?x.cpl:null)??1e12,ctr:x=>-(x.ctr??-1),impr:x=>-x.impr}[S.sort]; list.sort((p,q)=>key(p)-key(q)); IDEAS={}; list.forEach(x=>IDEAS[x.k]=x); }
   const show = list.slice(0,S.shown);
   $('#cards').innerHTML = show.length ? show.map(x=>wallCard({
     key:x.k, wall:'ad', label:ui('تفاصيل ','Details: ')+x.a.name, thumb:thumbHTML(x.a),
     badges:`${x.idea?`<span class="pill">${fmt(x.members.length)} ${ui('إعلان',x.members.length===1?'ad':'ads')}</span>`:platCell(x.a.platform)}${liveBadge(x.idea?{live:x.members.some(m=>m.a.live)}:x.a)}${x.idea?(x.members.some(m=>WIN.has(m.k))?winBadge(x.members.find(m=>WIN.has(m.k)).k):''):winBadge(x.k)}`,
     title:esc(x.a.name),
     sub:`${x.idea?'':campTag(x.a)+' '+tiredTag(x.k)} ${depCell(x.a.dept)} ${goalPill(x.a.goal)} ${esc(x.a.campaign)} · ${esc(x.a.group)}${x.a.format?` · <span>${esc(tr(x.a.format))}</span>`:''}`,
+<<<<<<< well
+    stats:statCell('الصرف',sar(x.spend))+resultCells(x)+statCell('الظهور',fmt(x.impr))+statCell(family(x.a.platform)==='meta'&&x.a.goal==='lead'?'محادثات':'النقرات', family(x.a.platform)==='meta'&&x.a.goal==='lead'?fmt(x.conv):fmt(x.clicks))+statCell('نسبة النقر',pct(x.ctr)),
+    flag:(x.a.dest==='whatsapp'?`<span class="pill wa-dest">${ui('توجيه للواتساب، الليدز ما تنقاس من المنصة','Sent to WhatsApp, leads are not measured by the platform')}</span>`:x.a.dest==='unknown'?`<span class="pill wa-dest">${ui('وجهة غير معروفة','Destination unknown')}</span>`:x.a.goal==='lead'&&x.leads===0&&x.conv===0&&x.spend>=50&&family(x.a.platform)!=='google'?`<span class="flag">${ui(`صرف ${sar(x.spend)} ${money()} بدون ليد أو محادثة`,`Spend ${sar(x.spend)} ${money()} with no lead or conversation`)}</span>`:''),
+=======
     stats:statCell('الصرف',sar(x.spend))+resultCells(x)+statCell('الظهور',fmt(x.impr))+statCell(family(x.a.platform)==='meta'&&x.a.goal==='lead'?'الإيراد':'النقرات', family(x.a.platform)==='meta'&&x.a.goal==='lead'?fmt(x.conv):fmt(x.clicks))+statCell('نسبة النقر',pct(x.ctr)),
     flag:(x.a.goal==='lead'&&x.leads===0&&x.conv===0&&x.spend>=50&&family(x.a.platform)!=='google'?`<span class="flag">${ui(`صرف ${sar(x.spend)} ${money()} بدون طلب أو ريال إيراد`,`Spend ${sar(x.spend)} ${money()} with no lead or conversation`)}</span>`:''),
+>>>>>>> hoven
     view:hookRow(x.idea?sumVid(x.members.map(m=>m.a)):x.a.vid)+viewControl(x.a)+cmpBox(x.k),
   })).join('') : '<div class="empty">لا توجد مادة إعلانية تطابق الفلاتر في هذه الفترة.</div>';
   $('#more').hidden = list.length<=S.shown;

@@ -1,5 +1,8 @@
 // /api/voice/*: brand-voice check and an optional AI rewrite. Nothing is stored; read-only.
 import { json, readJson, handle, requireUser, notEnabled } from '../../lib/auth';
+import { overCap, record, usageCtx } from '../../lib/usage';
+import { WHY } from '../../lib/gemini';
+import { guessUsage, usageIn } from '../voiceover/voiceover';
 import { AI_MODEL, type AiRun } from '../content/content';
 import { knowledgeFor, rulesFor, withKnowledge } from '../knowledge/knowledge';
 import { ACCENTS, GUIDE, TONES, TTS_MODEL, TTS_VOICES, analyze, rewritePrompt, ttsBody, ttsInput } from './voice';
@@ -37,16 +40,21 @@ export const rewrite = { POST: handle(async (request, e: AiEnv & Parameters<type
   return json(200, { text: next, analysis: analyze(next, await rulesFor(cfg, user.co)) });
 }) };
 
-// /api/voice/speak: Gemini TTS. The audio JSON is passed straight through (no parsing here: the free Workers
-// plan allows 10 ms of CPU); the page turns the PCM into a WAV file. The key never reaches the browser.
+// /api/voice/speak: Gemini TTS. The audio JSON is passed straight through (only the usage is read, for the cost record); the page turns the PCM into a WAV file. The key never reaches the browser.
 export const speak = { POST: handle(async (request, e: TtsEnv & Parameters<typeof requireUser>[1]) => {
   const { cfg, user } = await requireUser(request, e, 'voice', { write: true });
   const i = ttsInput(await readJson(request));
   if (!i.text) return json(400, { error: 'اكتب النص أول' });
   if (!e.GEMINI_API_KEY) return json(503, { error: notEnabled(user, 'توليد الصوت', 'GEMINI_API_KEY') });
+<<<<<<< well
+  // Under the tab's monthly cap like the Voiceover tab: a spent cap stops it with a plain sentence
+  const ctx = usageCtx(cfg, user, 'voice');
+  if (ctx && await overCap(ctx, 'voice')) return json(429, { error: WHY.capped });
+=======
   // About 2.3 words a second, the same figure the voice tab uses for the voice-over length
   const secs = Math.max(1, Math.ceil(i.text.split(/\s+/).filter(Boolean).length / 2.3));
   const over = await guard(cfg, user, 'voice_sec', secs); if (over) return over; await meter(cfg, user, 'voice', 'voice_sec', secs);
+>>>>>>> hoven
   const model = (e.GEMINI_TTS_MODEL || TTS_MODEL).replace(/[^a-z0-9.\-]/gi, '');
   let r: Response;
   try {
@@ -56,5 +64,8 @@ export const speak = { POST: handle(async (request, e: TtsEnv & Parameters<typeo
   } catch { return json(502, { error: 'خدمة الصوت ما ردت، جرّب بعد دقيقة' }); }
   if (r.status === 429) return json(429, { error: 'وصلت حد توليد الصوت لهالفترة، جرّب بعدين' });
   if (!r.ok) return json(502, { error: `ما انولد الصوت (${r.status})` });
-  return new Response(r.body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
+  const raw = await r.text();
+  const real = usageIn(raw);
+  record(ctx, 'voice', { provider: 'gemini', model, usage: real ?? guessUsage(i.text, raw), estimated: !real });
+  return new Response(raw, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }) };

@@ -4,9 +4,9 @@
 import { env as authEnv, sb, type AuthEnv, type Cfg } from '../../lib/auth';
 import { type AiRun } from '../content/content';
 import { generate, grokSearch, pick } from '../../lib/llm';
-import { usageCtx } from '../../lib/usage';
+import { usageCtx, type UsageCtx } from '../../lib/usage';
 import {
-  dedupe, due, parseBing, parseNews, parseReddit, parseSentiment, parseTikTok, parseX, parseYouTube, query, sentimentPrompt,
+  dedupe, due, parseBing, parseNews, parseReddit, parseSentiment, parseTikTok, parseX, parseYouTube, query, relevant, sentimentPrompt,
   terms, type Mention, type Watch,
 } from './social';
 
@@ -49,9 +49,12 @@ export function batch<T extends Watch>(list: T[], budget = BUDGET): T[] {
 }
 
 // One watch: each source on its own; a failing source never stops the others. Returns what each source gave.
-export async function collect(w: Watch & { id: number }, e: ListenEnv, f: typeof fetch = fetch): Promise<{ found: Mention[]; bySource: Record<string, number | string> }> {
+export async function collect(w: Watch & { id: number }, e: ListenEnv, f: typeof fetch = fetch, ctx?: UsageCtx): Promise<{ found: Mention[]; bySource: Record<string, number | string>; dropped: number }> {
   const q = query(w), found: Mention[] = [], bySource: Record<string, number | string> = {};
-  const add = (src: string, list: Mention[]) => { bySource[src] = list.length; found.push(...list); };
+  let dropped = 0;
+  // Only mentions that are really about the watch are kept (relevant() in social.ts); the rest are counted, not stored
+  const onTopic = (list: Mention[]) => { const keep = list.filter(m => relevant(m, w)); dropped += list.length - keep.length; return keep; };
+  const add = (src: string, list: Mention[]) => { const keep = onTopic(list); bySource[src] = keep.length; found.push(...keep); };
   const jobs: Promise<void>[] = [];
   // News: Google News, one quoted term per request (an OR of rare terms gives 0 results there), then Bing News the same way.
   // Both answer from Cloudflare (Actions > listening-probe, 2026-11-03).
@@ -61,7 +64,7 @@ export async function collect(w: Watch & { id: number }, e: ListenEnv, f: typeof
       let failed = '';
       for (const t of terms(w, NEWS_TERMS)) {
         const r = await get(f, url(t));
-        if (typeof r === 'string') failed = r; else list.push(...parse(await r.text(), w.id));
+        if (typeof r === 'string') failed = r; else list.push(...onTopic(parse(await r.text(), w.id)));
       }
       bySource[src] = list.length || !failed ? list.length : failed;
       found.push(...list);
@@ -84,16 +87,16 @@ export async function collect(w: Watch & { id: number }, e: ListenEnv, f: typeof
   })());
   // Grok (optional, PAID per use) with its live X search tool: lists the posts it found as JSON. parseX keeps x.com links only.
   if (e.XAI_API_KEY) jobs.push((async () => {
-    const text = await grokSearch(e, [{ role: 'user', content: `ابحث في X (تويتر) عن آخر التغريدات اللي تذكر: ${q}. رد JSON فقط: [{"url":"https://x.com/...","text":"","author":"","date":"YYYY-MM-DD"}]` }], ['x'], 2000, f);
+    const text = await grokSearch(e, [{ role: 'user', content: `ابحث في X (تويتر) عن آخر التغريدات اللي تذكر: ${q}. رد JSON فقط: [{"url":"https://x.com/...","text":"","author":"","date":"YYYY-MM-DD"}]` }], ['x'], 2000, f, ctx);
     if (text !== null) add('x', parseX(text, w.id)); else bySource.x = 'Grok ما رد';
   })());
   // TikTok has no open search API: Grok's web search over tiktok.com (same key, PAID per search). parseTikTok keeps tiktok.com links only.
   if (e.XAI_API_KEY) jobs.push((async () => {
-    const text = await grokSearch(e, [{ role: 'user', content: `ابحث في tiktok.com عن آخر الفيديوهات اللي تذكر: ${q}. رد JSON فقط: [{"url":"https://www.tiktok.com/@.../video/...","text":"وصف الفيديو","author":"","date":"YYYY-MM-DD"}]` }], ['web'], 2000, f);
+    const text = await grokSearch(e, [{ role: 'user', content: `ابحث في tiktok.com عن آخر الفيديوهات اللي تذكر: ${q}. رد JSON فقط: [{"url":"https://www.tiktok.com/@.../video/...","text":"وصف الفيديو","author":"","date":"YYYY-MM-DD"}]` }], ['web'], 2000, f, ctx);
     if (text !== null) add('tiktok', parseTikTok(text, w.id)); else bySource.tiktok = 'Grok ما رد';
   })());
   await Promise.all(jobs);
-  return { found: dedupe(found), bySource };
+  return { found: dedupe(found), bySource, dropped };
 }
 
 // Store new mentions, then score the unscored ones of this company (one AI call, at most 20)
@@ -133,6 +136,6 @@ export async function runListening(e: ListenEnv, now = Date.now(), f: typeof fet
   const r = await sb<(Watch & { id: number; company_id: string })[]>(cfg, '/rest/v1/listen_watch?select=*&order=fetched_at.asc.nullsfirst&limit=1', { admin: true });
   const w = r.ok && Array.isArray(r.data) ? r.data[0] : undefined; // table missing or empty: nothing to do
   if (!w || !due(w, now)) return 0;
-  const { found } = await collect(w, e, f);
+  const { found } = await collect(w, e, f, usageCtx(cfg, { co: w.company_id }));
   return (await store(cfg, w.company_id, w, found, e)).added;
 }

@@ -1,18 +1,26 @@
-// The journey's rules and shape on made-up numbers: which step is the bottleneck and why, the usual level (30-day
-// median), the floors, and a band whose height follows the volume and whose waist narrows on a weak step.
+// The journey's shape and numbers on made-up numbers: a band whose height follows the volume and whose waist narrows on
+// a step under target, the journey labels in English, and the platform filter. The rules themselves: judge.test.ts.
 import { describe, expect, it } from 'vitest';
-import { FLOORS, medians, points, shape, stageX, steps, verdict } from './funnel';
+import { points, shape, stageX } from './funnel';
 import { journey, outcome, type Outcome } from './analytics';
 import { addDays, type Dash } from './numbers';
 
 // A healthy period: CTR 1.5%, 3% of clicks become a lead or chat, 10% of ad-linked leads close, 50 SAR a lead
 const base: Outcome = {
   spend: 15000, impr: 200000, clicks: 3000, leads: 70, conv: 20, crm: true, crmLinked: true, crmLeads: 60, booked: 6, value: 9000,
-  closings: 8, paid: 12000, cpm: 75, cpc: 5, ctr: 1.5, cpl: 50, clickToResult: 3, closeRate: 10, roas: 0.6, mer: 0.8, cac: 1875, closingsAll: 8, bookedAll: 6,
+  closings: 8, paid: 12000, cpm: 75, cpc: 5, ctr: 1.5, cpl: 50, clickToResult: 3, closeRate: 10, roas: 0.6, mer: 0.8, cac: 1875, closingsAll: 8, bookedAll: 6, closingsUnattributed: 2,
+  closeRateAll: 8.9,
 };
 const as = (o: Partial<Outcome>): Outcome => ({ ...base, ...o });
-const usual = { click: 1.5, lead: 3, cpl: 50 };
 
+<<<<<<< well
+describe('overview: closings not tied to an ad are marked', () => {
+  it('shows the unattributed count beside the ad-linked one, in both languages, and not when there are none', () => {
+    const ar = journey(as({ closingsAll: 45, bookedAll: 0, booked: 0, closings: 45, closingsUnattributed: 45 }), 'ar').stages[3]!.sub.find(x => x.key === 'closingsUnattributed');
+    expect([ar?.label, ar?.now]).toEqual(['إقفالات غير منسوبة لإعلان', 45]);
+    expect(journey(as({ closingsUnattributed: 3 }), 'en').stages[3]!.sub.find(x => x.key === 'closingsUnattributed')?.label).toBe('Closings not tied to an ad');
+    expect(journey(as({ closingsUnattributed: 0 }), 'ar').stages[3]!.sub.some(x => x.key === 'closingsUnattributed')).toBe(false);
+=======
 describe('overview: funnel rules', () => {
   it('all steps as usual: «لا توجد مشكلة واضحة», no step singled out', () => {
     const v = verdict(steps(base, base, usual));
@@ -134,26 +142,20 @@ describe('overview: who owns the problem', () => {
   });
   it('owners in English too', () => {
     expect(verdict(steps(as({ closeRate: 1 }), base, usual, 'en'), 'en').owner).toBe('Sales');
+>>>>>>> hoven
   });
 });
 
 describe('overview: funnel in English', () => {
   const arabic = /[\u0600-\u06FF]/;
-  it('every step line, verdict and unlinked note comes out in English, no Arabic letters', () => {
-    for (const o of [base, as({ ctr: 0.5 }), as({ clickToResult: 1 }), as({ closeRate: 1 }), as({ cpl: 200 }), as({ crmLinked: false }), as({ booked: 0, closings: 9, closingsAll: 9, bookedAll: 0 })]) {
-      const list = steps(o, base, usual, 'en'), v = verdict(list, 'en');
-      const text = [v.title, v.why, v.todo, v.unlinked?.why ?? '', v.unlinked?.todo ?? '', ...list.flatMap(s => [s.label, s.line])].join(' ');
-      expect(text).not.toMatch(arabic);
-    }
-    expect(verdict(steps(base, base, usual, 'en'), 'en').title).toBe('No clear problem');
-    expect(steps(as({ booked: 0, closings: 45, closingsAll: 45, bookedAll: 0 }), base, usual, 'en').find(s => s.key === 'sale')!.line).toContain('it is not zero');
-  });
   it('the journey labels and «غير مربوط» in English', () => {
     const j = journey(as({ booked: 0, closings: 45, closingsAll: 45, bookedAll: 0 }), 'en');
     expect(j.stages.map(s => s.n)).toEqual(['Awareness', 'Interest', 'Conversion', 'Sale']);
     const all = j.stages.flatMap(s => [s.n, s.hint, s.main.label, ...s.sub.map(x => x.label + (x.missing ?? '')), s.rate ? s.rate.label + (s.rate.missing ?? '') : '']).join(' ');
     expect(all).not.toMatch(arabic);
-    expect(j.stages[3]!.rate!.missing).toBe('Not linked');
+    // The lead-to-closing link is CRM-wide (judged); only the ads' own share is «غير مربوط»
+    expect(j.stages[3]!.rate!.missing).toBeUndefined();
+    expect(j.stages[3]!.sub.find(x => x.label === 'Closings from ads')!.missing).toBe('Not linked');
     expect(journey(as({ crmLinked: false }), 'en').noCrm).not.toMatch(arabic);
   });
   it('the band reads left to right in English: stage 1 on the left', () => {
@@ -164,7 +166,7 @@ describe('overview: funnel in English', () => {
   });
 });
 
-describe('overview: the usual level (30-day median of daily values)', () => {
+describe('overview: the journey numbers per platform', () => {
   const to = '2026-10-30';
   const ads = { a: { name: 'a', campaign: 'c', platform: 'facebook', goal: 'lead' }, b: { name: 'b', campaign: 'c', platform: 'snap', goal: 'lead' } };
   // 20 days: facebook at 1% CTR, snap at 3%; one tiny day that must not count; one day outside the 30
@@ -176,34 +178,22 @@ describe('overview: the usual level (30-day median of daily values)', () => {
   rows.push(['a', addDays(to, -25), 1, 50, 40, 0, 0], ['a', addDays(to, -40), 100, 1000, 900, 0, 0]);
   const D = { ads, rows } as unknown as Dash;
 
-  it('takes the median of days with enough volume, inside the 30 days', () => {
-    const m = medians(D, to);
-    expect(m.click).toBeCloseTo(2);           // (10 + 30) / 2000
-    expect(m.lead).toBeCloseTo(7.5);          // 3 results / 40 clicks
-    expect(m.cpl).toBeCloseTo(200 / 3);
-  });
-  it('per platform', () => {
-    expect(medians(D, to, 'facebook').click).toBeCloseTo(1);
-    expect(medians(D, to, 'snap').click).toBeCloseTo(3);
-  });
-  it('no usual level with fewer than 7 qualifying days', () => {
-    expect(medians({ ads, rows: rows.slice(0, 10) } as unknown as Dash, to).click).toBeNull();
-  });
   it('the platform filter: only that platform, closings from the ad-linked CRM rows', () => {
     const C = { ...D, crm: { rows: [['a', to, to, true, 500], ['b', to, to, true, 700]], paid_all: [[to, to, 500, 'x'], [to, to, 700, 'y'], [to, to, 900, 'z']] } } as unknown as Dash;
     const all = outcome(C, addDays(to, -6), to), fb = outcome(C, addDays(to, -6), to, 'lead', 'facebook');
     expect(all).toMatchObject({ crm: true, closings: 3, impr: 14000 });
     expect(fb).toMatchObject({ crm: false, crmLinked: true, closings: 1, paid: 500, booked: 1, value: 500, impr: 7000, clicks: 70 });
   });
-  it('a platform filter cannot turn missing attribution into a 0% close rate: attribution is judged across all platforms', () => {
-    // Paid closings in the CRM, none tied to an ad; plenty of CRM leads tied to facebook ads
+  it('the sale link is CRM-wide when the CRM has its paid list, even when no closing is tied to an ad', () => {
     const leads = Array.from({ length: 40 }, () => ['a', to, '', false, 0]);
     const C = { ...D, crm: { rows: leads, paid_all: [[to, to, 900, 'manual'], [to, to, 900, 'manual']] } } as unknown as Dash;
-    const fb = outcome(C, addDays(to, -6), to, 'lead', 'facebook');
-    expect(fb).toMatchObject({ booked: 0, closeRate: 0, closingsAll: 2, bookedAll: 0 });
-    const sale = steps(fb, null, { click: null, lead: null, cpl: null }).find(s => s.key === 'sale')!;
-    expect(sale).toMatchObject({ unattributed: true, now: null });
-    expect(sale.line).toContain('2 إقفالة');
+    const all = outcome(C, addDays(to, -6), to), fb = outcome(C, addDays(to, -6), to, 'lead', 'facebook');
+    expect(all.closeRateAll).toBeCloseTo((100 * 2) / 21);   // 2 closings ÷ 21 results (14 facebook + 7 snap)
+    expect(journey(all).stages[3]!.rate!.key).toBe('closeRateAll');
+    expect(journey(all).stages[3]!.rate!.missing).toBeUndefined();
+    // A platform: the CRM can't split its closings, so the link falls back to the ad-linked rate, «غير مربوط» here
+    expect(fb.closeRateAll).toBeNull();
+    expect(journey(fb).stages[3]!.rate!.missing).toBe('غير مربوط');
   });
 });
 
