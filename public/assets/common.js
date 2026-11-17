@@ -182,7 +182,7 @@ function drawSide(side, me, active) {
   const NEW = [['control', '/control/new/', 'قرار جديد', 'gavel'], ['social', '/social/', 'منشور جديد', 'calendar'], ['design', '/design/', 'تصميم جديد', 'image'], ['copy', '/copy/', 'نص إعلان جديد', 'pen']];
   const can = new Set(sections(me, L).flatMap(sec => sec.items).filter(it => it.state === 'ok').map(it => it.key));
   const quick = NEW.filter(([k]) => can.has(k));
-  side.innerHTML = `<div class="side-top"><a class="brand mark" href="/dream/" aria-label="Hoven">Hoven<i>.</i></a><button type="button" class="btn icon ghost side-fold" id="sideFold" aria-label="${L('طي القائمة', 'Collapse menu')}" aria-pressed="false">${icon('panel')}</button><button class="btn icon ghost side-x" type="button" data-close-side aria-label="${L('إغلاق القائمة', 'Close menu')}">${icon('x')}</button></div>
+  side.innerHTML = `<div class="side-top"><a class="brand mark" href="/dream/" aria-label="Hoven"><img src="/assets/logos/hoven.png" alt="Hoven" class="brand-logo" width="70" height="45"></a><button type="button" class="btn icon ghost side-fold" id="sideFold" aria-label="${L('طي القائمة', 'Collapse menu')}" aria-pressed="false">${icon('panel')}</button><button class="btn icon ghost side-x" type="button" data-close-side aria-label="${L('إغلاق القائمة', 'Close menu')}">${icon('x')}</button></div>
     ${quick.length ? `<div class="qc"><button type="button" class="btn primary qc-btn" id="qcBtn" aria-haspopup="menu" aria-expanded="false">${icon('plus')}<span>${L('جديد', 'New')}</span></button>
       <div class="menu qc-menu" id="qcMenu" role="menu" hidden>${quick.map(([, href, t, ic]) => `<a href="${href}" role="menuitem">${icon(ic)}${t}</a>`).join('')}</div></div>` : ''}
     ${sections(me, L).map(sec => `<div class="side-sec"><small class="side-h">${esc(sec.label)}</small>${sec.items.map(it => {
@@ -219,7 +219,16 @@ function bindMe() {
 }
 
 // الهيكل: قائمة جانبية بأيقونات + شريط علوي. tools = HTML لأدوات الشريط.
+// The tab icon and the phone home-screen icon, from the Hoven logo (public/favicon.*, public/icons/)
+function icons() {
+  if (document.head.querySelector('link[rel="icon"]')) return;
+  for (const [rel, href, extra] of [['icon', '/favicon.png', { type: 'image/png' }], ['apple-touch-icon', '/icons/apple-touch-icon.png', {}]]) {
+    const l = Object.assign(document.createElement('link'), { rel, href }); Object.assign(l, extra); document.head.append(l);
+  }
+}
+
 export async function shell({ active, title, badge = '', tools = '' }) {
+  icons();
   const app = $('#app'), side = $('#side', app);
   // The title bar needs nothing from the server: it goes up before the user is known
   $('#top', app).innerHTML = `<div class="t"><button class="btn icon ghost burger" id="burger" aria-label="القائمة" aria-controls="side" aria-expanded="false">${icon('menu')}</button><h1>${esc(title)}</h1>${badge}</div><div class="tools"><span id="tools">${tools}</span>${langSwitch()}</div>`;

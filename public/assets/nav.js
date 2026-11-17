@@ -62,6 +62,7 @@ body{padding-inline-start:256px}
 .wl-x{display:none;width:44px;height:44px;border:0;border-radius:999px;background:none;color:#293342;cursor:pointer;place-items:center}
 .wl-x:focus-visible{outline:2px solid #294036;outline-offset:2px}
 .wl-mark i{color:#294036;font-style:normal}
+.wl-logo{display:block;height:44px;width:auto}
 .wl-navi{display:flex;align-items:center;gap:12px;height:44px;padding:0 16px;border-radius:999px;color:rgba(41,51,66,.62);text-decoration:none;transition:background .2s,color .2s}
 .wl-out{margin:0}.wl-out .wl-navi{width:100%;border:0;background:none;font:inherit;cursor:pointer;text-align:start}
 .wl-navi:hover{background:rgba(41,64,54,.07);color:#293342}
@@ -108,7 +109,7 @@ function draw(me) {
   const owner = me.role === 'owner';
   const initials = (me.name || me.email || '·').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const role = owner ? L('المالكة', 'Owner') : (me.departments || []).length ? L('مدير قسم', 'Department manager') : L('عضو', 'Member');
-  side.innerHTML = `<div class="wl-top"><a class="wl-mark" href="/dream/">Hoven<i>.</i></a><button type="button" class="wl-x" aria-label="${L('إغلاق القائمة', 'Close menu')}">${I('x')}</button></div>
+  side.innerHTML = `<div class="wl-top"><a class="wl-mark" href="/dream/" aria-label="Hoven"><img src="/assets/logos/hoven.png" alt="Hoven" class="wl-logo" width="70" height="45"></a><button type="button" class="wl-x" aria-label="${L('إغلاق القائمة', 'Close menu')}">${I('x')}</button></div>
     ${sections(me, L).map(sec => `<div class="wl-sec"><small class="wl-h">${esc(sec.label)}</small>${sec.items.map(it => {
       const ic = it.svg ? `<svg class="wl-i" viewBox="0 0 24 24" aria-hidden="true">${it.svg}</svg>` : I(it.ic);
       if (it.state === 'ok' || it.state === 'soon') return `<a class="wl-navi${it.state === 'soon' ? ' wl-soon' : ''}" href="${it.href}"${it.key === here ? ' aria-current="page"' : ''}>${ic}<span>${esc(it.text)}</span>${it.state === 'soon' ? `<small class="wl-tag">${L('قريباً', 'Soon')}</small>` : ''}</a>`;
