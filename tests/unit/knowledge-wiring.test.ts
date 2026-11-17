@@ -53,6 +53,7 @@ const CALLS: Record<(typeof AI_MODULES)[number], (env: A.AuthEnv) => Promise<Res
   social: async env => ROUTES.social.suggest.POST(await post('/api/social/suggest', { brief: 'مفارش للبيت', platforms: ['facebook'] }), env),
   maestro: async env => ROUTES.maestro.task.POST(await post('/api/maestro/task', { title: 'اكتب منشور' }), env),
   journeys: async env => ROUTES.journeys.write.POST(await post('/api/journeys/write', { type: 'email', idea: 'متابعة' }), env),
+  buyer: async env => ROUTES.buyer.chat.POST(await post('/api/buyer/chat', { messages: [{ role: 'user', content: 'وش أوقف؟' }] }), env),
 };
 
 describe('every AI module reads the knowledge', () => {

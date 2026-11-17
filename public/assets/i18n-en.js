@@ -2,6 +2,14 @@
 export const EN = {
   'كلمة أو ادعاء ما ينكتب أبداً. الكلمة تنمسك ككلمة كاملة بس، فاكتب كل صيغة تبي تمنعها (مثل «سر» و«سرها»)': 'A word or claim never to be written. A word is matched as a whole word only, so add each form you want to ban (e.g. «سر» and «سرها»)',
   // التنقل والهيكل
+  // الميديا باير
+  'الميديا باير · Hoven': 'Media buyer · Hoven', 'التوصيات': 'Recommendations', 'المحادثة': 'Chat', 'الأهداف': 'Goals', 'القواعد': 'Rules', 
+  'أرسل المحدد للوحة القرارات': 'Send selected to the decision board', 'افتح لوحة القرارات': 'Open the decision board', 'الحملات': 'Campaigns',
+  'وش صار في اقتراحاتي اللي قبل': 'How my past proposals turned out', 'احفظ الأهداف': 'Save goals', 'احفظ القواعد': 'Save rules',
+  'رجّع القواعد الأساسية': 'Restore the default rules', 'قواعدك بالعربي، كل قاعدة في سطر': 'Your rules, one per line', 'درس جديد': 'New lesson',
+  'أضف الدرس': 'Add lesson', 'احفظ كدرس': 'Save as a lesson', 'أرسل للوحة القرارات': 'Send to the decision board',
+  'أهدافك لكل منصة. اللي تخليه فاضي ما يُستخدم في الاقتراحات.': 'Your goals per platform. Empty fields are not used in recommendations.',
+  'صرف الإعلانات (ر.س)': 'Ad spend (SAR)', 'طلبات من الإعلانات': 'Purchases from ads', 'تكلفة الطلب (ر.س)': 'Cost per purchase (SAR)',
   // Hoven's menu and «احلم»
   'احلم': 'Dream', 'الميديا باير': 'Media buyer', 'الرئيسية': 'Main', 'الأتمتة والرصد': 'Automation and listening', 'الربط والإعدادات': 'Connections and settings',
   'احلم · Hoven': 'Dream · Hoven', 'وش الحملة اللي تحلم فيها؟': 'What campaign are you dreaming of?',

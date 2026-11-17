@@ -45,7 +45,7 @@ export function sections(me, L) {
   const pick = (...keys) => keys.map(byKey).filter(Boolean).flatMap(m => [mod(m), ...sub(m)]);
   const analytics = one(ov, core('/overview/', 'التحليلات', 'Analytics', 'chart', 'overview', true), core('/', 'التحليلات', 'Analytics', 'chart', 'ceo'));
   const HOVEN = [
-    ['main', L('الرئيسية', 'Main'), [...pick('dream'), analytics, ...pick('buyer')]],
+    ['main', L('الرئيسية', 'Main'), [...pick('dream'), analytics, ...pick('buyer'), ...(has('control') ? [core('/control/', 'لوحة القرارات', 'Decision board', 'gavel', 'control')] : [])]],
     ['auto', L('الأتمتة والرصد', 'Automation and listening'), [...pick('social', 'listening'), ...pick('knowledge')]],
     ['system', L('الربط والإعدادات', 'Connections and settings'), [core('/connectors/', 'الربط', 'Connectors', 'plug', 'connectors'),
       ...(me.role === 'owner' ? [core('/admin/', 'الصلاحيات', 'Permissions', SHIELD, 'admin', true)] : [])]],

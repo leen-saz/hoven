@@ -14,4 +14,5 @@ import * as overview from './overview/routes';
 import * as library from './library/routes';
 
 import * as dream from './dream/routes';
-export const ROUTES = { dream, maestro, social, journeys, content, debugger: debuggerRoutes, compliance, listening, design, voice, copy, knowledge, overview, library };
+import * as buyer from './buyer/routes';
+export const ROUTES = { dream, buyer, maestro, social, journeys, content, debugger: debuggerRoutes, compliance, listening, design, voice, copy, knowledge, overview, library };

@@ -1,0 +1,116 @@
+---
+import { ClientRouter } from 'astro:transitions';
+// الميديا باير: الأرقام ومبيعات سلة مقابل أهداف لين، اقتراحات تروح لوحة القرارات، ومحادثة مع Claude تحفظ منها دروس.
+---
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F2F0E3">
+<title>الميديا باير · Hoven</title>
+<link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<ClientRouter />
+<style is:global>
+.mb-tabs{margin:0 0 16px;flex-wrap:wrap}
+.mb-note{margin:0 0 16px;border-inline-start:4px solid var(--accent)}
+.mb-recs{display:grid;gap:12px}
+.mb-rec{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:14px 16px}
+.mb-rec h3{margin:0;font-size:16px}
+.mb-rec p{margin:4px 0 0}
+.mb-tag{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--tint);white-space:nowrap}
+.mb-tag.bad{background:color-mix(in srgb,var(--pulse) 16%,transparent)}
+.mb-tag.good{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.mb-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:0 0 12px}
+.mb-chat{display:grid;grid-template-rows:1fr auto;min-height:420px;max-height:70vh}
+.mb-log{overflow-y:auto;display:grid;gap:10px;align-content:start;padding:4px 0 12px}
+.mb-msg{padding:12px 14px;border-radius:14px;max-width:85%;white-space:pre-wrap;line-height:1.7}
+.mb-msg.user{justify-self:start;background:var(--tint)}
+.mb-msg.assistant{justify-self:end;background:var(--surface);border:1px solid color-mix(in srgb,var(--ink) 12%,transparent)}
+.mb-msg .mb-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.mb-prop{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--tint);display:grid;gap:6px}
+.mb-form{display:flex;gap:8px;align-items:flex-end}
+.mb-form textarea{min-height:52px}
+.mb-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.mb-goals fieldset{border:1px solid color-mix(in srgb,var(--ink) 12%,transparent);border-radius:14px;padding:4px 14px 14px;margin:0}
+.mb-goals legend{font-weight:700;padding:0 6px}
+.mb-goals label{margin:10px 0 4px}
+.mb-lessons{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mb-lessons li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 14px}
+@media (max-width:640px){.mb-rec{grid-template-columns:1fr}.mb-msg{max-width:100%}.mb-form{flex-direction:column;align-items:stretch}}
+</style>
+</head>
+<body data-page="buyer" data-module>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="القائمة" transition:persist="side"></aside>
+  <div class="scrim"></div>
+  <div class="main">
+    <header class="topbar" id="top"></header>
+    <main class="content" id="content">
+      <div id="setup"></div>
+      <section class="kpis" id="kpis" aria-label="آخر ٧ أيام"></section>
+      <div class="seg mb-tabs" role="tablist" aria-label="أقسام الميديا باير">
+        <button type="button" role="tab" id="tabR" data-tab="recs" aria-controls="paneRecs" aria-selected="true" aria-pressed="true">التوصيات</button>
+        <button type="button" role="tab" id="tabC" data-tab="chat" aria-controls="paneChat" aria-selected="false" aria-pressed="false">المحادثة</button>
+        <button type="button" role="tab" id="tabG" data-tab="goals" aria-controls="paneGoals" aria-selected="false" aria-pressed="false">الأهداف</button>
+        <button type="button" role="tab" id="tabU" data-tab="rules" aria-controls="paneRules" aria-selected="false" aria-pressed="false">القواعد</button>
+        <button type="button" role="tab" id="tabL" data-tab="lessons" aria-controls="paneLessons" aria-selected="false" aria-pressed="false">الدروس</button>
+      </div>
+
+      <section id="paneRecs" role="tabpanel" aria-labelledby="tabR">
+        <div class="mb-bar"><p class="muted" id="period" style="margin:0"></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary sm" type="button" id="sendAll">أرسل المحدد للوحة القرارات</button><a class="btn secondary sm" href="/control/">افتح لوحة القرارات</a></div></div>
+        <div class="msg" id="rmsg" role="status"></div>
+        <div class="mb-recs" id="recs"></div>
+        <section class="card pad" style="margin-top:16px"><h2 style="margin:0 0 10px">الحملات</h2><div class="tbl" id="camps"></div></section>
+        <section class="card pad" style="margin-top:16px"><h2 style="margin:0 0 10px">وش صار في اقتراحاتي اللي قبل</h2><div id="past"></div></section>
+      </section>
+
+      <section id="paneChat" role="tabpanel" aria-labelledby="tabC" hidden>
+        <div class="card pad mb-chat">
+          <div class="mb-log" id="log" aria-live="polite"></div>
+          <form class="mb-form" id="ask">
+            <textarea id="q" rows="2" aria-label="سؤالك" placeholder="مثلاً: وش أسوي بحملة الشتاء في سناب؟"></textarea>
+            <button class="btn primary" type="submit" id="askBtn">أرسل</button></form>
+        </div>
+        <div class="msg" id="cmsg" role="status"></div>
+      </section>
+
+      <section id="paneGoals" role="tabpanel" aria-labelledby="tabG" hidden>
+        <form class="card pad" id="goalsForm">
+          <p class="muted" style="margin:0 0 8px">أهدافك لكل منصة. اللي تخليه فاضي ما يُستخدم في الاقتراحات.</p>
+          <div class="mb-goals" id="goals"></div>
+          <div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" type="submit" id="saveGoals">احفظ الأهداف</button></div>
+          <div class="msg" id="gmsg" role="status"></div>
+        </form>
+      </section>
+
+      <section id="paneRules" role="tabpanel" aria-labelledby="tabU" hidden>
+        <form class="card pad" id="rulesForm">
+          <label for="rules" style="margin-top:0">قواعدك بالعربي، كل قاعدة في سطر</label>
+          <textarea id="rules" rows="10"></textarea>
+          <p class="muted" id="rulesNote" style="margin:6px 0 0"></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn primary" type="submit" id="saveRules">احفظ القواعد</button><button class="btn secondary" type="button" id="resetRules">رجّع القواعد الأساسية</button></div>
+          <div class="msg" id="umsg" role="status"></div>
+        </form>
+      </section>
+
+      <section id="paneLessons" role="tabpanel" aria-labelledby="tabL" hidden>
+        <form class="card pad" id="lessonForm">
+          <label for="lesson" style="margin-top:0">درس جديد</label>
+          <textarea id="lesson" rows="2" placeholder="مثلاً: حملات سناب للمفارش تجيب طلبات أكثر الخميس والجمعة"></textarea>
+          <div style="margin-top:10px"><button class="btn primary" type="submit" id="addLesson">أضف الدرس</button></div>
+          <div class="msg" id="lmsg" role="status"></div>
+        </form>
+        <ul class="mb-lessons" id="lessons" style="margin-top:16px"></ul>
+      </section>
+    </main>
+  </div>
+</div>
+<script is:inline type="module" src="/assets/router.js"></script>
+</body>
+</html>
