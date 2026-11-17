@@ -1,19 +1,46 @@
 // التصميم: تفاصيل تصميم من أفضل إعلاناتنا، نصوص مقترحة مفحوصة على قواعد الامتثال، ومعاينة لكل مقاس.
 // الصورة يصممها المصمم (OpenAI Images: منتجك في مشهد جديد، أو خلفية)، والنص دايم طبقة فوقها في المتصفح، والتحميل PNG.
 // «نوع التصميم»: صورة (هذا الملف) أو موشن جرافيك (motion.js)، والنوع ينحفظ في الرابط ?type=motion.
-import { $, $$, api, say, esc, shell, busy, fmt } from '/assets/common.js';
+import { $, $$, api, say, esc, shell, busy, fmt, friendly } from '/assets/common.js';
 
 const PLAT = { meta: 'ميتا', snapchat: 'سناب شات', tiktok: 'تيك توك', google: 'جوجل' };
 const LEVEL = { critical: 'مخالفة', warn: 'انتبه', info: 'ملاحظة' };
-const C = { ink: '#293342', accent: '#294036', white: '#FFFFFF' };
+// Hoven palette v2.1 (brand guide): seven colours only; Pulse Pink is one touch per design (the 3% rule)
+export const WELL = { ivory: '#F2F0E3', white: '#FFFFFF', purple: '#294036', indigo: '#293342', soft: '#7fb59a', pink: '#B3261E', deep: '#141414' };
+const C = { ink: WELL.indigo, accent: WELL.purple, white: WELL.white };
 
+// Brand type (self-hosted, OFL): Noto Naskh Arabic for every Arabic role, Inter for Latin, Playfair Display Black for the
+// wordmark. Both text fonts are variable, so one file covers 400 and 700. Thmanyah stays as the fallback.
 let fontReady = null;
+const face = (name, file, weight) => new FontFace(name, `url(/assets/fonts/${file})`, { weight }).load().then(f => document.fonts.add(f)).catch(() => {});
 const font = () => (fontReady ||= Promise.all([
-  new FontFace('HovenDesign', 'url(/assets/fonts/ibmplexsansarabic-bold.woff2)', { weight: '700' }).load(),
-  new FontFace('HovenDesign', 'url(/assets/fonts/ibmplexsansarabic-regular.woff2)', { weight: '400' }).load(),
-]).then(fs => fs.forEach(f => document.fonts.add(f))).catch(() => {}));
+  face('WellNaskh', 'noto-naskh-arabic.woff2', '400 700'), face('WellInter', 'inter-latin.woff2', '400 700'),
+  face('PlayfairWell', 'hoven-brand.woff2', '900'),
+  face('HovenDesign', 'ibmplexsansarabic-bold.woff2', '700'), face('HovenDesign', 'ibmplexsansarabic-regular.woff2', '400'),
+]));
 
-const FF = brand => (brand && brand.font) || 'HovenDesign';
+const FF = brand => brand && brand.font ? `${brand.font}, WellNaskh, WellInter` : 'WellNaskh, WellInter, HovenDesign';
+
+// No picture: a designed Hoven background instead of a flat one. A Purple Deep → Indigo field, a Pulse Purple glow,
+// Purple Soft rings and one Pulse Pink dot. White text stays AAA on it. A company palette (المعرفة) replaces the colours.
+export function backdrop(ctx, W, H, pal) {
+  const hex = c => Array.isArray(c) ? `rgb(${c.join(',')})` : c;
+  const base = pal ? hex(pal.dark) : WELL.deep, glow = pal ? pal.accent : WELL.purple, m = Math.min(W, H);
+  const g = ctx.createLinearGradient(0, 0, W * 0.3, H); g.addColorStop(0, base); g.addColorStop(1, pal ? base : WELL.indigo);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const spot = (x, y, r, c, a) => {
+    const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+    rg.addColorStop(0, c); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = a; ctx.fillStyle = rg; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1;
+  };
+  spot(W * 0.82, H * 0.2, Math.max(W, H) * 0.62, glow, 0.7);
+  spot(W * 0.08, H * 0.58, m * 0.7, WELL.soft, 0.28);
+  const cx = W * 0.8, cy = H * 0.22;
+  ctx.strokeStyle = WELL.soft; ctx.lineWidth = Math.max(2, m * 0.01);
+  for (const [r, a] of [[m * 0.26, 0.5], [m * 0.4, 0.3], [m * 0.56, 0.16]]) { ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.globalAlpha = 1;
+  if (!pal) { const a = Math.PI * 0.82, r = m * 0.4; ctx.fillStyle = WELL.pink; ctx.beginPath(); ctx.arc(cx + r * Math.cos(a), cy + r * Math.sin(a), m * 0.02, 0, Math.PI * 2); ctx.fill(); }
+}
 
 function lines(ctx, text, max) {
   const words = String(text || '').split(/\s+/).filter(Boolean), out = [];
@@ -23,14 +50,17 @@ function lines(ctx, text, max) {
   return out;
 }
 
-// Photo (cover) → soft brand gradient at the bottom → headline, sub, CTA pill. All on a canvas, nothing uploaded.
+// Photo (cover), or the Hoven backdrop when there is none → brand gradient at the bottom → headline, sub, CTA pill.
+// All on a canvas, nothing uploaded.
 // brand = the company's approved logo and font (المعرفة ← الهوية والبصريات), when there are any.
 export function draw(canvas, size, v, img, pal, brand = null) {
   canvas.width = size.w; canvas.height = size.h;
   const ctx = canvas.getContext('2d'), W = size.w, H = size.h, pad = Math.round(W * 0.07);
-  ctx.fillStyle = '#EEEBDD'; ctx.fillRect(0, 0, W, H);
   if (img) { const s = Math.max(W / img.width, H / img.height), w = img.width * s, h = img.height * s; ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h); }
+  else backdrop(ctx, W, H, pal);
   const dark = (pal && pal.dark) || [41, 51, 66], acc = (pal && pal.accent) || C.accent;
+  // Over a photo, a soft band at the top so the logo reads
+  if (img) { const t = ctx.createLinearGradient(0, 0, 0, H * 0.22); t.addColorStop(0, `rgba(${dark.join(',')},.55)`); t.addColorStop(1, `rgba(${dark.join(',')},0)`); ctx.fillStyle = t; ctx.fillRect(0, 0, W, H * 0.22); }
   const g = ctx.createLinearGradient(0, H * 0.35, 0, H); g.addColorStop(0, `rgba(${dark.join(',')},0)`); g.addColorStop(1, `rgba(${dark.join(',')},.88)`);
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
@@ -51,8 +81,11 @@ export function draw(canvas, size, v, img, pal, brand = null) {
     const lh = Math.round(hs * 0.9), lw = Math.min(W * 0.35, brand.logo.width * (lh / brand.logo.height));
     ctx.drawImage(brand.logo, pad, pad, lw, lw * (brand.logo.height / brand.logo.width));
   } else {
-    ctx.font = `700 ${Math.round(hs * 0.5)}px ${FF(brand)}, sans-serif`; ctx.textAlign = 'left'; ctx.direction = 'ltr';
-    ctx.fillStyle = C.white; ctx.fillText('Hoven.', pad, pad + hs * 0.5);
+    // The wordmark: «Hoven» in Playfair Display Black, its dot in Pulse Purple
+    const ls = Math.round(hs * 0.62);
+    ctx.font = `900 ${ls}px PlayfairWell, "Hoven Brand", serif`; ctx.textAlign = 'left'; ctx.direction = 'ltr';
+    ctx.fillStyle = C.white; ctx.fillText('Hoven', pad, pad + ls * 0.8);
+    ctx.fillStyle = WELL.purple; ctx.fillText('.', pad + ctx.measureText('Hoven').width, pad + ls * 0.8);
   }
 }
 
@@ -87,7 +120,7 @@ export function palette(imgs) {
 let keepState = null;
 
 export default async function mount() {
-  let res = null, pick = 0, img = null, refs = [], pal = null, drawn = null;
+  let res = null, pick = 0, img = null, refs = [], pal = null, drawn = null, last = null;
   // The brand from المعرفة: colours, logo and font load once; the references uploaded here still win for colours
   let brand = null;
   const usePal = () => ($('#useRefColors')?.checked && pal) || (brand && brand.pal) || null;
@@ -132,7 +165,12 @@ export default async function mount() {
         ${r.top.map(a => `<tr><td>${esc(a.name || a.ad_key)}</td><td>${esc(PLAT[a.platform] || a.platform)}</td><td>${esc(a.format || '—')}</td><td class="n">${fmt(a.cpl, 2)}</td><td class="n">${fmt(a.leads)}</td></tr>`).join('')}</tbody></table></div>
         <p class="muted" style="margin:8px 0 0">${r.medianWords ? `النص الناجح حوالي ${fmt(r.medianWords)} كلمة. ` : ''}${Object.entries(r.formats).map(([f, n]) => `${esc(f)}: ${fmt(n)}`).join(' · ')}</p>
         ${r.hooks.length ? `<div class="ls-topics" style="margin-top:8px">${r.hooks.map(h => `<span class="so-chip">${esc(h)}</span>`).join('')}</div>` : ''}`
+<<<<<<< well
         : '<p class="muted">ما فيه إعلانات طلبات بثلاث طلبات أو أكثر آخر 30 يوم، فالنصوص من القوالب.</p>'}`;
+    $('#vars').hidden = false;
+=======
+        : '<p class="muted">ما فيه إعلانات طلبات بثلاث طلبات أو أكثر آخر 30 يوم، فالنصوص من القوالب.</p>'}`;
+>>>>>>> hoven
     $('#vars').innerHTML = `<h2>النصوص المقترحة <span class="muted" style="font-size:13px">${res.engine === 'templates' ? '· قوالب' : ''}</span></h2>
       <div class="dz-vars">${res.variants.map((v, i) => `<label class="card dz-var${i === pick ? ' on' : ''}"><input type="radio" name="var" value="${i}" ${i === pick ? 'checked' : ''}>
         <b>${esc(v.headline)}</b><span>${esc(v.sub)}</span><span class="so-chip">${esc(v.cta)}</span>
@@ -148,18 +186,45 @@ export default async function mount() {
       btn.dataset.ok = '1'; $('#offer').focus();
       say($('#msg'), 'ما كتبت وش نعلن عنه: لو ضغطت «صمّم» مرة ثانية، المصمم يعتمد على معرفة العلامة وأفضل إعلاناتنا آخر 30 يوم.', true); return;
     }
-    delete btn.dataset.ok; busy(btn, true); say($('#msg'), 'المصمم شغّال والتصميم بالطريق… (حوالي دقيقة)', true);
+    delete btn.dataset.ok; busy(btn, true); $('#bgRetry').disabled = true; say($('#msg'), 'المصمم شغّال والتصميم بالطريق… (حوالي دقيقة)', true);
     try {
-      res = await api('/api/design/brief', { method: 'POST', body: { type: $('#type').value, offer: $('#offer').value, audience: $('#aud').value, dept: $('#dept').value,
-        product: img ? small(img, 1024).toDataURL('image/jpeg', 0.9) : '',
+      last = { type: $('#type').value, offer: $('#offer').value, audience: $('#aud').value, dept: $('#dept').value, sizes: sizes(),
+        product: img ? small(img, 1024).toDataURL('image/jpeg', 0.9) : '' };
+      res = await api('/api/design/brief', { method: 'POST', body: { ...last,
         images: [...(img ? [{ kind: 'product', data: small(img).toDataURL('image/jpeg', 0.7) }] : []), ...refs.map(r => ({ kind: 'ref', data: small(r).toDataURL('image/jpeg', 0.7) }))] } });
       drawn = res.image ? await picture(res.image).catch(() => null) : null;
-      pick = 0; drawResult(); await render();
-      const missed = !drawn && res.engine === 'openai';
-      say($('#msg'), missed ? (img ? 'النصوص جاهزة، بس المصمم ما رجّع صورة هالمرة، فالمعاينة على صورتك الأصلية.' : 'النصوص جاهزة، بس المصمم ما رجّع خلفية هالمرة. جرّب مرة ثانية أو ارفع صورة.') : 'جاهز. عدّل النص أو اختر خيار ثاني، والمعاينة تتحدث.', !missed);
+      pick = 0; drawResult(); await render(); showMiss();
+      say($('#msg'), drawn ? 'جاهز. عدّل النص أو اختر خيار ثاني، والمعاينة تتحدث.' : 'النصوص جاهزة، بس الخلفية ما انرسمت. السبب فوق المعاينة.', !!drawn);
     } catch (err) { say($('#msg'), err.message); }
-    busy(btn, false);
+    busy(btn, false); $('#bgRetry').disabled = false;
   });
+  // No picture: say why above the preview, and offer «جرّب مرة ثانية» where trying again can help
+  function showMiss() {
+    const err = drawn || !res ? null : res.imageError || { message: res.image ? 'وصلت الخلفية بس المتصفح ما قدر يفتحها.' : 'المصمم ما رجّع خلفية هالمرة.', retry: true };
+    $('#bgNote').hidden = !err;
+    if (!err) return;
+    const why = friendly(err.message, 'ما انرسمت الخلفية هالمرة.');
+    $('#bgWhy').textContent = why;
+    $('#bgNow').textContent = img ? 'المعاينة الحين على صورتك الأصلية.' : 'المعاينة الحين على خلفية من هوية Hoven لين تنرسم.';
+    // the reason names the connections page when the drawing service is not set up: a link there, not a dead end
+    $('#bgLink').hidden = !/الربط|تفعيل|مفعّل|مفعل/.test(why);
+    $('#bgRetry').hidden = !err.retry || !last;
+  }
+  $('#bgRetry').onclick = async () => {
+    const btn = $('#bgRetry');
+    const mine = res, again = $('#f [type=submit]');
+    busy(btn, true); if (again) again.disabled = true; $('#bgWhy').textContent = 'المصمم يرسم الخلفية… (حوالي دقيقة)'; $('#bgNow').textContent = ''; $('#bgLink').hidden = true;
+    try {
+      const r = await api('/api/design/background', { method: 'POST', body: { ...last, style: res.style || '' } });
+      if (res !== mine) return;   // a new brief replaced this one while it was drawing: this answer is for the old brief
+      res.image = r.image; res.imageError = r.imageError;
+      drawn = r.image ? await picture(r.image).catch(() => null) : null;
+      await render();
+      if (drawn) say($('#msg'), 'انرسمت الخلفية.', true);
+    } catch (err) { if (res === mine) res.imageError = { message: friendly(err.message), retry: true }; }
+    finally { if (again) again.disabled = false; busy(btn, false); }
+    if (res === mine) showMiss();
+  };
   function thumbs() {
     const all = [...(img ? [[img, 'المنتج']] : []), ...refs.map((r, i) => [r, `مرجع ${i + 1}`])];
     $('#thumbs').innerHTML = all.map(([im, l]) => `<figure><img alt="${esc(l)}" src="${small(im, 144).toDataURL('image/jpeg', 0.8)}"><figcaption>${esc(l)}</figcaption></figure>`).join('')
@@ -180,7 +245,14 @@ export default async function mount() {
     thumbs(); render();
   });
   $('#useRefColors').addEventListener('change', render);
-  $('#vars').addEventListener('change', e => { if (e.target.name === 'var') { pick = +e.target.value; drawResult(); render(); } });
+  // the chosen text changes in place: rebuilding the list would drop the keyboard focus of the radio the user is moving with the arrow keys
+  $('#vars').addEventListener('change', e => {
+    if (e.target.name !== 'var') return;
+    pick = +e.target.value;
+    $$('.dz-var', $('#vars')).forEach((el, i) => el.classList.toggle('on', i === pick));
+    const v = res.variants[pick]; $('#eh').value = v.headline; $('#es').value = v.sub; $('#ec').value = v.cta;
+    render();
+  });
   $('#vars').addEventListener('input', e => { if (!res || !['eh', 'es', 'ec'].includes(e.target.id)) return; const v = res.variants[pick]; v.headline = $('#eh').value; v.sub = $('#es').value; v.cta = $('#ec').value; render(); });
   $$('input[name=size]').forEach(x => x.addEventListener('change', render));
   $('#prev').addEventListener('click', e => { const a = e.target.closest('[data-dl]'); if (!a) return; const c = $(`#prev canvas[data-size="${a.dataset.dl}"]`); a.href = c.toDataURL('image/png'); });
@@ -200,7 +272,7 @@ export default async function mount() {
     const isMotion = kind === 'motion';
     $$('#kind [data-kind]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === (isMotion ? 'motion' : 'image'))));
     $('#imageFlow').hidden = isMotion; $('#motionFlow').hidden = !isMotion;
-    if (isMotion) motion ||= import('/modules/design/motion.js').then(m => m.mountMotion()).catch(err => say($('#mmsg'), err.message));
+    if (isMotion) motion ||= import('/modules/design/motion.js').then(m => m.mountMotion()).catch(() => say($('#mmsg'), 'ما انفتح قسم الموشن. حدّث الصفحة وجرّب مرة ثانية.'));
   };
   $('#kind').onclick = ev => {
     const b = ev.target.closest('[data-kind]');
@@ -217,7 +289,7 @@ export default async function mount() {
     res = kept.res; pick = kept.pick || 0;
     drawn = kept.drawn ? await picture(kept.drawn).catch(() => null) : null;
     img = kept.img ? await picture(kept.img).catch(() => null) : null;
-    thumbs(); drawResult(); await render();
+    thumbs(); drawResult(); await render(); showMiss();
   }
   await loadBrand();
 }

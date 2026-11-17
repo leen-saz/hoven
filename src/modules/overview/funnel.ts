@@ -1,3 +1,8 @@
+<<<<<<< well
+// شكل رحلة العميل: ارتفاع كل مرحلة من حجمها (مقياس مخفّف) وضيق الوصلة من قوة الخطوة، واتجاهه حسب اللغة.
+// الحكم نفسه (كل خطوة مقابل هدف ثابت) في judge.ts، من نفس ملف القواعد اللي تستخدمه اللوحة الرئيسية.
+export type { Step, StepKey, Verdict, Severity } from './judge';
+=======
 // تحليل رحلة العميل بالقواعد (بدون نموذج وبدون ما تطلع الأرقام لأي مكان): كل خطوة بين مرحلتين تنقارن بنفس الخطوة في
 // الفترة اللي قبلها، وبالوسيط اليومي لآخر 30 يوم، وبحد أدنى معقول. الخطوة ضعيفة بس إذا كانت أضعف من كل مرجع عندها بفرق
 // واضح، أو تحت حدها الأدنى. وإذا ما فيه شي من هذا: «لا توجد مشكلة واضحة». كل النصوص بالعربي والإنجليزي حسب لغة الصفحة.
@@ -183,6 +188,7 @@ export function verdict(list: Step[], l: Lang = 'ar'): Verdict {
   const a = ADVICE[l][top.key];
   return { step: top.key, level: top.level, title: a.title, where: a.where, why: a.why, todo: a.todo, owner: top.owner, unlinked };
 }
+>>>>>>> hoven
 
 // ---- The band. Heights on an eased scale ((v / top)^EASE) between minH and maxH: it visibly shrinks with the numbers
 // (a log scale made 1.9M impressions and 27K clicks look alike) while the sale stage stays visible. Every link narrows

@@ -112,6 +112,38 @@ def validate(data, min_ads=MIN_ADS, min_rows=MIN_ROWS):
     return errs
 
 
+def vanished_platforms(data, prev, days=7):
+    """Platforms that had spend in the last `days` days of the previous build but have neither spend NOR any ad now,
+    although their pull reported ok (a token that lost its scope returns an empty 200). Returns prefixes (m, g, s, t).
+    A platform that still lists its ads is just paused, and one whose pull is marked failed keeps its previous rows."""
+    def recent_spend(d):
+        if not isinstance(d, dict):
+            return {}
+        end = _day(((d.get("range") or {}).get("today"))) or date.today()
+        since = end.toordinal() - days
+        out = {}
+        for r in d.get("rows") or []:
+            dd = _day(r[1]) if isinstance(r, list) and len(r) > 2 else None
+            if dd and dd.toordinal() >= since and r[2]:
+                out[r[0][:1]] = out.get(r[0][:1], 0) + r[2]
+        return out
+    before, now = recent_spend(prev), recent_spend(data)
+    names = {"m": "meta", "g": "google", "s": "snap", "t": "tiktok"}
+    plats = (data.get("platforms") or {}) if isinstance(data, dict) else {}
+    listed = {k[:1] for k in ((data.get("ads") or {}) if isinstance(data, dict) else {})}
+    return [p for p in before if p not in now and p not in listed and (plats.get(names.get(p, ""), {}) or {}).get("ok") is True]
+
+
+def warnings(data):
+    """Things that do not stop the upload but must not pass silently: a dash.json built without the CRM block (the join
+    failed or CRM is not connected) would otherwise look fine while closings quietly vanish from every page."""
+    out = []
+    crm = data.get("crm") if isinstance(data, dict) else None
+    if not isinstance(crm, dict) or not crm:
+        out.append("dash.json has no CRM block: closings and CRM cost are missing from every page (the site shows a notice)")
+    return out
+
+
 def check_audience_files(directory):
     """The per-audience files (data/*.json, data/dept/*.json) must at least be valid JSON objects with ads and rows
     (as 'rows', or column-wise as 'rows_cols')."""
@@ -146,6 +178,8 @@ def main(argv):
         for e in errs:
             print(" -", e)
         return 1
+    for w in warnings(data):
+        print(f"::warning title=dash.json::{w}")
     print("dash.json check: ok")
     return 0
 

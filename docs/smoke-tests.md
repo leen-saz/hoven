@@ -2,11 +2,15 @@
 
 The built Worker runs locally (`wrangler dev`) with a fake Supabase (`tests/smoke/fake-supabase.mjs`) and a local R2
 seeded with synthetic pages (`tests/smoke/seed-r2.sh`). Everything is synthetic: accounts are `<name>@example.test`,
-nothing leaves the machine, no secrets are used. CI job: `.github/workflows/smoke.yml` (about 3 minutes).
+nothing leaves the machine, no secrets are used. CI job: `.github/workflows/smoke.yml` (about 7 minutes; the language crawl is close to half of it).
 
 ```bash
 npm run build && npm run test:smoke      # locally, with Chrome installed: PW_CHANNEL=chrome npm run test:smoke
 ```
+
+Two checkouts on one machine: give the second its own ports, `SMOKE_PORT=8931 SMOKE_FAKE_PORT=8932 npm run test:smoke`.
+Without them it reuses the first checkout's running servers (outside CI) and tests the other checkout's build. Specs take the
+addresses from `BASE` / `FAKE` in `tests/smoke/helpers.ts`, never a written port.
 
 ## What it covers
 - `/api/health` answers without a login; signed-out pages go to `/login/?next=`, signed-out API calls get 401 JSON in Arabic.
@@ -36,6 +40,10 @@ npm run build && npm run test:smoke      # locally, with Chrome installed: PW_CH
   Technical text may live only on the Connectors page and the owner-only pages (data health, admin), which these tests do not visit.
   A route that needs a setup step uses `notApplied(user, file)` / `notEnabled(user, …)` from `src/lib/auth.ts`: the owner gets the
   step, everyone else "tell the admin".
+
+- **Layout stability** (`cls.spec.ts`): the control, maestro, health, audit, admin, listening, knowledge, today and overview pages are loaded with every API answer held back 400 ms (the way late data arrives on the live site) and the Cumulative Layout Shift must stay at 0.1 or less. A failure names the element that moved most. The fixture's «numbers are old» notice is switched off for this test (it is a deliberate, rare shift). New late-filled areas get their space reserved in `public/assets/app.css` («Reserved space») or a `.sk` placeholder.
+
+- **Slow pages** (`loading.spec.ts`): the knowledge chat shows the answers so far at once and the AI's next question behind a placeholder (and keeps the answers if that question fails); the four data-health parts are requested together; the audit page shows a placeholder while it computes.
 
 ## What it does not cover
 - Real Supabase (RLS, migrations, the real `profiles` shape beyond what the fake returns): the migrations job covers schema only.

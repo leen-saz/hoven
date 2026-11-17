@@ -74,8 +74,8 @@ function renderBI(now){
   const rows=plats.map(p=>({p, s:100*now.byPlat[p].spend/ts, r:100*res(p)/tl})).sort((a,b)=>b.s-a.s);
   const top=Math.max(1,...rows.map(x=>Math.max(x.s,x.r)));
   const anyRes=plats.some(p=>res(p)>0);
-  const verdict=x=> !anyRes ? ['eq',ui('ما فيه نتايج بالفترة','No results in this period')] : x.r-x.s>=3 ? ['up',ui('تجيب أكثر من نصيبها','More than its share')] : x.s-x.r>=3 ? ['down',ui('تجيب أقل من نصيبها','Less than its share')] : ['eq',ui('على قد نصيبها','About its share')];
-  $('#share').innerHTML = plats.length ? `<div class="legend sh-key"><span><i class="sh-k"></i>${ui('حصتها من الصرف','Share of spend')}</span><span><i class="sh-k res"></i>${ui('حصتها من النتايج','Share of results')}</span></div>`
+  const verdict=x=> !anyRes ? ['eq',ui('ما فيه نتائج بالفترة','No results in this period')] : x.r-x.s>=3 ? ['up',ui('تجيب أكثر من نصيبها','More than its share')] : x.s-x.r>=3 ? ['down',ui('تجيب أقل من نصيبها','Less than its share')] : ['eq',ui('على قد نصيبها','About its share')];
+  $('#share').innerHTML = plats.length ? `<div class="legend sh-key"><span><i class="sh-k"></i>${ui('حصتها من الصرف','Share of spend')}</span><span><i class="sh-k res"></i>${ui('حصتها من النتائج','Share of results')}</span></div>`
     + rows.map(x=>{ const [k,l]=verdict(x); return `<div class="sh-row"><span class="sh-p"><span class="dot" style="background:var(${PL[x.p].c})"></span>${platName(x.p)}</span>`
       + `<div class="sh-bars"><div class="sh-b"><i style="width:${100*x.s/top}%"></i><b>${fmt(x.s,0)}%</b></div><div class="sh-b res"><i style="width:${100*x.r/top}%;background:var(${PL[x.p].c})"></i><b>${fmt(x.r,0)}%</b></div></div>`
       + `<span class="sh-v ${k}">${l}</span></div>`; }).join('') : '<div class="empty">لا توجد بيانات.</div>';
@@ -138,7 +138,7 @@ function renderPace(){
 function renderMonths(){
   const m={}, plats=orderNow();
   for(const [k,date,sp,im,cl,ld,cv=0] of D.rows){ const a=ADS[k]; if(date<S.from||date>S.to || !matchesSlice(a)) continue;
-    const ym=date.slice(0,7), o=(m[ym] ||= {})[a.platform] ||= {s:0,l:0,ls:0,ln:0,c:0}; o.s+=sp; o.l+=ld; o.c+=cv; if(a.goal==='lead'){ o.ls+=sp; o.ln+=ld; } }
+    const ym=date.slice(0,7), o=(m[ym] ||= {})[a.platform] ||= {s:0,l:0,ls:0,ln:0,c:0}; o.s+=sp; o.l+=ld; o.c+=cv; if(a.goal==='lead'&&a.dest!=='whatsapp'){ o.ls+=sp; o.ln+=ld; } }
   const months=Object.keys(m).sort().reverse(), used=plats.filter(p=>months.some(ym=>m[ym][p]));
   if(!months.length){ $('#tMonth').innerHTML='<tbody><tr><td class="empty">لا توجد بيانات.</td></tr></tbody>'; return; }
   const cpls=[]; months.forEach(ym=>used.forEach(p=>{const o=m[ym][p]; if(o&&o.ln) cpls.push(o.ls/o.ln);})); const lo=Math.min(...cpls), hi=Math.max(...cpls);

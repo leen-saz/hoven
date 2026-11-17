@@ -4,8 +4,14 @@ import { type AuditConfig, type Claim, type ClaimStep, type Finding, type StepKe
 import { type Facts, valueOf, volumeOf } from './facts';
 
 const NAME: Record<StepKey, { ar: string; en: string }> = {
+<<<<<<< well
   click: { ar: 'نسبة النقر', en: 'click rate' }, lead: { ar: 'من نقرة إلى طلب', en: 'click to lead' }, sale: { ar: 'من طلب إلى إقفالة', en: 'lead to closing' },
   cpl: { ar: 'تكلفة الطلب', en: 'cost per lead' }, cpm: { ar: 'تكلفة الألف ظهور', en: 'cost per 1,000 impressions' },
+  cpa: { ar: 'تكلفة الإقفالة', en: 'cost per closing' }, roas: { ar: 'العائد على الصرف', en: 'return on spend' },
+=======
+  click: { ar: 'نسبة النقر', en: 'click rate' }, lead: { ar: 'من نقرة إلى طلب', en: 'click to lead' }, sale: { ar: 'من طلب إلى إقفالة', en: 'lead to closing' },
+  cpl: { ar: 'تكلفة الطلب', en: 'cost per lead' }, cpm: { ar: 'تكلفة الألف ظهور', en: 'cost per 1,000 impressions' },
+>>>>>>> hoven
 };
 export const nameOf = (k: StepKey) => NAME[k];
 const num = (v: number | null | undefined, d = 2) => (v == null ? '—' : v.toFixed(d));

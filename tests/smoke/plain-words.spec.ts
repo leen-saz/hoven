@@ -3,15 +3,15 @@
 // tables are missing. Technical text may appear only on the Connectors page and the owner-only pages (data health, admin),
 // which are not visited here. Synthetic data only.
 import { test, expect } from '@playwright/test';
-import { login, addSession } from './helpers';
+import { login, addSession, FAKE } from './helpers';
 import { pageStrings, openTabs, arabicIn } from './page-text';
 import { TECH_WORDS } from '../shared/tech-words';
+import { settle } from './settle';
 
 const PAGES = [
   '/', '/today/', '/control/', '/control/new/', '/account/', '/library/', '/overview/', '/overview/creative/', '/listening/',
-  '/design/', '/copy/', '/voice/', '/social/', '/content/', '/journeys/', '/compliance/', '/maestro/', '/knowledge/', '/debugger/', '/soon/',
+  '/design/', '/video/', '/content/?tab=copy', '/voice/', '/social/', '/content/', '/journeys/', '/compliance/', '/maestro/', '/knowledge/', '/debugger/', '/soon/',
 ];
-const FAKE = 'http://localhost:8788';
 
 for (const missing of [false, true]) {
   test.describe(missing ? 'database tables missing' : 'normal data', () => {
@@ -21,9 +21,8 @@ for (const missing of [false, true]) {
       for (const path of PAGES) {
         test(`${path} as a member, ${lang}`, async ({ page, context, request }) => {
           await addSession(context, await login(request, 'member'));
-          await page.goto(`${path}?lang=${lang}`);
-          await page.waitForLoadState('networkidle');
-          await page.waitForTimeout(500);
+          await page.goto(`${path}${path.includes('?') ? '&' : '?'}lang=${lang}`);
+          await settle(page);
           const seen = new Set(await pageStrings(page));
           await openTabs(page, seen);
           const bad = [...seen].filter(s => TECH_WORDS.test(s)).map(s => s.slice(0, 120));

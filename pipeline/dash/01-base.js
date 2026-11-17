@@ -10,7 +10,7 @@ const EN = {
   'ميتا · جوجل · سناب شات · تيك توك — كل المبالغ بالريال السعودي':'Meta · Google · Snapchat · TikTok — amounts in Saudi riyals',
   'ميتا · سناب شات · تيك توك — كل المبالغ بالريال السعودي':'Meta · Snapchat · TikTok — amounts in Saudi riyals',
   'قارن جنب بعض':'Compare side by side',
-  'الاقفالات (مدفوعة)':'Closings (paid)',
+  'الإقفالات (مدفوعة)':'Closings (paid)',
   'المدفوع':'Paid',
   'النتيجة':'Outcome',
   'فلاتر أكثر':'More filters',
@@ -19,7 +19,11 @@ const EN = {
   'المنصات والحملات':'Platforms and campaigns',
   'طريقة الحساب':'How it is calculated',
   'شخصيات الجمهور':'Audience personas',
+<<<<<<< well
+  'من تفاصيل المشاهدين لكل إعلان في الفترة والفلاتر المختارة (ميتا وسناب وتيك توك). العمر داخل كل جنس من ميتا بس (ترجعهم مع بعض)، والمنصات الثانية ما تقسمه. المنطقة والجهاز والوقت لكل المشاهدين. النتائج = الليدز والمحادثات.':'From each ad\'s audience detail in the chosen period and filters (Meta, Snap and TikTok). Age within each gender comes from Meta only (it reports them together); other platforms do not split it. Region, device and time are for everyone. Results = leads and chats.',
+=======
   'من تفاصيل المشاهدين لكل إعلان في الفترة والفلاتر المختارة (ميتا وسناب وتيك توك). العمر داخل كل جنس من ميتا بس (ترجعهم مع بعض)، والمنصات الثانية ما تقسمه. المنطقة والجهاز والوقت لكل المشاهدين. النتايج = الطلبات والإيراد.':'From each ad\'s audience detail in the chosen period and filters (Meta, Snap and TikTok). Age within each gender comes from Meta only (it reports them together); other platforms do not split it. Region, device and time are for everyone. Results = orders and SAR revenue.',
+>>>>>>> hoven
   'فلاتر أقل':'Fewer filters',
   'رحلة العميل':'Customer journey',
   'العائد على الصرف':'Return on spend',
@@ -33,25 +37,39 @@ const EN = {
   'كم واحد ترك بياناته أو راسلنا':'How many left details or messaged us',
   'كم واحد دفع':'How many paid',
   'غير مربوط':'Not linked',
+  'لا توجد إقفالات':'No closings',
+  'ما فيه إقفالات مدفوعة في هالفترة.':'No paid closings in this period.',
   'عنق الزجاجة':'Bottleneck',
   'نظام العملاء مو موصول بهالأرقام':'The CRM is not connected to these numbers',
-  'مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الاقفالات هنا.':'The sale stage is empty because the CRM numbers did not reach this copy of the dashboard. Closings show here as soon as they do.',
-  'اقفالات مدفوعة':'Paid closings',
+  'مرحلة البيع فاضية لأن أرقام نظام العملاء ما وصلت لهالنسخة من اللوحة. أول ما توصل تطلع الإقفالات هنا.':'The sale stage is empty because the CRM numbers did not reach this copy of the dashboard. Closings show here as soon as they do.',
+  'إقفالات مدفوعة':'Paid closings',
   'العائد من الإعلانات':'ROAS from ads',
+<<<<<<< well
+  'من نقرة إلى ليد':'Click to lead',
+  'من ليد إلى إقفالة':'Lead to closing',
+  'الإقفالات والمدفوع من كل المصادر في نظام العملاء (مدفوعات ميسّر). العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الإقفالات.':'Closings and paid come from every source in the CRM (Moyasar payments). Return on spend = paid ÷ spend. Cost per customer = spend ÷ closings.',
+  'إقفالات من الإعلانات':'Closings from ads',
+=======
   'من طلب إلى اقفالة':'Order to closing',
   'الاقفالات والمدفوع من كل المصادر في نظام العملاء (مدفوعات ميسّر). العائد على الصرف = المدفوع ÷ الصرف. تكلفة العميل = الصرف ÷ الاقفالات.':'Closings and paid come from every source in the CRM (Moyasar payments). Return on spend = paid ÷ spend. Cost per customer = spend ÷ closings.',
   'اقفالات من الإعلانات':'Closings from ads',
+>>>>>>> hoven
   'العائد على الإعلان':'ROAS',
-  'الاقفالات (كل المصادر)':'Closings (all sources)',
+  'الإقفالات (كل المصادر)':'Closings (all sources)',
   'المدفوع (كل المصادر)':'Paid (all sources)',
+<<<<<<< well
+  'الإقفالات حسب':'Closings by',
+  'يوم الليد':'Lead day',
+=======
   'الاقفالات حسب':'Closings by',
   'يوم الطلب':'Order day',
+>>>>>>> hoven
   'يوم الدفع':'Payment day',
-  'تكلفة الاقفالة':'Cost per closing',
-  'نسبة الاقفال':'Close rate',
-  'الاقفالات':'Closings',
+  'تكلفة الإقفالة':'Cost per closing',
+  'نسبة الإقفال':'Close rate',
+  'الإقفالات':'Closings',
   'مسح':'Clear',
-  'صفحات فيسبوك · إنستغرام · تيك توك · تحليلات الموقع':'Facebook · Instagram · TikTok pages · site analytics',
+  'صفحات فيسبوك · انستقرام · تيك توك · تحليلات الموقع':'Facebook · Instagram · TikTok pages · site analytics',
   'العرض':'View',
   'الإعلانات':'Ads',
   'العضوي':'Organic',
@@ -76,6 +94,15 @@ const EN = {
   'أسبوعي':'Weekly',
   'شهري':'Monthly',
   'اضغط على أي عمود عشان تركّز الفترة عليه.':'Click a bar to focus the range on it.',
+<<<<<<< well
+  'الصرف (ريال)':'Spend (SAR)',
+  'الليدز':'Leads',
+  'تكلفة الليد حسب المنصة (ريال)':'Cost per lead by platform (SAR)',
+  'القمع: من الظهور إلى الليد':'Funnel: impressions to leads',
+  'حصة كل منصة من الصرف ومن النتائج':'Each platform’s share of spend and results',
+  'النتائج = الليدز والمحادثات. لما تكون حصة النتائج أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'Results = leads and conversations. When a platform’s share of results beats its share of spend, it brings more than its share.',
+  'لما تكون حصة الليدز أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'When the lead share is higher than the spend share, the platform is pulling more than its weight.',
+=======
   'الصرف (ر.س)':'Spend (SAR)',
   'الطلبات':'Orders',
   'تكلفة الطلب حسب المنصة (ر.س)':'Cost per order by platform (SAR)',
@@ -84,6 +111,7 @@ const EN = {
   'حصة كل منصة من الصرف ومن النتايج':'Each platform’s share of spend and results',
   'النتايج = الطلبات والإيراد. لما تكون حصة النتايج أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'Results = orders and revenue. When a platform’s share of results beats its share of spend, it brings more than its share.',
   'لما تكون حصة الطلبات أكبر من حصة الصرف، المنصة تجيب أكثر من نصيبها.':'When the order share is higher than the spend share, the platform is pulling more than its weight.',
+>>>>>>> hoven
   'وتيرة الشهر الحالي وتوقع نهايته':'This month’s pace and month-end forecast',
   'التوقع = المعدل اليومي لهذا الشهر × عدد أيامه، وما يحسب اليوم الحالي لأنه ناقص.':'Forecast = this month’s daily average × its days. Today is left out because it is incomplete.',
   'تكلفة الطلب حسب يوم الأسبوع':'Cost per order by weekday',
@@ -93,8 +121,13 @@ const EN = {
   'الصرف · الطلبات · تكلفة الطلب':'Spend · orders · cost per order',
   'المنصات':'Platforms',
   'الحملات':'Campaigns',
+<<<<<<< well
+  'هدف تكلفة الليد':'Cost-per-lead target',
+  'ريال':'SAR',
+=======
   'هدف تكلفة الطلب':'Cost-per-order target',
   'ر.س':'SAR',
+>>>>>>> hoven
   'تصدير Excel (CSV)':'Export Excel (CSV)',
   'اضغط على أي حملة عشان تفلتر اللوحة كاملة عليها.':'Click a campaign to filter the whole report.',
   'شهر بشهر':'Month by month',
@@ -123,7 +156,7 @@ const EN = {
   'كيف تنحسب الأرقام':'How the numbers are calculated',
   'صرف إعلانات الطلبات فقط ÷ عدد الطلبات.':'Spend on order ads only ÷ number of orders.',
   'ميتا':'Meta',
-  'فيسبوك وإنستغرام منفصلان، والدولار يُحسب بـ 3.75.':'Facebook and Instagram are separate. Dollars convert at 3.75.',
+  'فيسبوك وانستقرام منفصلان، والدولار يُحسب بـ 3.75.':'Facebook and Instagram are separate. Dollars convert at 3.75.',
   'يتقسم حسب نوع الحملة. سناب وتيك توك كما هما.':'Split by campaign type. Snapchat and TikTok stay as they are.',
   'المقارنة':'Comparison',
   'الفترة السابقة بنفس عدد الأيام، بتوقيت الرياض.':'The previous period has the same number of days, in Riyadh time.',
@@ -167,7 +200,7 @@ const EN = {
   'كل المنصات':'All platforms',
   'كل الأقسام':'All departments',
   'فيسبوك':'Facebook',
-  'إنستغرام':'Instagram',
+  'انستقرام':'Instagram',
   'ماسنجر':'Messenger',
   'سناب شات':'Snapchat',
   'جوجل · بحث':'Google · Search',
@@ -303,6 +336,15 @@ const EN = {
   'تفاصيل':'Details',
   'نقرات':'Clicks',
   'الصرف اليومي':'Daily spend',
+<<<<<<< well
+  'الصرف اليومي (ريال)':'Daily spend (SAR)',
+  'الصرف الأسبوعي (ريال)':'Weekly spend (SAR)',
+  'الصرف الشهري (ريال)':'Monthly spend (SAR)',
+  'الليدز اليومية':'Daily leads',
+  'الليدز الأسبوعية':'Weekly leads',
+  'الليدز الشهرية':'Monthly leads',
+  'الليدز والمحادثات':'Leads and conversations',
+=======
   'الصرف اليومي (ر.س)':'Daily spend (SAR)',
   'الصرف الأسبوعي (ر.س)':'Weekly spend (SAR)',
   'الصرف الشهري (ر.س)':'Monthly spend (SAR)',
@@ -310,6 +352,7 @@ const EN = {
   'الطلبات الأسبوعية':'Weekly orders',
   'الطلبات الشهرية':'Monthly orders',
   'الطلبات والإيراد':'Orders and revenue',
+>>>>>>> hoven
   'مثلاً 15':'e.g. 15',
   'تعذّر تحديث':'Update failed',
   'بيانات تيك توك غير متوفرة':'TikTok data is unavailable',
@@ -403,7 +446,7 @@ function goalName(g){
   if(LANG==='en' && GOAL_EN[g]) return GOAL_EN[g];
   return (D.goals||{})[g] || (LANG==='en'?'Other':'أخرى');
 }
-function money(){ return LANG==='en'?'SAR':'ر.س'; }
+function money(){ return LANG==='en'?'SAR':'ريال'; }
 function pendingCopy(kind){
   if(kind==='tiktok') return LANG==='en'?EN['يحتاج بيانات تيك توك العضوي']:'يحتاج بيانات تيك توك العضوي';
   if(kind==='ga4') return LANG==='en'?EN['يحتاج ربط تحليلات جوجل']:'يحتاج ربط تحليلات جوجل';
@@ -426,7 +469,12 @@ const D = await (async () => {
   if (d.rows_cols) { d.rows = decodeRows(d.rows_cols); delete d.rows_cols; }
   return d;
 })();
+<<<<<<< well
+// The other company's TikTok account is excluded on the server only (tiktok/merge.py, with ids and markers kept in secrets).
+// No id, name or marker ships in the page: these stay as no-ops so the callers below need no change.
+=======
 // No TikTok account is excluded in Hoven.
+>>>>>>> hoven
 function ttExcludedAccount(){ return false; }
 function ttExcludedAd(){ return false; }
 const ORG_FB_HIDDEN = new Set(['Hoven Home Care','Hoven Women Health']);
@@ -476,7 +524,7 @@ const CH = (D.channels && D.channels.platforms) ? D.channels : {order:['facebook
 const PL = {};
 function syncPL(){
   for(const [k,v] of Object.entries(CH.platforms||{})) PL[k]={ar:v.ar,c:v.color||'--s-meta',family:v.family||k};
-  const fallback={facebook:['فيسبوك','--s-fb','meta'],instagram:['إنستغرام','--s-ig','meta'],messenger:['ماسنجر','--s-msg','meta'],audience_network:['شبكة الجمهور','--s-an','meta'],threads:['ثريدز','--s-threads','meta'],meta:['ميتا','--s-meta','meta'],snap:['سناب شات','--s-snap','snap'],tiktok:['تيك توك','--s-tiktok','tiktok'],google:['جوجل','--s-google','google'],google_search:['جوجل · بحث','--s-gs','google'],google_pmax:['جوجل · أداء أقصى','--s-gp','google'],google_display:['جوجل · شبكة العرض','--s-gd','google'],google_video:['جوجل · يوتيوب','--s-gv','google'],google_demand_gen:['جوجل · توليد الطلب','--s-gg','google']};
+  const fallback={facebook:['فيسبوك','--s-fb','meta'],instagram:['انستقرام','--s-ig','meta'],messenger:['ماسنجر','--s-msg','meta'],audience_network:['شبكة الجمهور','--s-an','meta'],threads:['ثريدز','--s-threads','meta'],meta:['ميتا','--s-meta','meta'],snap:['سناب شات','--s-snap','snap'],tiktok:['تيك توك','--s-tiktok','tiktok'],google:['جوجل','--s-google','google'],google_search:['جوجل · بحث','--s-gs','google'],google_pmax:['جوجل · أداء أقصى','--s-gp','google'],google_display:['جوجل · شبكة العرض','--s-gd','google'],google_video:['جوجل · يوتيوب','--s-gv','google'],google_demand_gen:['جوجل · توليد الطلب','--s-gg','google']};
   for(const [k,v] of Object.entries(fallback)) if(!PL[k]) PL[k]={ar:v[0],c:v[1],family:v[2]};
   for(const a of Object.values(D.ads||{})) if(a.platform && !PL[a.platform]) PL[a.platform]={ar:a.platform,c:'--s-google',family:a.family||a.platform};
 }
