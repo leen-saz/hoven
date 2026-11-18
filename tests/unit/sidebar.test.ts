@@ -25,12 +25,15 @@ describe('sidebar', () => {
       expect(dup(list.map(i => view(i.href)))).toEqual([]);
     });
   }
-  it('opens the Overview pages when Overview is on, the dashboard when it is off', () => {
+  it('opens the Overview page when Overview is on, the dashboard when it is off', () => {
     const on = items(me()), off = items(me({ off: ['overview'] }));
-    expect(on.find(i => i.text === 'ملخص الأداء')?.href).toBe('/overview/');
-    expect(on.find(i => i.text === 'المواد الإعلانية')?.href).toBe('/overview/creative/');
-    expect(off.find(i => i.text === 'ملخص الأداء')?.href).toBe('/');
-    expect(off.find(i => i.text === 'المواد الإعلانية')?.href).toBe('/?view=creative');
-    expect(off.some(i => i.href.startsWith('/overview'))).toBe(false);
+    expect(on.find(i => i.text === 'التحليلات')?.href).toBe('/overview/');
+    expect(off.find(i => i.text === 'التحليلات')?.href).toBe('/');
+  });
+  it("is Hoven's simple menu, in Leen's order: Dream, Analytics, Media buyer, then the rest", () => {
+    const list = items(me()).map(i => i.text);
+    expect(list.slice(0, 3)).toEqual(['احلم', 'التحليلات', 'الميديا باير']);
+    expect(list).toEqual(expect.arrayContaining(['السوشال', 'الرصد', 'المعرفة', 'الربط']));
+    for (const gone of ['التصميم', 'الصوت', 'المايسترو', 'التتبع', 'الامتثال', 'المحتوى و SEO']) expect(list).not.toContain(gone);
   });
 });

@@ -39,6 +39,18 @@ export function sections(me, L) {
     system: [core('/connectors/', 'الربط', 'Connectors', 'plug', 'connectors'), ...mods('system'),
       ...(me.role === 'owner' ? [core('/admin/', 'الصلاحيات', 'Permissions', SHIELD, 'admin', true)] : [])],
   };
-  return GROUPS.map(([k, ar, en]) => ({ key: k, label: L(ar, en), items: items[k] })).filter(s => s.items.length);
+  // Hoven's menu (Leen, 2026-11-16): simpler than Well, in this order. Dream is the start page; the other tools keep their
+  // code and links but are not in the menu.
+  const byKey = k => (me.modules || []).find(m => m.key === k);
+  const pick = (...keys) => keys.map(byKey).filter(Boolean).flatMap(m => [mod(m), ...sub(m)]);
+  const analytics = one(ov, core('/overview/', 'التحليلات', 'Analytics', 'chart', 'overview', true), core('/', 'التحليلات', 'Analytics', 'chart', 'ceo'));
+  const HOVEN = [
+    ['main', L('الرئيسية', 'Main'), [...pick('dream'), analytics, ...pick('buyer')]],
+    ['auto', L('الأتمتة والرصد', 'Automation and listening'), [...pick('social', 'listening'), ...pick('knowledge')]],
+    ['system', L('الربط والإعدادات', 'Connections and settings'), [core('/connectors/', 'الربط', 'Connectors', 'plug', 'connectors'),
+      ...(me.role === 'owner' ? [core('/admin/', 'الصلاحيات', 'Permissions', SHIELD, 'admin', true)] : [])]],
+  ];
+  void items;
+  return HOVEN.map(([key, label, list]) => ({ key, label, items: list })).filter(s => s.items.length);
 }
 export const TIP = { noaccess: ['ما عندك صلاحية', 'No access'], locked: ['مقفل لشركتك', 'Locked for your company'] };

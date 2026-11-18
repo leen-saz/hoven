@@ -1,0 +1,48 @@
+---
+import { ClientRouter } from 'astro:transitions';
+// احلم: الصفحة الرئيسية. فكرة الحملة ← محادثة تفكير ← مسودة كاملة ← اعتماد كل جزء ← انشر (موقوفة).
+---
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F2F0E3">
+<title>احلم · Hoven</title>
+<link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<ClientRouter />
+<style is:global>
+.dr-hero{display:grid;gap:10px;max-width:760px}
+.dr-hero h2{margin:0;font-size:22px}
+.dr-steps{display:grid;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.dr-steps li{padding:12px 16px}
+</style>
+</head>
+<body data-page="dream" data-module>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="القائمة" transition:persist="side"></aside>
+  <div class="scrim"></div>
+  <div class="main">
+    <header class="topbar" id="top"></header>
+    <main class="content" id="content">
+      <section class="card pad dr-hero" id="dream">
+        <h2>وش الحملة اللي تحلم فيها؟</h2>
+        <p class="muted">اكتب الفكرة، ونتناقش فيها، وبعدها يطلع لك كل شي جاهز تعتمده وتنشره.</p>
+        <ol class="dr-steps">
+          <li class="card">١. تكتب الفكرة وتتناقش معه</li>
+          <li class="card">٢. يطلع الاستراتيجية والجمهور والميزانية والنصوص والتصاميم والموشن والفويس أوفر</li>
+          <li class="card">٣. تعدّل أي جزء وتعتمده</li>
+          <li class="card">٤. «انشر» ينشئ الحملة في المنصات موقوفة، وأنت تشغّلها</li>
+        </ol>
+        <p class="muted" id="note">المحادثة تنفتح هنا قريب.</p>
+      </section>
+    </main>
+  </div>
+</div>
+<script is:inline type="module" src="/assets/router.js"></script>
+</body>
+</html>

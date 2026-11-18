@@ -140,7 +140,8 @@ export function can(s: Session | null | undefined, need: Need, cfg?: Cfg): boole
 }
 // Where the user lands after sign-in, and where a page they may not open sends them: the start page. Every user may
 // open it, and it lists what they can reach (src/api/routes/today.ts).
-export const home = (): string => '/today/';
+// Leen: «احلم» is the start page
+export const home = (): string => '/dream/';
 // Blocks redirects to another site after login
 export const safePath = (p: unknown): string =>
   typeof p === 'string' && /^\/(?!\/)[^\s\\]*$/.test(p) ? p : '';

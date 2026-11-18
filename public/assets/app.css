@@ -357,3 +357,8 @@ body{background:
 .app.mini .qc-menu{inset-inline:0 auto;width:220px}
 .app.mini .me{justify-content:center}
 @media (max-width:900px){.side-fold{display:none}.app.mini{grid-template-columns:1fr}}
+
+/* Hoven logo (Leen, 2026-11-17): Arabic «هوفن» over Latin «HOVEN», dark ink on transparent */
+.brand-logo{display:block;height:44px;width:auto}
+.brand-logo.lg{height:64px}
+.app.mini .brand-logo{height:30px}
