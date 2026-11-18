@@ -2,9 +2,10 @@
 
 import { companyOf, HOVEN_COMPANY } from './tenant';
 import { MODULES, LIVE, isModule } from '../modules/registry';
+import { hit } from './ratelimit';
 
 export const SESSION = '__Host-hoven_session';
-export const SESSION_HOURS = 12;
+export const SESSION_HOURS = 24 * 14; // 14 days, renewed on use (the page gate renews in place every RECHECK_MS), so only 14 idle days log a user out
 export const RECHECK_MS = 10 * 60 * 1000; // pages re-read the user's permissions every 10 minutes
 // Core dashboards, then one per live module (src/modules/registry.ts)
 const CORE = { ceo: 'الحملات والمنصات', creative: 'المواد الإعلانية', control: 'لوحة القرارات', connectors: 'الربط' };
@@ -12,6 +13,12 @@ export const DASHBOARDS: Record<string, string> = { ...CORE, ...Object.fromEntri
 // Department scope: empty = all departments. A department manager sees only their department.
 export const DEPTS = { hoven: 'هوفن' } as const;
 export const PASSWORD_MIN = 10;
+// Supabase Auth hashes with bcrypt, which reads only the first 72 bytes (UTF-8): an Arabic letter takes two, so the cap is in bytes.
+export const PASSWORD_MAX_BYTES = 72;
+// One rule for every place a password is set (reset link, account page, owner's admin page). null = acceptable.
+export const passwordError = (pw: string): string | null =>
+  pw.length < PASSWORD_MIN ? `الباسوورد لازم ${PASSWORD_MIN} أحرف أو أكثر`
+    : new TextEncoder().encode(pw).length > PASSWORD_MAX_BYTES ? 'الباسوورد طويل زيادة، قصّره' : null;
 export const LOCKED = 'هالموديول مقفل لشركتك';
 export const VIEW_ONLY = 'صلاحيتك هنا مشاهدة بس';
 export const NO_APPROVE = 'الموافقة تحتاج صلاحية موافقة';
@@ -42,17 +49,22 @@ export interface Session {
   off?: string[]; // modules locked for this company (companies.disabled_modules)
   lvl?: Record<string, Level>; // level per dashboard (profiles.access)
   exp: number; chk: number;
+  iat?: number; // when this login was made: a login older than the user's `valid_after` is refused (see revoked)
   stale?: boolean;
 }
 export interface Profile {
   id: string; email?: string | null; name?: string | null; role?: string | null;
   dashboards?: string[] | null; departments?: string[] | null; active?: boolean | null;
   company_id?: string | null;
-  company?: { disabled_modules?: string[] | null } | null;
+  company?: { disabled_modules?: string[] | null; active?: boolean | null } | null;
   access?: Record<string, string> | null;
+<<<<<<< well
+  valid_after?: string | null; // every login made before this moment is void (password change, reset, logout)
+=======
   // Two-step sign-in (migration 025). Server only: never put these in a response.
   totp_secret?: string | null; totp_enabled?: boolean | null; totp_recovery?: string[] | null;
   totp_last_step?: number | null; totp_fails?: number | null; totp_locked_until?: string | null;
+>>>>>>> hoven
 }
 
 export function env(e: AuthEnv): Cfg {
@@ -92,15 +104,20 @@ function key(secret: string): Promise<CryptoKey> {
   return k;
 }
 
-export async function sign(payload: object, secret: string): Promise<string> {
-  const p = toB64u(enc.encode(JSON.stringify(payload)));
+// Every signed token carries a type, so a token made for one purpose (the OAuth state in a URL) is never accepted as another
+// (the session cookie). Same secret, different `typ`; verify() refuses a token of the wrong type.
+export type TokenType = 'session' | 'oauth';
+export async function sign(payload: object, secret: string, typ: TokenType = 'session'): Promise<string> {
+  const p = toB64u(enc.encode(JSON.stringify({ ...payload, typ })));
   const m = new Uint8Array(await crypto.subtle.sign('HMAC', await key(secret), enc.encode(p)));
   return `${p}.${toB64u(m)}`;
 }
 
 // Returns the cookie payload if the signature is valid and not expired. stale = permissions must be re-read.
 // crypto.subtle.verify compares in constant time.
-export async function verify(token: string | null | undefined, secret: string, now = Date.now()): Promise<Session | null> {
+// `typ` is the type the caller expects. Session cookies issued before types existed have no `typ`: they are accepted as
+// sessions only if they have the session's own shape (role + dash list), which an OAuth state never has.
+export async function verify(token: string | null | undefined, secret: string, now = Date.now(), typ: TokenType = 'session'): Promise<Session | null> {
   if (!token || !secret) return null;
   const [p, s, extra] = token.split('.');
   if (!p || !s || extra !== undefined) return null;
@@ -110,14 +127,20 @@ export async function verify(token: string | null | undefined, secret: string, n
   let o: Session;
   try { o = JSON.parse(dec.decode(fromB64u(p))) as Session; } catch { return null; }
   if (!o || typeof o.exp !== 'number' || o.exp < now || !o.uid) return null;
+  const got = (o as { typ?: unknown }).typ;
+  if (got === undefined) { if (typ !== 'session' || !Array.isArray(o.dash) || (o.role !== 'owner' && o.role !== 'member')) return null; }
+  else if (got !== typ) return null;
   return { ...o, stale: !o.chk || now - o.chk > RECHECK_MS };
 }
 
+// A value that cannot be decoded (a cut or garbled cookie) is no cookie: the caller answers "sign in", never a server error.
 export function readCookie(request: Request, name: string): string | null {
   const raw = request.headers.get('cookie') || '';
   for (const part of raw.split(';')) {
     const i = part.indexOf('=');
-    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0 && part.slice(0, i).trim() === name) {
+      try { return decodeURIComponent(part.slice(i + 1).trim()); } catch { return null; }
+    }
   }
   return null;
 }
@@ -164,9 +187,19 @@ export function sessionFor(profile: Profile, cfg: Cfg, now = Date.now()): Sessio
     depts: owner ? [] : ((profile.departments || []).filter(d => d in DEPTS) as Dept[]),
     co: companyOf(profile.company_id),
     off: (profile.company?.disabled_modules || []).filter(isModule),
-    exp: now + SESSION_HOURS * 3600 * 1000, chk: now,
+    exp: now + SESSION_HOURS * 3600 * 1000, chk: now, iat: now,
   };
 }
+
+// A login made before the profile's `valid_after` (a cookie without a time counts as the oldest) is void: this is what makes a
+// stolen cookie stop working when the password changes or the user signs out. A profile without the column (migration 037 not
+// applied yet) never revokes, as before.
+export const revoked = (p: Profile, s: { iat?: number | undefined }): boolean => {
+  const at = p.valid_after ? Date.parse(p.valid_after) : 0;
+  return at > 0 && (s.iat ?? 0) < at;
+};
+// A company that is switched off (companies.active = false): nobody in it signs in or reaches the API, the owner included
+export const companyOff = (p: Profile): boolean => p.company?.active === false;
 
 // ---- Supabase REST. The service key stays on the server; every call is server-side.
 export interface SbResult<T = unknown> { ok: boolean; status: number; data: T }
@@ -188,15 +221,17 @@ export async function sb<T = unknown>(cfg: Cfg, path: string,
 // A table or column a migration adds, read before that migration is applied (PostgREST / Postgres error codes)
 export const missingSchema = (r: SbResult<unknown>): boolean =>
   !r.ok && ['PGRST205', 'PGRST204', '42P01', '42703'].includes(String((r.data as { code?: unknown } | null)?.code ?? ''));
-// A table a migration adds is not there yet: only the owner hears which file (a normal user gets a plain sentence)
-export const notApplied = (user: { role: string } | null | undefined, file: string) =>
-  user?.role === 'owner' ? `الجدول ناقص في قاعدة البيانات: شغّل ${file} في Supabase ← SQL Editor`
-    : 'جزء من النظام ما اكتمل تجهيزه. بلّغ الإدارة.';
+// A table a migration adds is not there yet: plain words for everyone; the owner is pointed to the Data health page
+export const notApplied = (user: { role: string } | null | undefined, file: string) => {
+  console.warn('not_applied', file);   // the file to apply is for the logs and the data-health page, never for a page's text
+  return user?.role === 'owner' ? 'جزء من النظام ما اكتمل تجهيزه. التفاصيل في صفحة صحة الداتا.' : 'جزء من النظام ما اكتمل تجهيزه. بلّغ الإدارة.';
+};
 
-// A feature waiting for a key: the owner gets the exact step, everyone else a plain sentence
-export const notEnabled = (user: { role: string } | null | undefined, what: string, key: string) =>
-  user?.role === 'owner' ? `${what} يحتاج تفعيل: أضف ${key} في Cloudflare ← Workers ← hoven ← Settings ← Variables and Secrets.`
-    : `${what} يحتاج تفعيل من الإدارة. بلّغ مالك الحساب.`;
+// A feature waiting for a key: plain words for everyone; the key's name stays in the logs and on the Connectors page
+export const notEnabled = (user: { role: string } | null | undefined, what: string, key: string) => {
+  console.warn('not_enabled', key);
+  return user?.role === 'owner' ? `${what} يحتاج تفعيل. التفاصيل في صفحة الربط.` : `${what} يحتاج تفعيل من الإدارة. بلّغ مالك الحساب.`;
+};
 
 // Diagnostics: the kind of key in use, never the key. JWT keys expose only their role claim.
 export function keyKind(k: string): string {
@@ -207,15 +242,51 @@ export function keyKind(k: string): string {
   try { return 'jwt:' + String((JSON.parse(atob(p.replace(/-/g, '+').replace(/_/g, '/'))) as { role?: string }).role ?? '?'); } catch { return 'unknown'; }
 }
 
-export async function loadProfile(cfg: Cfg, uid: string): Promise<Profile | null> {
+// 'missing' = the account has no profile; 'error' = Supabase could not answer (5xx, 429, network). The two must not be mixed:
+// a hiccup is not a reason to log anyone out.
+export type ProfileRead = { kind: 'ok'; profile: Profile } | { kind: 'missing' } | { kind: 'error' };
+export async function readProfile(cfg: Cfg, uid: string): Promise<ProfileRead> {
   const q = `/rest/v1/profiles?id=eq.${encodeURIComponent(uid)}&select=`;
-  const r = await sb<Profile[]>(cfg, q + '*,company:companies(disabled_modules)', { admin: true });
-  if (r.ok && Array.isArray(r.data)) return r.data[0] || null;
+  const done = (r: SbResult<Profile[]>): ProfileRead | null => {
+    if (r.ok && Array.isArray(r.data)) return r.data[0] ? { kind: 'ok', profile: r.data[0] } : { kind: 'missing' };
+    return null;
+  };
+  const hiccup = (r: SbResult<unknown>) => r.status >= 500 || r.status === 429;
+  let r: SbResult<Profile[]>;
+  try { r = await sb<Profile[]>(cfg, q + '*,company:companies(disabled_modules,active)', { admin: true }); } catch { return { kind: 'error' }; }
+  const first = done(r);
+  if (first) return first;
+  if (hiccup(r)) return { kind: 'error' };
   // A column from a migration that is not applied yet must not lock everyone out: read the profile alone and log why.
   const d = (r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {}) as Record<string, unknown>;
   console.warn('profile_read_degraded', JSON.stringify({ status: r.status, code: d.code ?? null, msg: String(d.message ?? '').slice(0, 160) }));
-  const plain = await sb<Profile[]>(cfg, q + '*', { admin: true });
-  return plain.ok && Array.isArray(plain.data) ? plain.data[0] || null : null;
+  let plain: SbResult<Profile[]>;
+  try { plain = await sb<Profile[]>(cfg, q + '*', { admin: true }); } catch { return { kind: 'error' }; }
+  const second = done(plain);
+  if (second) return second;
+  return hiccup(plain) ? { kind: 'error' } : { kind: 'missing' };
+}
+// Old shape for callers that only need "profile or nothing" (login, OAuth callback)
+export async function loadProfile(cfg: Cfg, uid: string): Promise<Profile | null> {
+  const r = await readProfile(cfg, uid);
+  return r.kind === 'ok' ? r.profile : null;
+}
+
+// Re-reads the user's permissions and issues the renewed cookie (renewing never extends the session). Shared by
+// /api/auth/refresh and the page gate, which renews in place instead of redirecting there and back.
+export type Renewed = { kind: 'ok'; session: Session; cookie: string } | { kind: 'login' } | { kind: 'expired' } | { kind: 'error' };
+export async function renew(cfg: Cfg, s: Session): Promise<Renewed> {
+  const read = await readProfile(cfg, s.uid);
+  if (read.kind === 'error') return { kind: 'error' }; // Supabase hiccup: keep the session as it is
+  if (read.kind === 'missing' || read.profile.active === false || companyOff(read.profile) || revoked(read.profile, s)) return { kind: 'login' };
+  const profile = read.profile;
+  const fresh = sessionFor(profile, cfg);
+  fresh.exp = s.exp;
+  // renewing keeps the time of the original login: a renewed cookie must not outlive a later revocation
+  if (s.iat === undefined) delete fresh.iat; else fresh.iat = s.iat;
+  const left = Math.max(0, Math.floor((s.exp - Date.now()) / 1000));
+  if (!left) return { kind: 'expired' };
+  return { kind: 'ok', session: fresh, cookie: setCookie(await sign(fresh, cfg.secret), left) };
 }
 
 // What a visitor typed in the email box, for the audit log: only something shaped like an email and of sane length.
@@ -228,6 +299,38 @@ export async function audit(cfg: Cfg, user: Who, action: string, fields: Record<
     method: 'POST', admin: true, headers: { Prefer: 'return=minimal' },
     body: { user_id: user ? user.uid || user.id || null : null, email: user ? user.email ?? null : null, ...(user?.co ? { company_id: user.co } : {}), action, ...fields },
   }).catch(() => {});
+}
+
+// An event anyone can cause without signing in (a wrong password, a reset request). audit_log is append-only, so a flood of these
+// can never be cleaned: each kind is written at most a few times a minute per isolate, the rest only reach the Worker log.
+export async function auditAnon(cfg: Cfg, user: Who, action: string, fields: Record<string, unknown> = {}): Promise<void> {
+  if (!hit(`anon-audit:${action}`, 6, 60_000)) return;
+  await audit(cfg, user, action, fields);
+}
+
+// Voids every login the user has made so far (their cookies are stateless, so this is the only way to end them). Returns the
+// moment written, or null when it could not be saved (the column is missing until migration 037, or Supabase failed).
+export async function revokeSessions(cfg: Cfg, uid: string, now = Date.now()): Promise<number | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(uid)) return null;
+  try {
+    const r = await sb(cfg, `/rest/v1/profiles?id=eq.${uid}`, { method: 'PATCH', admin: true, headers: { Prefer: 'return=minimal' }, body: { valid_after: new Date(now).toISOString() } });
+    if (r.ok) return now;
+    console.warn('revoke_sessions_failed', r.status);
+  } catch { console.warn('revoke_sessions_failed'); }
+  return null;
+}
+
+// A daily limit that cannot be skipped: the counting row is written FIRST (and must be saved), then the day's rows are counted.
+// Two requests at once both write before either counts, so the one over the limit is refused; a failed write or count refuses
+// too (fail closed), where the old way (check, spend, write the row afterwards) let parallel calls through and a lost row meant no limit.
+export async function claimDaily(cfg: Cfg, user: { uid: string; email?: string; co?: string }, action: string, limit: number, since: string): Promise<'ok' | 'over' | 'error'> {
+  if (!/^[0-9a-f-]{36}$/i.test(user.uid)) return 'error';
+  const w = await sb(cfg, '/rest/v1/audit_log', { method: 'POST', admin: true, headers: { Prefer: 'return=minimal' },
+    body: { user_id: user.uid, email: user.email ?? null, ...(user.co ? { company_id: user.co } : {}), action } }).catch(() => null);
+  if (!w || !w.ok) return 'error';
+  const r = await sb<unknown[]>(cfg, `/rest/v1/audit_log?select=id&action=eq.${encodeURIComponent(action)}&user_id=eq.${user.uid}&at=gte.${encodeURIComponent(since)}&limit=${limit + 1}`, { admin: true }).catch(() => null);
+  if (!r || !r.ok || !Array.isArray(r.data)) return 'error';
+  return r.data.length > limit ? 'over' : 'ok';
 }
 
 // ---- Responses
@@ -264,9 +367,12 @@ export async function requireUser(request: Request, e: AuthEnv, need: Need, { wr
   if (write && !sameOrigin(request)) throw json(403, { error: 'طلب مرفوض' });
   const s = await verify(readCookie(request, SESSION), cfg.secret);
   if (!s) throw json(401, { error: 'سجّل الدخول' });
-  const profile = await loadProfile(cfg, s.uid);
-  if (!profile || profile.active === false) throw json(401, { error: 'الحساب موقوف' }, { 'set-cookie': clearCookie() });
-  const user = sessionFor(profile, cfg);
+  const read = await readProfile(cfg, s.uid);
+  // A Supabase hiccup answers 503 and keeps the cookie; only a missing or disabled account clears it
+  if (read.kind === 'error') throw json(503, { error: 'تعذّر التحقق من حسابك الحين. جرّب بعد لحظات.' });
+  if (read.kind === 'missing' || read.profile.active === false || companyOff(read.profile)) throw json(401, { error: 'الحساب موقوف' }, { 'set-cookie': clearCookie() });
+  if (revoked(read.profile, s)) throw json(401, { error: 'انتهت الجلسة، سجّل الدخول من جديد' }, { 'set-cookie': clearCookie() });
+  const user = sessionFor(read.profile, cfg);
   if (locked(user, need)) throw json(403, { error: LOCKED });
   if (well && user.co !== HOVEN_COMPANY) throw json(403, { error: HOVEN_ONLY });
   if (!can(user, need, cfg)) throw json(403, { error: 'ما عندك صلاحية' });

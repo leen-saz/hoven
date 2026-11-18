@@ -2,7 +2,7 @@
 // the wait for a video, double runs, recovery of a post that lost its Worker, the retry of failed platforms, and the dry-run check.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { publishPost, publishOne, retryPlan, checkConnection, validate, stale, VIDEO_WAIT_MS, type Draft, type Results } from './social';
-import { runSocial } from './cron';
+import { runSocial, FRESH_MAX, PENDING_MAX, TICK_MS } from './cron';
 import { HOVEN_COMPANY } from '../../lib/tenant';
 import { graphMock } from './graph-mock';
 
@@ -164,7 +164,7 @@ describe('double runs and recovery', () => {
     let lost = true;
     const first = await publishPost(p, g.tokens, g.f, {}, { ...noWait, save: async r => { if (lost && r.instagram?.ok) throw new Error('worker died'); } }).catch(() => null);
     lost = false;
-    expect(first).toBeNull();
+    expect(first?.results.instagram).toMatchObject({ ok: false, code: 'unsaved' });
     expect(g.st.igPosts).toHaveLength(1);
     const cid = g.st.igPosts[0]!.creation_id;
     const out = await publishPost(p, g.tokens, g.f, { instagram: { ok: false, state: 'publishing', creation_id: cid, since: new Date(NOW).toISOString() } }, noWait);
@@ -210,7 +210,7 @@ describe('runSocial: claiming, pending videos, recovery', () => {
   const ENV = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'l@x' };
   const base = { company_id: HOVEN_COMPANY, platforms: ['instagram'], body: 'v', media: [vid], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } };
   // a tiny table: social_posts rows, claims honoured by the filters the cron sends
-  function db(rows: Record<string, unknown>[]) {
+  function db(rows: Record<string, unknown>[], refuse?: (body: Record<string, unknown>) => boolean) {
     const patches: Record<string, unknown>[] = [];
     vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
       if (url.includes('/rpc/connector_env')) return new Response(JSON.stringify([{ name: 'META_PAGE_ACCESS_TOKEN', value: 'tok' }, { name: 'META_PAGE_ID', value: 'p1' }, { name: 'IG_USER_ID', value: 'ig1' }]));
@@ -219,8 +219,10 @@ describe('runSocial: claiming, pending videos, recovery', () => {
         const row = rows.find(r => r.id === id);
         const need = [...url.matchAll(/(status|claimed_at)=eq\.([^&]+)/g)].every(m => String(row?.[m[1]!] ?? '') === decodeURIComponent(m[2]!));
         const nullOk = !url.includes('claimed_at=is.null') || !row?.claimed_at;
-        if (!row || !need || !nullOk) return new Response('[]');
+        const approvedOk = !url.includes('approved_at=not.is.null') || !!row?.approved_at;
+        if (!row || !need || !nullOk || !approvedOk) return new Response('[]');
         const body = JSON.parse(String(init.body));
+        if (refuse?.(body)) return new Response('{"message":"down"}', { status: 503 });
         Object.assign(row, body); patches.push({ id, ...body });
         return new Response(JSON.stringify([row]));
       }
@@ -268,6 +270,42 @@ describe('runSocial: claiming, pending videos, recovery', () => {
     expect((rows[2]!.results as Results).facebook?.code).toBe('unconfirmed');
     expect(g.st.fbPosts).toHaveLength(0);
   });
+  it('one run handles a bounded number of posts: waiting videos and fresh posts have their own slots, the rest wait for the next run', async () => {
+    const g = graphMock();
+    const proc = { instagram: { ok: false, state: 'processing', creation_id: 'c', since: new Date(NOW).toISOString() } };
+    const rows: Record<string, unknown>[] = [
+      // 5 videos still being prepared, due earlier than the 6 fresh posts: they must not take every slot
+      ...[1, 2, 3, 4, 5].map(id => ({ ...base, id, status: 'scheduled', publish_at: `2026-11-01T10:0${id}:00Z`, results: proc })),
+      ...[6, 7, 8, 9, 10, 11].map(id => ({ ...base, id, platforms: ['facebook'], media: [], status: 'scheduled', publish_at: `2026-11-01T11:0${id - 6}:00Z`, results: {} })),
+    ];
+    db(rows);
+    vi.useFakeTimers();
+    const p = runSocial(ENV, NOW, g.f); await vi.runAllTimersAsync();
+    expect(await p).toBe(PENDING_MAX + FRESH_MAX);
+    expect(g.st.fbPosts).toHaveLength(FRESH_MAX);                       // fresh posts got their slots despite the waiting videos
+    expect(rows.filter(r => r.status === 'publishing')).toHaveLength(0);
+    expect(rows.filter(r => r.status === 'scheduled' && !r.claimed_at && Object.keys(r.results as object).length === 0)).toHaveLength(4); // 4 fresh ones untouched: next run
+    vi.useRealTimers();
+  });
+  it('30 posts due at once: one run stays under the free plan\'s 50 subrequests', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = Array.from({ length: 30 }, (_, i) => ({ ...base, id: i + 1, platforms: ['facebook', 'instagram'], media: [img(i)], status: 'scheduled', results: {} }));
+    db(rows);
+    const sb = (globalThis.fetch as unknown as { mock: { calls: unknown[] } }).mock;
+    const done = await runSocial(ENV, NOW, g.f);
+    const subrequests = sb.calls.length + g.st.calls.length;     // Supabase calls + Graph calls
+    expect(done).toBe(FRESH_MAX);
+    expect(subrequests).toBeLessThanOrEqual(50);
+    expect(rows.filter(r => r.status === 'scheduled')).toHaveLength(30 - FRESH_MAX);
+  });
+  it('stops starting new posts once the run has used its time', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [6, 7].map(id => ({ ...base, id, platforms: ['facebook'], media: [], status: 'scheduled', publish_at: '2026-11-01T11:00:00Z', results: {} }));
+    db(rows);
+    let t = 0;
+    expect(await runSocial(ENV, NOW, g.f, () => (t += TICK_MS + 1))).toBe(1);
+    expect(g.st.fbPosts).toHaveLength(1);
+  });
   it('two overlapping runs recover a stuck post once', async () => {
     const g = graphMock();
     const rows: Record<string, unknown>[] = [{ ...base, id: 1, platforms: ['facebook'], media: [], status: 'publishing', claimed_at: new Date(NOW - 20 * 60_000).toISOString(), results: {} }];
@@ -275,6 +313,90 @@ describe('runSocial: claiming, pending videos, recovery', () => {
     const [a, b] = await Promise.all([runSocial(ENV, NOW, g.f), runSocial(ENV, NOW, g.f)]);
     expect(a + b).toBe(1);
     expect(g.st.fbPosts).toHaveLength(1);
+  });
+});
+
+describe('runSocial: a result that cannot be saved never leads to a second post', () => {
+  const ENV = { SUPABASE_URL: 'https://sb.example', SUPABASE_SERVICE_ROLE_KEY: 's', SESSION_SECRET: 'x'.repeat(40), OWNER_EMAIL: 'l@x' };
+  const base = { company_id: HOVEN_COMPANY, platforms: ['facebook'], body: 'v', media: [], publish_at: '2026-11-01T11:00:00Z', mode: 'manual', approved_at: '2026-11-01T10:00:00Z', approved_by: 'sara@x.co', company: { social_approvers: ['sara@x.co'] } };
+  const fb = (b: Record<string, unknown>) => (b.results as Results | undefined)?.facebook;
+  function tableWith(rows: Record<string, unknown>[], refuse?: (b: Record<string, unknown>) => boolean) {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit = {}) => {
+      urls.push(`${init.method ?? 'GET'} ${url}`);
+      if (url.includes('/rpc/connector_env')) return new Response(JSON.stringify([{ name: 'META_PAGE_ACCESS_TOKEN', value: 'tok' }, { name: 'META_PAGE_ID', value: 'p1' }]));
+      const id = Number(url.match(/id=eq\.(\d+)/)?.[1]);
+      if (init.method === 'PATCH') {
+        const row = rows.find(r => r.id === id);
+        const need = [...url.matchAll(/(status|claimed_at)=eq\.([^&]+)/g)].every(m => String(row?.[m[1]!] ?? '') === decodeURIComponent(m[2]!));
+        if (!row || !need || (url.includes('approved_at=not.is.null') && !row.approved_at)) return new Response('[]');
+        const body = JSON.parse(String(init.body));
+        if (refuse?.(body)) return new Response('{"message":"down"}', { status: 503 });
+        Object.assign(row, body);
+        return new Response(JSON.stringify([row]));
+      }
+      if (url.includes('select=*')) return new Response(JSON.stringify(rows.filter(r => r.status === url.match(/status=eq\.(\w+)/)![1])));
+      return new Response('{}');
+    }));
+    return urls;
+  }
+  it('the claims only take approved posts (approved_at in the filter)', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [{ ...base, id: 1, status: 'scheduled', results: {} }, { ...base, id: 2, status: 'publishing', claimed_at: new Date(NOW - 20 * 60_000).toISOString(), results: {} }];
+    const urls = tableWith(rows);
+    await runSocial(ENV, NOW, g.f);
+    const claims = urls.filter(u => u.startsWith('PATCH') && /status=eq\.(scheduled|publishing)/.test(u) && !u.includes('claimed_at=null'));
+    expect(claims.length).toBeGreaterThanOrEqual(2);
+    for (const c of claims) expect(c).toContain('approved_at=not.is.null');
+  });
+  it('an approval withdrawn after the list was read means the post is not claimed or sent', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [{ ...base, id: 1, status: 'scheduled', results: {} }];
+    tableWith(rows);
+    // the row is listed with its approval; by the time of the claim it is gone
+    const real = globalThis.fetch;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => { if (init?.method === 'PATCH') rows[0]!.approved_at = null; return real(url, init); }));
+    expect(await runSocial(ENV, NOW, g.f)).toBe(0);
+    expect(g.st.fbPosts).toHaveLength(0);
+  });
+  it('the post went out but the database refused the result: marked unsaved, and recovery never posts it again', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [{ ...base, id: 1, status: 'scheduled', results: {} }];
+    tableWith(rows, b => fb(b)?.ok === true);                 // any write that says "ok" is refused
+    expect(await runSocial(ENV, NOW, g.f)).toBe(1);
+    expect(g.st.fbPosts).toHaveLength(1);
+    expect(fb(rows[0]!)).toMatchObject({ ok: false, code: 'unsaved' });
+    expect(rows[0]!.status).toBe('failed');
+    // a later run, even of a row stuck in publishing with the old stored trail, does not post again
+    rows[0]!.status = 'publishing'; rows[0]!.claimed_at = new Date(NOW - 20 * 60_000).toISOString();
+    await runSocial(ENV, NOW + 60_000, g.f);
+    expect(g.st.fbPosts).toHaveLength(1);
+  });
+  it('even when every write after the post is refused, the stored trail keeps recovery from posting twice', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [{ ...base, id: 1, status: 'scheduled', results: {} }];
+    let sent = false;
+    const orig = g.f;
+    const f = (async (u: string, i?: RequestInit) => { const r = await orig(u, i); if (String(u).endsWith('p1/feed')) sent = true; return r; }) as typeof fetch;
+    tableWith(rows, () => sent);                              // the database goes down right after the post
+    await runSocial(ENV, NOW, f);
+    expect(g.st.fbPosts).toHaveLength(1);
+    expect(rows[0]!.status).toBe('publishing');
+    sent = false;                                             // it comes back; the row is old enough to be recovered
+    await runSocial(ENV, NOW + 20 * 60_000, g.f);
+    expect(g.st.fbPosts).toHaveLength(1);
+    expect(fb(rows[0]!)).toMatchObject({ ok: false, code: 'unconfirmed' });
+  });
+  it('if the database refuses the "about to post" note, nothing is posted', async () => {
+    const g = graphMock();
+    const rows: Record<string, unknown>[] = [{ ...base, id: 1, status: 'scheduled', results: {} }];
+    tableWith(rows, b => fb(b)?.state === 'sending');
+    await runSocial(ENV, NOW, g.f);
+    expect(g.st.fbPosts).toHaveLength(0);
+  });
+  it('an unsaved platform is never retried by the retry button', () => {
+    const plan = retryPlan({ status: 'failed', platforms: ['facebook'], retried_at: null, results: { facebook: { ok: false, code: 'unsaved', id: '1' } } });
+    expect(plan).toEqual({ error: 'nothing' });
   });
 });
 

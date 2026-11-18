@@ -22,13 +22,16 @@ describe('gate: Hoven pages and data', () => {
     const cookie = await cookieOf(profile(OTHER));
     for (const p of PATHS) {
       const d = await gate(new Request('https://x.test' + p, { headers: { cookie } }), E);
-      expect(d instanceof Response ? d.status : 'pass', p).toBe(403);
+      // a page goes to the «not available for your company» screen; data files and the API keep a plain 403
+      const page = !/\.[a-z0-9]+$/i.test(p) && !p.startsWith('/api/');
+      expect(d instanceof Response ? d.status : 'pass', p).toBe(page ? 302 : 403);
+      if (page) expect((d as Response).headers.get('location'), p).toContain('/soon/?t=');
     }
   });
   it('a department manager of another company gets no Hoven department page by a rewrite', async () => {
     const cookie = await cookieOf(profile(OTHER, { departments: ['iv'] }));
     const d = await gate(new Request('https://x.test/anything', { headers: { cookie } }), E);
-    expect(d instanceof Response ? d.status : 'pass').toBe(403);
+    expect(d instanceof Response ? d.status : 'pass').toBe(302);   // to the same screen; no department page is rewritten
   });
   it("still opens them for Hoven's users, and the other company keeps its own tabs", async () => {
     const well = await cookieOf(profile(HOVEN_COMPANY));
@@ -72,7 +75,7 @@ describe("handlers refuse another company's users themselves (the gate is not th
     const env = { ...E, META_APP_ID: 'app', META_APP_SECRET: 'sec' };
     async function callback(co: string) {
       const p = profile(co);
-      const state = await A.sign({ uid: p.id, p: 'meta', n: 'n1', exp: Date.now() + 60_000 }, cfg.secret);
+      const state = await A.sign({ uid: p.id, p: 'meta', n: 'n1', exp: Date.now() + 60_000 }, cfg.secret, 'oauth');
       const calls: string[] = [];
       vi.stubGlobal('fetch', vi.fn(async (url: string) => { calls.push(String(url)); return new Response(JSON.stringify(String(url).includes('/profiles?id=eq.') ? [p] : { error: 'x' }), { status: String(url).includes('/profiles?id=eq.') ? 200 : 400 }); }));
       const res = await api.request(`https://x.test/api/connectors/callback?state=${encodeURIComponent(state)}&code=c`, { headers: { cookie: '__Secure-hoven_oauth=n1' } }, env);

@@ -47,8 +47,13 @@ function renderCharts(now){
   $('#legend').innerHTML = plats.map(p=>`<span><span class="dot" style="background:var(${PL[p].c})"></span>${platName(p)}</span>`).join('');
   stacked($('#chSpend'),now,'spend'); stacked($('#chLeads'),now,'orders'); cplLine($('#chCpl'),now);
   const g=granOf();
+<<<<<<< well
+  $('#chSpendT').textContent={day:'الصرف اليومي (ريال)',week:'الصرف الأسبوعي (ريال)',month:'الصرف الشهري (ريال)'}[g];
+  $('#chLeadsT').textContent={day:'الليدز اليومية',week:'الليدز الأسبوعية',month:'الليدز الشهرية'}[g];
+=======
   $('#chSpendT').textContent={day:'الصرف اليومي (ر.س)',week:'الصرف الأسبوعي (ر.س)',month:'الصرف الشهري (ر.س)'}[g];
   $('#chLeadsT').textContent={day:'الطلبات اليومية',week:'الطلبات الأسبوعية',month:'الطلبات الشهرية'}[g];
+>>>>>>> hoven
   document.querySelectorAll('#gran button').forEach(b=>b.setAttribute('aria-pressed',S.gran===b.dataset.v));
   localize();
 }

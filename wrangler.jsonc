@@ -5,13 +5,14 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
-  // OWNER_EMAIL is config, not a credential, so it lives here instead of in secrets.
+  // OWNER_EMAIL is NOT in this public file: it is a Worker secret per environment (docs/secrets/worker.env.example).
+  // Local dev uses a placeholder below; deploy.yml refuses to deploy an environment that lacks the secret.
   // Top level = local dev only. Each env has its own bindings; nothing is inherited.
   "env": {
     "staging": {
       "name": "hoven-staging",
       "workers_dev": true,
-      "vars": { "APP_ENV": "staging", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+      "vars": { "APP_ENV": "staging" },
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files-staging" }],
       "ai": { "binding": "AI" },
       "workflows": [{ "name": "hoven-journey-run-staging", "binding": "JOURNEY", "class_name": "JourneyRun" }]
@@ -19,15 +20,25 @@
     "production": {
       "name": "hoven",
       "workers_dev": false,
+<<<<<<< well
+      "vars": { "APP_ENV": "production" },
+      "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files" }],
+      "ai": { "binding": "AI" },
+      "workflows": [{ "name": "hoven-journey-run", "binding": "JOURNEY", "class_name": "JourneyRun" }],
+      // Workers Free allows 5 cron triggers per account, so only TWO here (src/app.ts, hourlyTasks in src/lib/cron.ts):
+      // every 5 minutes the due social posts; minute 7 hourly: the data refresh and the watchdog, plus the weekly backup (Sunday 02 UTC) and the monthly restore test (the 1st, 03 UTC)
+      "triggers": { "crons": ["7 * * * *", "*/5 * * * *"] }
+=======
       "vars": { "APP_ENV": "production", "OWNER_EMAIL": "leen@brandsforhome.sa", "SALLA_CLIENT_ID": "19bb79a1-40f7-4568-8d6c-65228613b644" },
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files" }],
       "ai": { "binding": "AI" },
       "workflows": [{ "name": "hoven-journey-run", "binding": "JOURNEY", "class_name": "JourneyRun" }],
       // Hourly data refresh (src/lib/cron.ts): GitHub's own schedule never fired for this repo; every 5 minutes: due social posts
       "triggers": { "crons": ["7 */4 * * *", "*/5 * * * *"] }
+>>>>>>> hoven
     }
   },
-  "vars": { "APP_ENV": "local", "OWNER_EMAIL": "leen@brandsforhome.sa" },
+  "vars": { "APP_ENV": "local", "OWNER_EMAIL": "owner@example.test" },
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "hoven-files-local" }],
   "ai": { "binding": "AI" },
   "workflows": [{ "name": "hoven-journey-run-local", "binding": "JOURNEY", "class_name": "JourneyRun" }]

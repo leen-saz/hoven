@@ -1,25 +1,49 @@
 // /api/maestro/usage|budgets|reconcile: what the AI costs, per tab and month, the owner's monthly cap per tab, and the
 // check against a provider invoice. Owner only (PRD: the cost screen is Leen's alone in phase 1). Nothing here logs a figure.
 import { sb, json, readJson, handle, requireUser, audit, missingSchema, notApplied } from '../../lib/auth';
-import { scoped } from '../../lib/tenant';
+import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { MODULES } from '../registry';
-import { PRICES } from '../../lib/prices';
-import { USD_SAR, DEFAULT_ALERT_PCT, clearSnaps, levelOf, monthStart, reconcile as compare, type Row } from '../../lib/usage';
+import { PRICES, priceOf, type Billed } from '../../lib/prices';
+import { cost as priceCost, USD_SAR, DEFAULT_ALERT_PCT, defaultCap, clearSnaps, levelOf, monthStart, reconcile as compare, type Row } from '../../lib/usage';
 
+<<<<<<< well
+const MIGRATION = 'migration 026_ai_usage.sql';
+// the home assistant (task `ahlam`) is not a module but is billed and capped like a tab
+const TABS = [...MODULES.filter(m => m.status === 'live').map(m => ({ key: m.key, ar: m.ar })), { key: 'ahlam', ar: 'أحلم' }, { key: 'ahlam_campaign', ar: 'أحلم: حملة جديدة' }];
+=======
 const MIGRATION = 'migration 019_ai_usage.sql';
 const TABS = MODULES.filter(m => m.status === 'live').map(m => ({ key: m.key, ar: m.ar }));
+>>>>>>> hoven
 const TAB_KEYS = new Set(TABS.map(t => t.key));
 const MONTH = /^(\d{4})-(0[1-9]|1[0-2])$/;
+// The model keys are the platform's (Worker secrets, billed to Hoven): another company's owner sets a cap of their own up to this
+// ceiling and cannot remove it, while Hoven's owner keeps the full range
+export const TENANT_CAP_MAX_SAR = 200;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const num = (x: unknown) => { const n = Number(x); return isFinite(n) ? n : 0; };
+type ModelRow = { month: string; provider: string; model: string; calls: number; tokens_in: number; tokens_out: number; cost_usd: number; unpriced: number; estimated: number };
+// Recorded against expected, per provider and model. «Expected» is the tokens priced from our own table (prices.ts); where the provider
+// reports its own cost (OpenRouter, search and image estimates) the two differ on purpose, and the row says which kind it is.
+export function compareModels(rows: ModelRow[]) {
+  return rows.map(r => {
+    const tin = num(r.tokens_in), tout = num(r.tokens_out), p = priceOf(r.provider as Billed, r.model);
+    const expected = p ? priceCost(r.provider as Billed, r.model, tin, tout).usd : null, recorded = num(r.cost_usd);
+    const diff = expected === null ? null : Math.round((recorded - expected) * 1e6) / 1e6;
+    return { provider: r.provider, model: r.model, calls: num(r.calls), tokens_in: tin, tokens_out: tout, recorded_usd: recorded, expected_usd: expected, diff_usd: diff,
+      diff_pct: expected && expected > 0 ? Math.round(((recorded - expected) / expected) * 10_000) / 100 : null,
+      unpriced: num(r.unpriced), estimated: num(r.estimated), verified: !!p?.verified, in_table: !!p };
+  }).sort((a, b) => b.recorded_usd - a.recorded_usd);
+}
 type Budget = { module: string; monthly_cap_usd: number | null; alert_at_pct: number };
 
 export const usage = { GET: handle(async (request, e) => {
   const { cfg, user } = await requireUser(request, e, 'owner');
   const now = Date.now(), pick = new URL(request.url).searchParams.get('month') || '';
-  const [u, b] = await Promise.all([
+  const [u, b, mr] = await Promise.all([
     sb<Row[]>(cfg, '/rest/v1/rpc/ai_spend', { method: 'POST', admin: true, body: { p_company: user.co, p_since: monthStart(now, 5) } }),
     sb<Budget[]>(cfg, scoped('/rest/v1/ai_budgets?select=module,monthly_cap_usd,alert_at_pct', user.co), { admin: true }),
+    // the recorded-vs-expected table: its own function (migration 031), so a missing one hides the table and nothing else
+    sb<ModelRow[]>(cfg, '/rest/v1/rpc/ai_models_spend', { method: 'POST', admin: true, body: { p_company: user.co, p_since: monthStart(now, 5) } }),
   ]);
   if (!u.ok || !b.ok) return json(missingSchema(u) || missingSchema(b) ? 503 : 500, { error: missingSchema(u) || missingSchema(b) ? notApplied(user, MIGRATION) : 'ما قدرت أقرأ الصرف' });
   const rows = Array.isArray(u.data) ? u.data : [];
@@ -31,7 +55,8 @@ export const usage = { GET: handle(async (request, e) => {
   const byTab = new Map(here.map(r => [r.module, r]));
   const tabs = TABS.map(t => {
     const r = byTab.get(t.key), c = caps.get(t.key), spent = num(r?.cost_usd);
-    const cap = c && c.monthly_cap_usd != null ? { usd: num(c.monthly_cap_usd), pct: num(c.alert_at_pct) || DEFAULT_ALERT_PCT } : undefined;
+    // no row = the default cap (usage.ts); a row with an empty cap = the owner chose no limit
+    const cap = !c ? defaultCap() : c.monthly_cap_usd != null ? { usd: num(c.monthly_cap_usd), pct: num(c.alert_at_pct) || DEFAULT_ALERT_PCT } : undefined;
     return {
       tab: t.key, ar: t.ar, calls: num(r?.calls), tokens_in: num(r?.tokens_in), tokens_out: num(r?.tokens_out), usd: num(r?.cost_usd), sar: r2(num(r?.cost_sar)), unpriced: num(r?.unpriced),
       cap_sar: cap ? r2(cap.usd * USD_SAR) : null, alert_pct: cap?.pct ?? DEFAULT_ALERT_PCT,
@@ -44,6 +69,7 @@ export const usage = { GET: handle(async (request, e) => {
     month, current: month === nowMonth, rate: USD_SAR,
     months: months.map(m => ({ month: m, usd: sum(m).usd, sar: r2(sum(m).sar) })),
     tabs, total: { usd: sum(month).usd, sar: r2(sum(month).sar) },
+    models: mr.ok && Array.isArray(mr.data) ? compareModels(mr.data.filter(x => String(x.month) === month)) : null,
     prices: PRICES.map(p => ({ provider: p.provider, match: p.match, in_usd: p.inUsd, out_usd: p.outUsd, source: p.source, date: p.date, verified: p.verified })),
   });
 }) };
@@ -55,7 +81,10 @@ export const budgets = { POST: handle(async (request, e) => {
   const tab = String(b.tab || '');
   if (!TAB_KEYS.has(tab)) return json(400, { error: 'اختر تاب' });
   const raw = b.cap_sar === null || b.cap_sar === undefined || String(b.cap_sar).trim() === '' ? null : Number(b.cap_sar);
+  const well = user.co === HOVEN_COMPANY;
+  if (!well && raw === null) return json(403, { error: 'السقف ما ينشال لشركتك. اكتب رقم.' });
   if (raw !== null && !(isFinite(raw) && raw > 0 && raw <= 10_000_000)) return json(400, { error: 'السقف رقم أكبر من صفر، أو اتركه فاضي لو ما تبي سقف' });
+  if (!well && raw !== null && raw > TENANT_CAP_MAX_SAR) return json(403, { error: `أعلى سقف لشركتك ${TENANT_CAP_MAX_SAR} ريال بالشهر. للزيادة تواصل مع الإدارة.` });
   const pct = b.alert_pct === undefined || b.alert_pct === '' ? DEFAULT_ALERT_PCT : Math.round(Number(b.alert_pct));
   if (!(pct >= 1 && pct <= 99)) return json(400, { error: 'نسبة التنبيه بين 1 و99' });
   const r = await sb(cfg, '/rest/v1/ai_budgets?on_conflict=company_id,module', { method: 'POST', admin: true, headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -71,7 +100,7 @@ export const reconcile = { POST: handle(async (request, e) => {
   const { cfg, user } = await requireUser(request, e, 'owner', { write: true });
   const b = await readJson(request, 2000);
   const provider = String(b.provider || ''), m = MONTH.exec(String(b.month || '')), invoice = Number(b.invoice_usd);
-  if (provider !== 'openai' && provider !== 'xai') return json(400, { error: 'اختر المزوّد: OpenAI أو Grok' });
+  if (provider !== 'openai' && provider !== 'xai' && provider !== 'gemini' && provider !== 'openrouter') return json(400, { error: 'اختر المزوّد: OpenAI أو Grok أو OpenRouter' });
   if (!m) return json(400, { error: 'اختر الشهر' });
   if (!(isFinite(invoice) && invoice > 0 && invoice <= 100_000_000)) return json(400, { error: 'اكتب مبلغ الفاتورة بالدولار' });
   const from = new Date(Date.UTC(+m[1]!, +m[2]! - 1, 1) - 3 * 3600e3), to = new Date(Date.UTC(+m[1]!, +m[2]!, 1) - 3 * 3600e3);

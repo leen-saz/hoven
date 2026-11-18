@@ -1,5 +1,6 @@
 // Social: validation, due rule, publishing to Facebook/Instagram with a stubbed Graph API, and company scoping.
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { textLength } from './engine';
 import { validate, due, publishPost, canApprove, cleanApprovers } from './social';
 import { runSocial } from './cron';
 import { HOVEN_COMPANY } from '../../lib/tenant';
@@ -19,8 +20,47 @@ describe('validate', () => {
     expect(validate({ platforms: ['x'], body: 'ا'.repeat(281), publish_at: later }, NOW).error).toContain('X');
     expect(validate({ platforms: ['instagram'], body: 'x', publish_at: later }, NOW).error).toContain('انستقرام');
   });
+<<<<<<< well
+  it('counts X text the way X does: a link is 23, an emoji is 2, other platforms count characters', () => {
+    const link = 'https://hoven.example/book/' + 'a'.repeat(120);
+    expect(textLength('x', 'ا'.repeat(10) + ' ' + link)).toBe(10 + 1 + 23);
+    expect(validate({ platforms: ['x'], body: 'ا'.repeat(250) + ' ' + link, publish_at: later }, NOW).error).toBeUndefined();
+    expect(validate({ platforms: ['x'], body: 'ا'.repeat(260) + ' ' + link, publish_at: later }, NOW).error).toContain('X');
+    expect(textLength('x', '👨‍👩‍👧‍👦')).toBe(2);
+    expect(textLength('x', '👍🏽')).toBe(2);
+    expect(textLength('x', '日本')).toBe(4);
+    expect(textLength('facebook', link)).toBe(link.length);
+  });
+  it('counts X links the way X ends them: trailing punctuation and glued Arabic text are outside the link', () => {
+    const l = 'https://hoven.example/book/' + 'a'.repeat(60);
+    expect(textLength('x', l)).toBe(23);
+    expect(textLength('x', l + '.')).toBe(24);                       // full stop
+    expect(textLength('x', l + '\u060c')).toBe(24);                  // Arabic comma
+    expect(textLength('x', l + '!?')).toBe(25);
+    expect(textLength('x', '(' + l + ')')).toBe(25);                 // unbalanced closing bracket is outside
+    expect(textLength('x', 'https://hoven.example/a_(b)')).toBe(23);  // balanced pair stays inside
+    expect(textLength('x', l + 'زيارة')).toBe(23 + 5);              // Arabic glued to the link starts the text
+    expect(textLength('x', 'https://')).toBe(8);                     // no domain: not a link
+  });
+  it('counts X text by the ranges X lists: Arabic and plain punctuation are 1, signs outside the ranges are 2', () => {
+    expect(textLength('x', 'عِيادة')).toBe(6);                       // Arabic letters and their marks: 1 each
+    expect(textLength('x', '\u201c\u201d\u2013')).toBe(3);          // curly quotes and the en dash are inside the ranges
+    expect(textLength('x', '\u2026')).toBe(2);                       // ellipsis
+    expect(textLength('x', '\u2022')).toBe(2);                       // bullet
+    expect(textLength('x', '\ufdfc')).toBe(2);                       // rial sign
+    expect(textLength('x', '\u2192')).toBe(2);                       // arrow
+    expect(textLength('x', 'e\u0301')).toBe(1);                      // counted in NFC
+    expect(textLength('facebook', '\u2026')).toBe(1);
+    // 279 letters and an ellipsis is 281 for X: said when scheduling, not as a failed post after approval
+    expect(validate({ platforms: ['x'], body: 'ا'.repeat(279) + '\u2026', publish_at: later }, NOW).error).toContain('X');
+    expect(validate({ platforms: ['x'], body: 'ا'.repeat(278) + '\u2026', publish_at: later }, NOW).error).toBeUndefined();
+  });
+  it('warns on MOH claims precisely without blocking, and defaults to manual', () => {
+    const v = validate({ platforms: ['facebook'], body: 'علاج نهائي ومضمون', publish_at: later }, NOW);
+=======
   it('warns on consumer-protection claims precisely without blocking, and defaults to manual', () => {
     const v = validate({ platforms: ['facebook'], body: 'شحن مجاني ومضمون', publish_at: later }, NOW);
+>>>>>>> hoven
     expect(v.draft?.mode).toBe('manual');
     expect(v.notices.length).toBe(2);
     expect(v.notices.join(' ')).toContain('«مجاني»');
@@ -138,6 +178,8 @@ describe('readiness before scheduling', () => {
     expect(readiness('instagram', { META_PAGE_ACCESS_TOKEN: 't', META_PAGE_ID: '1' })).toContain('انستقرام مو مربوط');
     expect(readiness('instagram', { META_PAGE_ACCESS_TOKEN: 't', IG_USER_ID: '2' })).toBe('');
     expect(readiness('facebook', {})).toContain('فيسبوك مو مربوطة');
-    expect(readiness('tiktok', {})).toContain('قريباً');
+    expect(readiness('snapchat', {})).toContain('قريباً');
+    // TikTok, X and LinkedIn go through the extra engine: not available until it is set up and the account is connected there
+    expect(readiness('tiktok', {})).toContain('غير متاح الحين');
   });
 });

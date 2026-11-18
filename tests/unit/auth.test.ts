@@ -46,8 +46,19 @@ describe('auth', () => {
     expect(await A.verify(t, cfg.secret)).toBeTruthy();
     expect(await A.verify(t.slice(0, -2) + 'aa', cfg.secret)).toBeNull();
     expect(await A.verify(t, 'y'.repeat(40))).toBeNull();
-    const old = await A.sign(A.sessionFor(member, cfg, Date.now() - 13 * 3600e3), cfg.secret);
+    const old = await A.sign(A.sessionFor(member, cfg, Date.now() - (A.SESSION_HOURS + 1) * 3600e3), cfg.secret);
     expect(await A.verify(old, cfg.secret)).toBeNull();
+  });
+
+  it('a session cookie that cannot be decoded is no session: login for a page, 401 for the API, never a server error', async () => {
+    const bad = `${A.SESSION}=%E0%A4%A`;
+    expect(A.readCookie(req('/', bad), A.SESSION)).toBe(null);
+    const page = await M(req('/control/', bad));
+    expect(status(page)).toBe(302);
+    expect(location(page)).toContain('/login/');
+    expect(status(await M(req('/api/admin/users', bad)))).toBe(401);
+    const res = await api.request('https://hoven.example/api/account/password', { headers: { cookie: bad } }, E);
+    expect(res.status).toBe(401);
   });
 
   it('owner gets every dashboard, members only what Leen picked', () => {
@@ -93,7 +104,9 @@ describe('auth', () => {
     expect(need('/settings/', '')).toBe('any');
     expect(need('/social/', '')).toBe('social');
     expect(need('/api/social/posts', '')).toBe('social');
-    expect(need('/api/listening/probe', '')).toBeNull(); // the handler opens it on staging only
+    expect(need('/api/listening/probe', '')).toBeNull(); // the handler wants the secret header or the owner
+    expect(need('/api/health', '')).toBeNull();
+    expect(need('/api/health/details', '')).toBe('owner');
     expect(need('/api/listening/refresh', '')).toBe('listening');
     expect(need('/soon/', '?t=seo')).toBe('any');
   });
@@ -131,10 +144,39 @@ describe('auth', () => {
     expect(passed(await M(req('/today/', c)))).toBe(true);
   });
 
-  it('gate: stale session re-checks permissions', async () => {
-    const r = await M(req('/?view=creative', await cookieFor(member, Date.now() - 11 * 60e3)));
+  it('gate: stale session re-checks permissions in place, one profile read, no redirect', async () => {
+    let calls = 0;
+    vi.stubGlobal('fetch', async () => { calls++; return new Response(JSON.stringify([{ ...member, dashboards: ['creative', 'ceo'] }]), { status: 200 }); });
+    const stale = await cookieFor(member, Date.now() - 11 * 60e3);
+    const d = await M(req('/?view=creative', stale));
+    expect(calls).toBe(1);
+    expect(d instanceof Response).toBe(false);
+    const ck = (d as { cookie?: string }).cookie ?? '';
+    expect(ck).toContain(A.SESSION + '=');
+    // The renewed cookie carries the fresh permissions and is no longer stale
+    const fresh = await A.verify(decodeURIComponent(ck.split(';')[0]!.slice(A.SESSION.length + 1)), cfg.secret);
+    expect(fresh?.stale).toBe(false);
+    expect(fresh?.dash).toContain('ceo');
+    // Permissions come from the fresh read: a dashboard taken away is refused on this very request
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify([{ ...member, dashboards: ['creative'] }]), { status: 200 }));
+    const r = await M(req('/control/', stale));
+    expect(r instanceof Response && r.status).toBe(302);
+    expect((r as Response).headers.get('set-cookie')).toContain(A.SESSION + '=');
+  });
+
+  it('gate: stale session of a disabled account goes to login and loses its cookie', async () => {
+    vi.stubGlobal('fetch', async () => new Response(JSON.stringify([{ ...member, active: false }]), { status: 200 }));
+    const r = await M(req('/control/', await cookieFor(member, Date.now() - 11 * 60e3)));
     expect(status(r)).toBe(302);
-    expect(location(r)).toMatch(/\/api\/auth\/refresh\?next=/);
+    expect(new URL(location(r)).pathname).toBe('/login/');
+    expect((r as Response).headers.get('set-cookie')).toContain('Max-Age=0');
+  });
+
+  it('gate: stale session with Supabase unreachable keeps the session (no logout, no cookie cleared)', async () => {
+    vi.stubGlobal('fetch', async () => { throw new Error('down'); });
+    const r = await M(req('/?view=creative', await cookieFor(member, Date.now() - 11 * 60e3)));
+    expect(status(r)).toBe(200);
+    expect((r as Response).headers?.get?.('set-cookie') ?? '').not.toContain('Max-Age=0');
   });
 
   it('safePath blocks redirects to other sites', () => {
@@ -211,5 +253,117 @@ describe('audit rows from visitors without a session', () => {
     expect(auditEmail('my-password-1')).toBeNull();
     expect(auditEmail('a'.repeat(300) + '@b.co')).toBeNull();
     expect(auditEmail(undefined)).toBeNull();
+  });
+});
+
+describe('one password rule wherever a password is set', () => {
+  const same = { origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' };
+  it('counts UTF-8 bytes, so a long Arabic password is refused instead of being cut short by the hash', () => {
+    expect(A.passwordError('x'.repeat(A.PASSWORD_MIN - 1))).toMatch(/أحرف أو أكثر/);
+    expect(A.passwordError('x'.repeat(A.PASSWORD_MAX_BYTES))).toBeNull();
+    expect(A.passwordError('x'.repeat(A.PASSWORD_MAX_BYTES + 1))).not.toBeNull();
+    expect(A.passwordError('ب'.repeat(36))).toBeNull(); // 72 bytes
+    expect(A.passwordError('ب'.repeat(37))).not.toBeNull(); // 37 letters, 74 bytes
+  });
+
+  it('reset link and account page refuse an over-long password before calling Supabase Auth', async () => {
+    const calls: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => { calls.push(String(u)); return new Response(JSON.stringify([member]), { status: 200 }); });
+    const long = 'ب'.repeat(40);
+    const r = await authRoutes.reset.POST(req('/api/auth/reset', null, { method: 'POST', headers: same, body: JSON.stringify({ access_token: 't', password: long }) }), E);
+    expect(r.status).toBe(400);
+    expect(calls.some(c => c.includes('/auth/v1/'))).toBe(false);
+    const a = await api.request('https://hoven.example/api/account/password',
+      { method: 'POST', headers: { ...same, cookie: await cookieFor(member) }, body: JSON.stringify({ current: 'not-checked', password: long }) }, E);
+    expect(a.status).toBe(400);
+    expect(calls.some(c => c.includes('/auth/v1/'))).toBe(false);
+  });
+});
+
+describe('reset link: token_hash flow', () => {
+  const same = { origin: 'https://hoven.example', 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' };
+  const post = (body: unknown) => authRoutes.reset.POST(req('/api/auth/reset', null, { method: 'POST', headers: same, body: JSON.stringify(body) }), E);
+  const stub = (verify: Response) => {
+    const calls: { url: string; method: string; body: string }[] = [];
+    vi.stubGlobal('fetch', async (u: string, init?: RequestInit) => {
+      calls.push({ url: String(u), method: String(init?.method || 'GET'), body: String(init?.body || '') });
+      if (String(u).includes('/auth/v1/verify')) return verify.clone();
+      if (String(u).includes('/auth/v1/user')) return new Response(JSON.stringify({ id: 'u1', email: 'p@example.com' }), { status: 200 });
+      return new Response('[]', { status: 200 });
+    });
+    return calls;
+  };
+  const ok = () => new Response(JSON.stringify({ access_token: 'AT' }), { status: 200 });
+
+  it('verifies the token_hash on submit, then sets the password with the returned access token', async () => {
+    const calls = stub(ok());
+    const r = await post({ token_hash: 'abc', type: 'recovery', password: 'long-enough-pass' });
+    expect(r.status).toBe(200);
+    const v = calls.find(c => c.url.includes('/auth/v1/verify'))!;
+    expect(JSON.parse(v.body)).toEqual({ type: 'recovery', token_hash: 'abc' });
+    expect(calls.some(c => c.url.includes('/auth/v1/user') && c.method === 'PUT')).toBe(true);
+  });
+  it('accepts invite, rejects any other type before calling Supabase', async () => {
+    stub(ok());
+    expect((await post({ token_hash: 'abc', type: 'invite', password: 'long-enough-pass' })).status).toBe(200);
+    const calls = stub(ok());
+    for (const type of ['magiclink', 'signup', '', undefined]) expect((await post({ token_hash: 'abc', type, password: 'long-enough-pass' })).status).toBe(400);
+    expect(calls.length).toBe(0);
+  });
+  it('a weak password does not spend the token', async () => {
+    const calls = stub(ok());
+    const r = await post({ token_hash: 'abc', type: 'recovery', password: 'short' });
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { error: string }).error).toMatch(/أحرف أو أكثر/);
+    expect(calls.length).toBe(0);
+  });
+  it('an expired or used token gives the expired message', async () => {
+    stub(new Response(JSON.stringify({ error_code: 'otp_expired' }), { status: 403 }));
+    const r = await post({ token_hash: 'abc', type: 'recovery', password: 'long-enough-pass' });
+    expect(r.status).toBe(400);
+    expect(((await r.json()) as { error: string }).error).toMatch(/انتهى أو انستخدم/);
+  });
+  it('the old hash flow (access_token) still works', async () => {
+    const calls = stub(ok());
+    expect((await post({ access_token: 'OLD', password: 'long-enough-pass' })).status).toBe(200);
+    expect(calls.some(c => c.url.includes('/auth/v1/verify'))).toBe(false);
+  });
+  it('same-origin and size limits are unchanged; no token or password reaches the logs', async () => {
+    stub(ok());
+    const spies = [vi.spyOn(console, 'warn'), vi.spyOn(console, 'error'), vi.spyOn(console, 'log')];
+    spies.forEach(s => s.mockImplementation(() => {}));
+    expect((await authRoutes.reset.POST(req('/api/auth/reset', null, { method: 'POST', headers: { origin: 'https://evil.example', 'sec-fetch-site': 'cross-site' }, body: '{}' }), E)).status).toBe(403);
+    expect((await post({ token_hash: 'x'.repeat(30000), type: 'recovery', password: 'long-enough-pass' })).status).toBeGreaterThanOrEqual(400);
+    await post({ token_hash: 'SECRETHASH', type: 'recovery', password: 'SECRETPASSWORD1' });
+    expect(JSON.stringify(spies.map(s => s.mock.calls))).not.toMatch(/SECRETHASH|SECRETPASSWORD1/);
+    spies.forEach(s => s.mockRestore());
+  });
+  it('forgot answers 200 and logs password_reset_email_failed (no address) when Supabase refuses', async () => {
+    const seen: string[] = [];
+    vi.stubGlobal('fetch', async (u: string, init?: RequestInit) => {
+      seen.push(String(u) + ' ' + String(init?.body || ''));
+      if (String(u).includes('/auth/v1/')) return new Response(JSON.stringify({ error_code: 'over_email_send_rate_limit' }), { status: 429 });
+      return new Response('[]', { status: 200 });
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const r = await authRoutes.forgot.POST(req('/api/auth/forgot', null, { method: 'POST', headers: same, body: JSON.stringify({ email: 'p@example.com' }) }), E);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true });
+    const line = warn.mock.calls.map(c => c.join(' ')).find(l => l.includes('password_reset_email_failed')) || '';
+    expect(line).toContain('over_email_send_rate_limit');
+    expect(line).not.toContain('p@example.com');
+    const row = seen.find(x => x.includes('/rest/v1/audit_log') && x.includes('password_reset_email_failed')) || '';
+    expect(row).toContain('over_email_send_rate_limit');
+    warn.mockRestore();
+  });
+});
+
+describe('reset page', () => {
+  it('does not call the API on load, only on submit', async () => {
+    const src = ((await import('../../public/assets/reset.js?raw')) as { default: string }).default;
+    const beforeSubmit = src.slice(0, src.indexOf("addEventListener('submit'"));
+    expect(beforeSubmit).not.toMatch(/api\(/);
+    expect(src).toMatch(/history\.replaceState/);
+    expect(src).toMatch(/token_hash/);
   });
 });

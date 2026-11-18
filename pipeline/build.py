@@ -11,7 +11,7 @@ from channels import annotate
 from classify import apply_all, public_config, relabel_posts
 from media import enrich
 from organic import pending_shell, visible_facebook
-from tiktok.merge import without_spring_rose
+from tiktok.merge import without_excluded
 HERE = os.path.dirname(os.path.abspath(__file__))
 _BILLING = re.compile(r"رصيد|سداد|مستحق|شحن|فوتر|فاتور|billing|unpaid|top-?up|payment|account balance", re.I)
 
@@ -24,7 +24,7 @@ def scrub_status(status):
         return "متوقف"
     return text
 
-data = without_spring_rose(json.load(open(os.path.join(HERE, "data.json"), encoding="utf-8")))
+data = without_excluded(json.load(open(os.path.join(HERE, "data.json"), encoding="utf-8")))
 # CRM leads matched to ads (closings, revenue, ROAS on the dashboard). Skipped without Supabase.
 # Hoven: Salla daily sales for the KPIs (salla_orders_daily). Skipped without Supabase.
 try:
@@ -57,6 +57,11 @@ print("معاينات بعد", after)
 apply_all(data.get("ads") or {})
 data["channels"] = annotate(data.get("ads") or {})
 data["departments"] = public_config()
+# أهداف حكم رحلة العميل (pipeline/dash/00-judge.js): الكتلة «funnel» من config/targets.json، والباقي افتراضي في الملف نفسه
+try:
+    data["funnel_targets"] = {k: v for k, v in (json.load(open(os.path.join(HERE, "config", "targets.json"), encoding="utf-8")).get("funnel") or {}).items() if not k.startswith("_")}
+except (FileNotFoundError, ValueError):
+    data["funnel_targets"] = {}
 if not data.get("organic"):
     data["organic"] = pending_shell()
 else:

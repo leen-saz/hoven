@@ -5,7 +5,7 @@
     "data": {
       "list": [
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "name": "Hoven",
           "currency": "SAR",
           "timezone": "Asia/Riyadh",
@@ -20,14 +20,19 @@
     "data": {
       "list": [
         {
+<<<<<<< well
+          "campaign_id": "1000000000000001",
+          "campaign_name": "Sample_TikTok_Leads_iv",
+=======
           "campaign_id": "1875496154242098",
           "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
           "objective_type": "LEAD_GENERATION",
           "operation_status": "ENABLE"
         },
         {
           "campaign_id": "99",
-          "campaign_name": "SR | iOS14 | AppInstall",
+          "campaign_name": "Demo | ad_demo_x1 | AppInstall",
           "objective_type": "TRAFFIC",
           "operation_status": "ENABLE"
         }
@@ -53,24 +58,39 @@
     "data": {
       "list": [
         {
-          "advertiser_id": "7532842350553514000",
-          "ad_id": "1878109843378193",
+          "advertiser_id": "7000000000000000001",
+          "ad_id": "9000000000000000001",
           "ad_name": "Hoven lead video",
+<<<<<<< well
+          "campaign_id": "1000000000000001",
+          "campaign_name": "Sample_TikTok_Leads_iv",
+=======
           "campaign_id": "1875496154242098",
           "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
           "adgroup_id": "22",
           "adgroup_name": "Female2",
           "operation_status": "ENABLE",
           "secondary_status": "AD_STATUS_DELIVERY_OK",
+<<<<<<< well
+          "tiktok_item_id": "9000000000000000002",
+          "ad_text": "فيتامينات وريدية"
+=======
           "tiktok_item_id": "7692055113619442965",
           "ad_text": "مفارش قطنية"
+>>>>>>> hoven
         },
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "ad_id": "555",
           "ad_name": "Old group",
+<<<<<<< well
+          "campaign_id": "1000000000000001",
+          "campaign_name": "Sample_TikTok_Leads_iv",
+=======
           "campaign_id": "1875496154242098",
           "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
           "adgroup_id": "23",
           "adgroup_name": "Paused group",
           "operation_status": "DISABLE",
@@ -78,11 +98,16 @@
           "ad_text": ""
         },
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "ad_id": "556",
           "ad_name": "Looks delivering",
+<<<<<<< well
+          "campaign_id": "1000000000000001",
+          "campaign_name": "Sample_TikTok_Leads_iv",
+=======
           "campaign_id": "1875496154242098",
           "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
           "adgroup_id": "25",
           "adgroup_name": "Parent off",
           "operation_status": "ENABLE",
@@ -90,16 +115,16 @@
           "ad_text": ""
         },
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "ad_id": "9",
           "ad_name": "Rose install",
           "campaign_id": "99",
-          "campaign_name": "SR | iOS14 | AppInstall",
+          "campaign_name": "Demo | ad_demo_x1 | AppInstall",
           "adgroup_id": "22",
           "adgroup_name": "g",
           "operation_status": "ENABLE",
           "secondary_status": "AD_STATUS_DELIVERY_OK",
-          "ad_text": "زهرة الربيع"
+          "ad_text": "شركة العرض التجريبي"
         }
       ],
       "page_info": {"page": 1, "page_size": 1000, "total_number": 4, "total_page": 1}
@@ -111,7 +136,7 @@
     "data": {
       "list": [
         {
-          "dimensions": {"ad_id": "1878109843378193", "stat_time_day": "2026-10-17 00:00:00"},
+          "dimensions": {"ad_id": "9000000000000000001", "stat_time_day": "2026-10-17 00:00:00"},
           "metrics": {
             "spend": "50.29",
             "impressions": "17367",
@@ -120,13 +145,17 @@
             "messaging_total_conversation_tiktok_direct_message": "2",
             "messaging_total_conversation_instant_messaging_app": "1",
             "ad_name": "Hoven lead video",
+<<<<<<< well
+            "campaign_name": "Sample_TikTok_Leads_iv",
+=======
             "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
             "adgroup_name": "Female2",
-            "campaign_id": "1875496154242098"
+            "campaign_id": "1000000000000001"
           }
         },
         {
-          "dimensions": {"ad_id": "1878109843378193", "stat_time_day": "2026-10-15 00:00:00"},
+          "dimensions": {"ad_id": "9000000000000000001", "stat_time_day": "2026-10-15 00:00:00"},
           "metrics": {
             "spend": "0",
             "impressions": "0",
@@ -137,7 +166,7 @@
           }
         },
         {
-          "dimensions": {"ad_id": "1878109843378193", "stat_time_day": "2026-10-18 00:00:00"},
+          "dimensions": {"ad_id": "9000000000000000001", "stat_time_day": "2026-10-18 00:00:00"},
           "metrics": {
             "spend": "0.00",
             "impressions": "0",
@@ -163,7 +192,7 @@
             "impressions": "999",
             "clicks": "40",
             "conversion": "7",
-            "campaign_name": "SR | iOS14 | AppInstall",
+            "campaign_name": "Demo | ad_demo_x1 | AppInstall",
             "ad_name": "Rose install"
           }
         }
@@ -184,9 +213,13 @@
             "clicks": "2",
             "conversion": "0.5",
             "ad_name": "Deleted creative",
+<<<<<<< well
+            "campaign_name": "Sample_TikTok_Leads_iv",
+=======
             "campaign_name": "Tiktok_Leads_HOVEN_iv",
+>>>>>>> hoven
             "adgroup_name": "Archive",
-            "campaign_id": "1875496154242098"
+            "campaign_id": "1000000000000001"
           }
         }
       ],
@@ -204,7 +237,7 @@
     "data": {
       "list": [
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "name": "Hoven",
           "currency": "USD",
           "timezone": "Asia/Riyadh"
@@ -218,7 +251,7 @@
     "data": {
       "list": [
         {
-          "dimensions": {"ad_id": "1878109843378193", "stat_time_day": "2026-10-17 00:00:00"},
+          "dimensions": {"ad_id": "9000000000000000001", "stat_time_day": "2026-10-17 00:00:00"},
           "metrics": {"spend": "10.00", "impressions": "100", "clicks": "4", "conversion": "1"}
         }
       ],
@@ -231,7 +264,7 @@
     "data": {
       "list": [
         {
-          "advertiser_id": "7532842350553514000",
+          "advertiser_id": "7000000000000000001",
           "name": "Hoven",
           "currency": "EUR",
           "timezone": "Asia/Riyadh"
@@ -245,8 +278,8 @@
     "data": {
       "list": [
         {
-          "advertiser_id": "7532842350553514000",
-          "name": "Spring Rose0406",
+          "advertiser_id": "7000000000000000001",
+          "name": "ACME Demo Co",
           "currency": "SAR",
           "timezone": "Asia/Riyadh"
         }

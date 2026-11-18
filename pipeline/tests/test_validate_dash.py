@@ -90,6 +90,13 @@ class ValidateTests(unittest.TestCase):
         m, _, _ = split(good()); del m["rows_cols"]
         self.assertEqual(v.validate(m), ["missing required key 'rows'"])
 
+    def test_missing_crm_block_warns_but_does_not_fail(self):
+        d = good(); self.assertEqual(v.warnings(d), [])
+        del d["crm"]
+        self.assertEqual(v.validate(d), [])
+        self.assertEqual(len(v.warnings(d)), 1)
+        self.assertEqual(len(v.warnings({**d, "crm": {}})), 1)
+
     def test_crm_block(self):
         d = good(); d["crm"]["rows"][0][4] = -5
         self.assertIn("some crm rows are malformed or have a negative amount", v.validate(d))
@@ -187,3 +194,24 @@ class BuildOutputTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class VanishedPlatforms(unittest.TestCase):
+    def build(self, rows, ads, ok=True):
+        return {"range": {"start": "2026-06-30", "end": "2026-11-12", "today": "2026-11-13"}, "ads": ads, "rows": rows,
+                "platforms": {"meta": {"ok": ok}, "google": {"ok": ok}}}
+
+    def test_empty_ok_platform_is_flagged(self):
+        prev = self.build([["g1", "2026-11-12", 50, 10, 1, 0, 0], ["m1", "2026-11-12", 20, 10, 1, 0, 0]], {"g1": {}, "m1": {}})
+        now = self.build([["m1", "2026-11-12", 20, 10, 1, 0, 0]], {"m1": {}})
+        self.assertEqual(v.vanished_platforms(now, prev), ["g"])
+
+    def test_paused_platform_that_still_lists_its_ads_is_not_flagged(self):
+        prev = self.build([["g1", "2026-11-12", 50, 10, 1, 0, 0]], {"g1": {}})
+        now = self.build([], {"g1": {}})
+        self.assertEqual(v.vanished_platforms(now, prev), [])
+
+    def test_failed_platform_is_not_flagged(self):
+        prev = self.build([["g1", "2026-11-12", 50, 10, 1, 0, 0]], {"g1": {}})
+        now = self.build([], {}, ok=False)
+        self.assertEqual(v.vanished_platforms(now, prev), [])

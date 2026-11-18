@@ -21,10 +21,12 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from channels import GOOGLE_FORMAT, annotate, family_of, google_platform, meta_key, placement_platform
 from classify import apply_all, public_config
-from common import env, http
+from common import env, error_code, google_ads_headers, http, retry_call, sar_factor
 from organic import collect_organic, clip as clip_err
 from tiktok.fetch import ingest_tiktok
+from tiktok.merge import exclusion_state
 import audience
+import validate_dash
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(HERE, "data.json")
@@ -82,18 +84,9 @@ STATUS_AR = {"ACTIVE": "نشط", "ENABLED": "نشط", "PAUSED": "متوقف", "A
              "PENDING_BILLING_INFO": "متوقف"}
 
 def retry(fn, *a, tries=6, **k):
-    """يعيد المحاولة عند تجاوز حد الطلبات (ميتا 4/17/32/613، سناب وجوجل 429)."""
-    wait = 30
-    for n in range(tries):
-        try:
-            return fn(*a, **k)
-        except RuntimeError as ex:
-            msg = str(ex)
-            limited = ("HTTP 429" in msg or '"code":4,' in msg or '"code":17,' in msg or '"code":32,' in msg
-                       or '"code":613,' in msg or "request limit" in msg.lower())
-            if not limited or n == tries - 1: raise
-            print(f"  حد الطلبات: انتظار {wait} ثانية", file=sys.stderr, flush=True)
-            time.sleep(wait); wait = min(wait * 2, 600)
+    """يعيد المحاولة عند الأخطاء المؤقتة: تجاوز الحد (ميتا 4/17/32/613/80000-80004، سناب وجوجل 429)،
+    أخطاء الخادم 5xx وانقطاع الشبكة، مع تأخير متدرّج وعشوائية وميزانية وقت للتشغيل كله (common.retry_call)."""
+    return retry_call(fn, *a, tries=tries, log=lambda m: print(m, file=sys.stderr, flush=True), **k)
 
 def windows(start, end, size=30):
     """يقسم الفترة [start, end] لقطع حجمها size يوم كحد أقصى."""
@@ -144,7 +137,7 @@ def google_delivery(ad_status, group_status, campaign_status):
 
 
 def meta_preview(creative, video_url=None):
-    """رابط يشاهد الكرييتف: منشور إنستغرام، ثم منشور فيسبوك، ثم ملف الفيديو، ثم الصورة."""
+    """رابط يشاهد الكرييتف: منشور انستقرام، ثم منشور فيسبوك، ثم ملف الفيديو، ثم الصورة."""
     creative = creative or {}
     ig = creative.get("instagram_permalink_url")
     if isinstance(ig, str) and ig.startswith("http"):
@@ -200,8 +193,18 @@ def meta(P):
             nxt = r.get("paging", {}).get("next")
             if not nxt: return
             r = retry(http, nxt)
+<<<<<<< well
+    act = lambda acts, t: next((int(a["value"]) for a in acts or [] if a["action_type"] == t), 0)
+    try:
+        cur = g(A, fields="currency").get("currency")
+    except Exception as ex:
+        cur = None
+        print("meta: تعذر قراءة عملة الحساب، نفترض الدولار —", error_code(ex), file=sys.stderr)
+    fx = sar_factor(cur, "USD")   # a currency other than SAR/USD fails the platform instead of mixing currencies
+=======
     act = lambda acts, t: next((float(a["value"]) for a in acts or [] if a["action_type"] == t), 0)
     buy = lambda acts: act(acts, "omni_purchase") or act(acts, "purchase")   # Hoven: result = purchase (store)
+>>>>>>> hoven
     ids, goal = set(), {}
     for s, e in windows(FROM, TO):
         for x in pages(g(f"{A}/insights", level="ad", time_increment=1, limit=500,
@@ -210,10 +213,16 @@ def meta(P):
                          fields="ad_id,spend,impressions,inline_link_clicks,actions,action_values,account_currency")):
             ids.add(x["ad_id"])
             key, _plat = meta_key(x["ad_id"], x.get("publisher_platform"))
+<<<<<<< well
+            P.row(key, x["date_start"], float(x.get("spend", 0)) * fx,
+                  x.get("impressions", 0), x.get("inline_link_clicks", 0), act(x.get("actions"), "lead"),
+                  act(x.get("actions"), "onsite_conversion.messaging_conversation_started_7d"))
+=======
             fx = USD_SAR if x.get("account_currency", "USD") == "USD" else 1
             P.row(key, x["date_start"], float(x.get("spend", 0)) * fx,
                   x.get("impressions", 0), x.get("inline_link_clicks", 0), buy(x.get("actions")),
                   buy(x.get("action_values")) * fx)
+>>>>>>> hoven
     f = ("name,effective_status,adset{name,effective_status,optimization_goal},campaign{name,effective_status},"
          "creative.thumbnail_width(320).thumbnail_height(320){thumbnail_url,image_url,title,body,object_type,video_id,"
          "instagram_permalink_url,effective_object_story_id,object_story_id}")
@@ -321,7 +330,7 @@ def meta(P):
                 P.ads[key]["vid"] = doc; got += 1
         print(f"meta: مقاييس فيديو لـ {got} إعلان", file=sys.stderr)
     except Exception as ex:
-        print("meta: مقاييس الفيديو ما انسحبت —", str(ex)[:160], file=sys.stderr)
+        print("meta: مقاييس الفيديو ما انسحبت —", error_code(ex), file=sys.stderr)
     # منحنى المشاهدة ثانية بثانية (مشاهد الفيديو). اختياري.
     try:
         got = 0
@@ -333,19 +342,39 @@ def meta(P):
                 P.ads[key]["vid"]["pc"] = [int(v) for v in curve]; got += 1
         print(f"meta: منحنى مشاهدة لـ {got} إعلان", file=sys.stderr)
     except Exception as ex:
-        print("meta: منحنى المشاهدة ما انسحب —", str(ex)[:160], file=sys.stderr)
+        print("meta: منحنى المشاهدة ما انسحب —", error_code(ex), file=sys.stderr)
     if audience_due():
         try:
-            n = audience.attach(P.ads, "m", audience.meta(E, lambda p, **q: pages(g(p, **q)), act, USD_SAR, LAST_FULL))
+            n = audience.attach(P.ads, "m", audience.meta(E, lambda p, **q: pages(g(p, **q)), act, fx, LAST_FULL))
             print(f"meta: تفاصيل المشاهدين لـ {n} إعلان", file=sys.stderr)
         except Exception as ex:
-            print("meta: تفاصيل المشاهدين ما انسحبت —", str(ex)[:160], file=sys.stderr)
+            print("meta: تفاصيل المشاهدين ما انسحبت —", error_code(ex), file=sys.stderr)
 
 # ---------------- Google ----------------
 def google(P):
+    google_ads_headers(E, "")  # no developer token: fail the google step here, before any call; the other platforms go on
     tok = http("https://oauth2.googleapis.com/token", data=urllib.parse.urlencode({
         "client_id": E["GOOGLE_ADS_CLIENT_ID"], "client_secret": E["GOOGLE_ADS_CLIENT_SECRET"],
         "refresh_token": E["GOOGLE_ADS_REFRESH_TOKEN"], "grant_type": "refresh_token"}).encode())["access_token"]
+<<<<<<< well
+    def q(query):
+        """googleAds:search follows nextPageToken: one page holds about 10k rows, so a bigger window must not be cut silently."""
+        out, token = [], None
+        while True:
+            body = {"query": query, **({"pageToken": token} if token else {})}
+            res = retry(http, f"https://googleads.googleapis.com/v24/customers/{E['GOOGLE_ADS_CUSTOMER_ID']}/googleAds:search",
+                        data=json.dumps(body).encode(), method="POST", headers=google_ads_headers(E, tok))
+            out += res.get("results", [])
+            token = res.get("nextPageToken")
+            if not token:
+                return out
+    try:
+        cur = (q("SELECT customer.currency_code FROM customer")[0].get("customer") or {}).get("currencyCode")
+    except Exception as ex:
+        cur = None
+        print("جوجل: تعذر قراءة عملة الحساب، نفترض الريال —", error_code(ex), file=sys.stderr)
+    fx = sar_factor(cur, "SAR")
+=======
     q = lambda query: retry(http, f"https://googleads.googleapis.com/v24/customers/{E['GOOGLE_ADS_CUSTOMER_ID'].replace('-', '')}/googleAds:search",
         data=json.dumps({"query": query}).encode(), method="POST",
         headers={"Authorization": f"Bearer {tok}", "Content-Type": "application/json",
@@ -372,6 +401,7 @@ def google(P):
         except Exception as ex:
             print("جوجل: تعذر سحب المشتريات", str(ex)[:160], file=sys.stderr)
     pending = []
+>>>>>>> hoven
     for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.responsive_search_ad.headlines, "
                "ad_group_ad.ad.responsive_search_ad.descriptions, ad_group_ad.ad.final_urls, ad_group_ad.status, "
                "ad_group.status, campaign.status, campaign.advertising_channel_type, campaign.advertising_channel_sub_type, "
@@ -396,6 +426,10 @@ def google(P):
             word, live = google_delivery(r["adGroupAd"]["status"], r["adGroup"]["status"], r["campaign"]["status"])
             P.ads[key]["status"] = word
             P.ads[key]["live"] = live
+<<<<<<< well
+        P.row(key, r["segments"]["date"], int(m.get("costMicros", 0)) / 1e6 * fx, m.get("impressions", 0),
+              m.get("clicks", 0), float(m.get("conversions", 0)))
+=======
         pending.append((key, str(camp.get("id", "")), r["segments"]["date"], int(m.get("costMicros", 0)) / 1e6,
                         m.get("impressions", 0), m.get("clicks", 0)))
     # Purchases per ad; with only campaign totals, each ad gets its share of the campaign's spend that day
@@ -410,6 +444,7 @@ def google(P):
             share = sp / tot if tot else 0
             b = (cb[0] * share, cb[1] * share)
         P.row(key, day, sp, im, cl, b[0], b[1])
+>>>>>>> hoven
     # حالة كل إعلان حتى الذي بلا صرف في النافذة. بدونها يُعلَّم النشط خطأً كمتوقف.
     try:
         for r in q("SELECT ad_group_ad.ad.id, ad_group_ad.ad.name, ad_group_ad.ad.final_urls, ad_group_ad.status, "
@@ -429,13 +464,13 @@ def google(P):
                               thumb=None, link=(ad.get("finalUrls") or [None])[0], goal="lead")
         P.status_catalog = True
     except Exception as ex:
-        print("جوجل: تعذر تحديث حالة الإعلانات بلا صرف", str(ex)[:160], file=sys.stderr)
+        print("جوجل: تعذر تحديث حالة الإعلانات بلا صرف", error_code(ex), file=sys.stderr)
     if audience_due():
         try:
             n = audience.attach(P.ads, "g", audience.google(q, LAST_FULL))
             print(f"جوجل: تفاصيل المشاهدين لـ {n} إعلان", file=sys.stderr)
         except Exception as ex:
-            print("جوجل: تفاصيل المشاهدين ما انسحبت —", str(ex)[:160], file=sys.stderr)
+            print("جوجل: تفاصيل المشاهدين ما انسحبت —", error_code(ex), file=sys.stderr)
 
 # ---------------- Snapchat ----------------
 HOVEN_SNAP_ACCOUNTS = ("1669d1d8-825d-4c9e-90cb-4eca5a4632d7", "72f0b85a-9ef2-4c11-8396-ccb23115f86a", "aa65612c-c322-46b8-9e6a-5b6ad34e16a9")
@@ -479,9 +514,17 @@ def snap_one(P):
     g = lambda p, **q: retry(http, f"https://adsapi.snapchat.com/v1/{p}" + ("?" + urllib.parse.urlencode(q) if q else ""), headers=H)
     A = E["SNAP_AD_ACCOUNT_ID"]
     try:
+<<<<<<< well
+        cur = (g(f"adaccounts/{A}")["adaccounts"][0]["adaccount"] or {}).get("currency")
+    except Exception as ex:
+        cur = None
+        print("سناب: تعذر قراءة عملة الحساب، نفترض الريال —", error_code(ex), file=sys.stderr)
+    fx = sar_factor(cur, "SAR")
+=======
         fx = USD_SAR if g(f"adaccounts/{A}")["adaccounts"][0]["adaccount"].get("currency", "USD") == "USD" else 1
     except Exception:
         fx = USD_SAR
+>>>>>>> hoven
     camps = {c["campaign"]["id"]: c["campaign"] for c in g(f"adaccounts/{A}/campaigns")["campaigns"]}
     squads = {s["adsquad"]["id"]: s["adsquad"] for s in g(f"adaccounts/{A}/adsquads")["adsquads"]}
     ads = {a["ad"]["id"]: a["ad"] for a in g(f"adaccounts/{A}/ads")["ads"]}
@@ -500,7 +543,11 @@ def snap_one(P):
                     if x.get("spend") or x.get("impressions"):
                         seen.add(b["id"])
                         P.row("s" + b["id"], t["start_time"][:10], x.get("spend", 0) / 1e6 * fx, x.get("impressions", 0),
+<<<<<<< well
+                              x.get("swipes", 0), x.get("native_leads", 0))
+=======
                               x.get("swipes", 0), x.get("conversion_purchases", 0), x.get("conversion_purchases_value", 0) / 1e6 * fx)
+>>>>>>> hoven
     def is_live(a):
         sq = squads.get(a["ad_squad_id"], {})
         return a["status"] == "ACTIVE" and sq.get("status") == "ACTIVE" and camps.get(sq.get("campaign_id"), {}).get("status") == "ACTIVE"
@@ -592,7 +639,7 @@ def snap_one(P):
     def safe(a):   # إعلان واحد بدون تفاصيل ما يلغي أرقام سناب كلها
         try: return build(a)
         except Exception as ex:
-            print("سناب: تفاصيل إعلان ناقصة", a["id"], str(ex)[:120], file=sys.stderr)
+            print("سناب: تفاصيل إعلان ناقصة", a["id"], error_code(ex), file=sys.stderr)
             return None
     show = [a for a in ads.values() if (a["id"] in seen or is_live(a)) and a.get("ad_squad_id") in squads]
     with ThreadPoolExecutor(6) as ex:
@@ -616,14 +663,14 @@ def snap_one(P):
                     P.ads[key]["vid"] = doc; got += 1
         print(f"snap: مقاييس فيديو لـ {got} إعلان", file=sys.stderr)
     except Exception as ex:
-        print("snap: مقاييس الفيديو ما انسحبت —", str(ex)[:160], file=sys.stderr)
+        print("snap: مقاييس الفيديو ما انسحبت —", error_code(ex), file=sys.stderr)
     if audience_due():
         try:
             cids = {squads[a["ad_squad_id"]]["campaign_id"] for a in show if a.get("ad_squad_id") in squads}
             n = audience.attach(P.ads, "s", audience.snap(g, sorted(cids), LAST_FULL))
             print(f"snap: تفاصيل المشاهدين لـ {n} إعلان", file=sys.stderr)
         except Exception as ex:
-            print("snap: تفاصيل المشاهدين ما انسحبت —", str(ex)[:160], file=sys.stderr)
+            print("snap: تفاصيل المشاهدين ما انسحبت —", error_code(ex), file=sys.stderr)
 
 # ---------------- بداية التاريخ ----------------
 def history_start():
@@ -636,7 +683,7 @@ def history_start():
             {"fields": "created_time", "access_token": E["META_ACCESS_TOKEN"]}))
         found.append(datetime.strptime(acc["created_time"][:10], "%Y-%m-%d"))
     except Exception as ex:
-        print("ميتا: تعذر معرفة تاريخ الحساب", str(ex)[:120], file=sys.stderr)
+        print("ميتا: تعذر معرفة تاريخ الحساب", error_code(ex), file=sys.stderr)
     try:
         tok = http("https://accounts.snapchat.com/login/oauth2/access_token", data=urllib.parse.urlencode({
             "grant_type": "refresh_token", "client_id": E["SNAP_CLIENT_ID"], "client_secret": E["SNAP_CLIENT_SECRET"],
@@ -645,7 +692,7 @@ def history_start():
                    headers={"Authorization": f"Bearer {tok}"})["campaigns"]
         found += [datetime.strptime(c["campaign"]["created_at"][:10], "%Y-%m-%d") for c in cs if c["campaign"].get("created_at")]
     except Exception as ex:
-        print("سناب: تعذر معرفة أول حملة", str(ex)[:120], file=sys.stderr)
+        print("سناب: تعذر معرفة أول حملة", error_code(ex), file=sys.stderr)
     start = min(found) if found else TODAY.replace(tzinfo=None) - timedelta(days=365)
     start = max(start, TODAY.replace(tzinfo=None) - timedelta(days=37 * 30))   # ميتا يحتفظ بـ 37 شهر فقط
     return start.replace(tzinfo=RIYADH)
@@ -747,25 +794,38 @@ def main():
                 ADS.update({k: v for k, v in PREV.get("ads", {}).items() if k[0] == p})
                 ps = PREV.get("platforms", {}).get(name, {})
                 stale = ps.get("stale_from") or (PREV.get("generated_at") if ps.get("ok") else None)
-            status[name] = {"ok": False, "error": str(ex)[:300], "stale_from": stale}
-            print(f"{name}: فشل — {str(ex)[:200]}" + (f" (نعرض بيانات {stale})" if stale else ""), file=sys.stderr)
+            status[name] = {"ok": False, "error": error_code(ex), "stale_from": stale}
+            print(f"{name}: فشل — {error_code(ex)}" + (f" (نعرض بيانات {stale})" if stale else ""), file=sys.stderr)
 
     # ---------------- TikTok (Marketing API، والفرع tiktok-data احتياط) ----------------
     TT_PATH = os.environ.get("TIKTOK_DATA", os.path.join(HERE, "tiktok-data", "tiktok.json"))
     pending = [{"platform": "tiktok", "reason": "بيانات تيك توك غير متوفرة"}]
-    got = ingest_tiktok(
-        E, PREV, RECENT, FROM, TO, ds(TODAY), TT_PATH, http, datetime.now(RIYADH),
-        lambda prev_ads, fresh: carry_forward(prev_ads, fresh, "t"), audience_due=aud_fresh,
-    )
-    if got["ads"]:
-        ADS.update(got["ads"])
-    if got["rows"]:
-        ROWS += got["rows"]
-    if got["status"]:
-        status["tiktok"] = got["status"]
-    tiktok_blob = got["organic_blob"]
-    if not got["pending"]:
-        pending = []
+    if exclusion_state() == "missing":
+        # Fail closed: without the two exclusion secrets (or the explicit opt-out TIKTOK_EXCLUSION_DISABLED=true) the other
+        # company's account would not be filtered, so nothing new is read for TikTok. The previous numbers stay, marked stale.
+        stale = None
+        if PREV:
+            ROWS += [r for r in PREV.get("rows", []) if r[0][0] == "t"]
+            ADS.update({k: v for k, v in PREV.get("ads", {}).items() if k[0] == "t"})
+            ps = PREV.get("platforms", {}).get("tiktok", {})
+            stale = ps.get("stale_from") or (PREV.get("generated_at") if ps.get("ok") else None)
+        status["tiktok"] = {"ok": False, "error": "exclusion_not_configured", "stale_from": stale}
+        print("tiktok: لا أسرار الاستبعاد (TIKTOK_EXCLUDED_*) ولا TIKTOK_EXCLUSION_DISABLED=true، نبقي البيانات السابقة", file=sys.stderr)
+        tiktok_blob, pending = None, []
+    else:
+        got = ingest_tiktok(
+            E, PREV, RECENT, FROM, TO, ds(TODAY), TT_PATH, http, datetime.now(RIYADH),
+            lambda prev_ads, fresh: carry_forward(prev_ads, fresh, "t"), audience_due=aud_fresh,
+        )
+        if got["ads"]:
+            ADS.update(got["ads"])
+        if got["rows"]:
+            ROWS += got["rows"]
+        if got["status"]:
+            status["tiktok"] = got["status"]
+        tiktok_blob = got["organic_blob"]
+        if not got["pending"]:
+            pending = []
 
     _FAM = {"m": "meta", "g": "google", "s": "snap", "t": "tiktok"}
     for k in {r[0] for r in ROWS} - set(ADS):
@@ -799,6 +859,13 @@ def main():
     os.replace(tmp, DATA_PATH)
     json.dump(CACHE, open(CACHE_PATH, "w", encoding="utf-8"), ensure_ascii=False)
     if supa_on and supabase_store is not None:
+        # validate BEFORE the database write: a bad pull must not be persisted while the site keeps the old pages
+        problems = validate_dash.validate(data, min_ads=1, min_rows=1)
+        gone = validate_dash.vanished_platforms(data, PREV)
+        if problems or gone:
+            print("supabase: لن يُحفظ هذا السحب —", "; ".join(problems) or "", ("منصات اختفى صرفها: " + ",".join(gone)) if gone else "", file=sys.stderr)
+            supa_on = False
+    if supa_on and supabase_store is not None:
         try:
             ok_prefixes = [name[0] for name in ("meta", "google", "snap", "tiktok") if status.get(name, {}).get("ok")]
             supabase_store.save_bundle(
@@ -814,7 +881,7 @@ def main():
         keys = {k for k, v in ADS.items() if family_of(v.get("platform")) == p}
         rs = [r for r in ROWS if r[0] in keys]
         # Public Actions log: spend and leads only with PIPELINE_DEBUG=1 (no workflow sets it)
-        figures = f" | صرف {round(sum(r[2] for r in rs))} ر.س | ليدز {round(sum(r[5] for r in rs))}" if os.environ.get("PIPELINE_DEBUG") == "1" else ""
+        figures = f" | صرف {round(sum(r[2] for r in rs))} ريال | ليدز {round(sum(r[5] for r in rs))}" if os.environ.get("PIPELINE_DEBUG") == "1" else ""
         print(f"{p}: {status[p]['ok'] and 'تم' or 'فشل'} | {len(keys)} إعلان{figures}")
     print("mode", data["mode"], "| size KB", os.path.getsize(DATA_PATH) // 1024)
 

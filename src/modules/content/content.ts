@@ -1,5 +1,6 @@
 import { withKnowledge } from '../knowledge/knowledge';
 import type { Hit } from '../compliance/compliance';
+import { refuse } from '../video/safe-fetch';
 
 // إيجنت المحتوى و SEO/AEO: يقرا الموقع (الصفحة الرئيسية + sitemap)، ويطلع الملاحظات بقواعد ثابتة،
 // وبعدين يبني خطة بـ Workers AI (مجاني ضمن حد Cloudflare اليومي). لو الذكاء الاصطناعي ما اشتغل، الخطة من القواعد بس.
@@ -18,6 +19,8 @@ export function normalizeSite(s: unknown): string | null {
   try {
     const u = new URL(/^https?:\/\//.test(String(s)) ? String(s) : `https://${String(s)}`);
     if (u.protocol !== 'https:' || !/\./.test(u.hostname) || /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)) return null;
+    // The same address rules as the video brief (safe-fetch): no literal or private IPs (172.16/12, 0.0.0.0, IPv6), no internal-looking names, port 443 only
+    if (refuse(u.href)) return null;
     return u.origin;
   } catch { return null; }
 }
@@ -41,7 +44,22 @@ export function facts(url: string, status: number, html: string): PageFacts {
 }
 
 export async function crawl(site: string, f: typeof fetch = fetch): Promise<PageFacts[]> {
-  const get = async (u: string) => { const r = await f(u, { headers: UA, redirect: 'follow' }); return { status: r.status, text: r.ok ? (await r.text()).slice(0, 600_000) : '' }; };
+  // Redirects are followed by hand (3 at most): every hop passes the address rules again, so a page cannot send the crawler to an internal address
+  const get = async (u: string) => {
+    let url = u;
+    for (let hop = 0; hop <= 3; hop++) {
+      if (refuse(url)) return { status: 0, text: '' };
+      const r = await f(url, { headers: UA, redirect: 'manual' });
+      if (r.status >= 300 && r.status < 400) {
+        const next = r.headers.get('location');
+        if (!next) return { status: r.status, text: '' };
+        try { url = new URL(next, url).toString(); } catch { return { status: 0, text: '' }; }
+        continue;
+      }
+      return { status: r.status, text: r.ok ? (await r.text()).slice(0, 600_000) : '' };
+    }
+    return { status: 0, text: '' };
+  };
   const urls = new Set([site + '/']);
   const same = (u: string) => (u.replace(/\/+$/, '') || u);
   try {
@@ -65,7 +83,11 @@ export function audit(pages: PageFacts[]): Item[] {
   const broken = pages.filter(p => p.status >= 400 || p.status === 0);
   if (broken.length) add('fix', `صلّح ${broken.length} صفحة ما تفتح`, broken.map(p => p.url).slice(0, 5).join('، '), 1);
   const noTitle = pages.filter(p => p.status === 200 && (!p.title || p.title.length > 65));
+<<<<<<< well
+  if (noTitle.length) add('fix', `عناوين ناقصة أو طويلة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتائج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه الخدمة والمدينة.', 1);
+=======
   if (noTitle.length) add('fix', `عناوين ناقصة أو طويلة في ${noTitle.length} صفحة`, 'العنوان يطلع في نتايج قوقل وإجابات الذكاء الاصطناعي. خلّه أقل من 60 حرف وفيه المنتج أو الفئة.', 1);
+>>>>>>> hoven
   const noDesc = pages.filter(p => p.status === 200 && !p.description);
   if (noDesc.length) add('fix', `وصف (meta description) ناقص في ${noDesc.length} صفحة`, 'بدونه قوقل يختار أي نص من الصفحة.', 2);
   const badH1 = pages.filter(p => p.status === 200 && p.h1.length !== 1);
@@ -73,7 +95,11 @@ export function audit(pages: PageFacts[]): Item[] {
   const thin = pages.filter(p => p.status === 200 && p.words < 250);
   if (thin.length) add('page', `وسّع ${thin.length} صفحة محتواها قليل`, 'الصفحات القصيرة نادراً تطلع أو تنذكر في إجابات الذكاء الاصطناعي.', 2);
   if (!pages.some(p => p.faq)) add('faq', 'أضف أسئلة شائعة بالسعودي مع FAQPage schema', 'محركات الإجابة (AEO) تقتبس الأسئلة والأجوبة المباشرة.', 1);
+<<<<<<< well
+  if (!pages.some(p => p.schema.some(s => ['Organization', 'OnlineStore', 'Store', 'LocalBusiness', 'Product'].includes(s)))) add('fix', 'أضف schema للمنشأة (MedicalClinic / LocalBusiness)', 'يربط اسمك وعنوانك وخدماتك في نتائج البحث والخرائط.', 1);
+=======
   if (!pages.some(p => p.schema.some(s => ['Organization', 'OnlineStore', 'Store', 'LocalBusiness', 'Product'].includes(s)))) add('fix', 'أضف schema للمتجر (Organization / OnlineStore + Product)', 'يربط اسم المتجر ومنتجاته وأسعاره في نتايج البحث.', 1);
+>>>>>>> hoven
   if (pages.some(p => p.status === 200 && !p.canonical)) add('fix', 'أضف رابط canonical لكل صفحة', 'يمنع تكرار الصفحات في الفهرسة.', 3);
   return items;
 }

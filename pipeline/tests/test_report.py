@@ -129,8 +129,13 @@ class OrganicTests(unittest.TestCase):
             token = (qs.get("access_token") or [""])[0]
             if path.endswith("/me/accounts"):
                 return {"data": [{
+<<<<<<< well
+                    "id": "111", "name": "Hoven Care.", "access_token": "PAGE",
+                    "instagram_business_account": {"id": "17840000000000001", "username": "hoven.sa"},
+=======
                     "id": "111", "name": "Hoven", "access_token": "PAGE",
                     "instagram_business_account": {"id": "17841423912575723", "username": "hoven.gcc"},
+>>>>>>> hoven
                 }]}
             if path.endswith("/111/insights"):
                 raise RuntimeError(denied)
@@ -138,10 +143,15 @@ class OrganicTests(unittest.TestCase):
                 raise RuntimeError(posts_denied)
             if path.endswith("/111"):
                 self.assertEqual(token, "PAGE")
+<<<<<<< well
+                return {"name": "Hoven Care.", "followers_count": 1500, "fan_count": 1500}
+            if path.endswith("/17840000000000001/insights"):
+=======
                 return {"name": "Hoven", "followers_count": 1500, "fan_count": 1500}
             if path.endswith("/17841423912575723/insights"):
+>>>>>>> hoven
                 raise RuntimeError(denied)
-            if path.endswith("/17841423912575723/media"):
+            if path.endswith("/17840000000000001/media"):
                 self.assertEqual(token, "PAGE")
                 return {"data": [{
                     "id": "m1", "caption": "عناية في البيت", "media_type": "IMAGE",
@@ -151,7 +161,7 @@ class OrganicTests(unittest.TestCase):
                     "timestamp": "2026-10-10T12:00:00+0000",
                     "like_count": 4, "comments_count": 1,
                 }]}
-            if path.endswith("/17841423912575723"):
+            if path.endswith("/17840000000000001"):
                 self.assertEqual(token, "PAGE")
                 return {"username": "hoven.gcc", "followers_count": 334, "media_count": 37}
             raise RuntimeError("unexpected " + path)
@@ -181,7 +191,7 @@ class OrganicTests(unittest.TestCase):
         self.assertEqual(post["date"], "2026-10-10")
         self.assertEqual(ig.get("days") or [], [])
         self.assertIsNone(ig.get("period"))
-        self.assertTrue(any(u.endswith("/17841423912575723/media") for u in seen))
+        self.assertTrue(any(u.endswith("/17840000000000001/media") for u in seen))
 
     def test_well_care_empty_body_is_awaiting_permission(self):
         import urllib.parse
@@ -281,6 +291,13 @@ class BillingTests(unittest.TestCase):
         self.assertIn("metricText", html)
         self.assertIn("بانتظار الصلاحية", html)
         self.assertIn("Awaiting permission", html)
+<<<<<<< well
+        # the other company's account is excluded on the server only: no id or marker ships in the page
+        self.assertNotIn("6948010864247046146", html)
+        self.assertNotIn("spring rose", html.lower())
+        self.assertNotIn("زهرة الربيع", html)
+=======
+>>>>>>> hoven
         self.assertIn("function careBlocked", html)
         self.assertIn("page.name==='Hoven'", html)
         self.assertIn("ORG_FB_HIDDEN", html)
@@ -336,17 +353,26 @@ class BillingTests(unittest.TestCase):
                 open(data_path, "w", encoding="utf-8").write(previous)
 
 
+<<<<<<< well
+class ExcludedAccountTests(unittest.TestCase):
+=======
 @unittest.skip("Upstream-only: excluded TikTok account; Hoven excludes none")
 class SpringRoseTests(unittest.TestCase):
+>>>>>>> hoven
     def test_account_and_named_ads_drop_out_of_spend(self):
-        from tiktok.merge import is_spring_rose_account, without_spring_rose
-        self.assertTrue(is_spring_rose_account("6948010864247046146", "Spring Rose0406"))
-        self.assertTrue(is_spring_rose_account("", "شركة زهرة الربيع"))
-        self.assertFalse(is_spring_rose_account("7532842350553514000", "Hoven"))
+        from tiktok.merge import is_excluded_account, without_excluded
+        self.assertTrue(is_excluded_account("7000000000000000002", "ACME Demo Co"))
+        self.assertTrue(is_excluded_account("", "شركة العرض التجريبي"))
+        self.assertFalse(is_excluded_account("7000000000000000001", "Hoven"))
         blob = {
             "ads": {
+<<<<<<< well
+                "t1": {"platform": "tiktok", "name": "Rose install", "campaign": "Demo | ad_demo_x1 | AppInstall", "group": "", "text": ""},
+                "t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": r"Sample_TikTok_Leads_iv_20\8", "group": "", "text": ""},
+=======
                 "t1": {"platform": "tiktok", "name": "Rose install", "campaign": "SR | iOS14 | AppInstall", "group": "", "text": ""},
                 "t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": r"Tiktok_Leads_HOVEN_iv_20\8", "group": "", "text": ""},
+>>>>>>> hoven
                 "m1": {"platform": "facebook", "name": "قابلة", "campaign": "IV", "group": "", "text": ""},
             },
             "rows": [
@@ -355,32 +381,39 @@ class SpringRoseTests(unittest.TestCase):
                 ["m1", "2026-10-01", 9, 10, 1, 1, 0],
             ],
         }
-        out = without_spring_rose(blob)
+        out = without_excluded(blob)
         self.assertEqual(set(out["ads"]), {"t2", "m1"})
         self.assertEqual([r[0] for r in out["rows"]], ["t2", "m1"])
         self.assertAlmostEqual(sum(r[2] for r in out["rows"]), 13.0)
-        whole = without_spring_rose({
-            "advertiser_id": "6948010864247046146",
-            "advertiser_name": "Spring Rose0406",
+        # a deleted ad (its row has no entry in `ads`) keeps its spend: only excluded ads lose their rows
+        gone = without_excluded({"ads": {"t2": blob["ads"]["t2"]}, "rows": [["t2", "2026-10-01", 4, 10, 1, 1, 0], ["t_deleted", "2026-10-01", 7, 10, 1, 0, 0]]})
+        self.assertEqual([r[0] for r in gone["rows"]], ["t2", "t_deleted"])
+        whole = without_excluded({
+            "advertiser_id": "7000000000000000002",
+            "advertiser_name": "ACME Demo Co",
             "ads": {"t9": {"platform": "tiktok", "name": "plain", "campaign": "purchase", "group": "", "text": ""}},
             "rows": [["t9", "2026-10-01", 99, 1, 0, 0, 0]],
         })
         self.assertEqual(whole["ads"], {})
         self.assertEqual(whole["rows"], [])
 
-    def test_merge_keeps_well_and_skips_spring_rose_pull(self):
+    def test_merge_keeps_well_and_skips_excluded_pull(self):
         import tempfile
         rose_ads = {"data": {"list": [{
-            "ad_id": "9", "advertiser_id": "6948010864247046146", "advertiser_name": "Spring Rose0406",
-            "ad_name": "install", "campaign_name": "ZR_ND96_TT_iOS_Purchase", "adgroup_name": "g",
-            "operation_status": "ENABLE", "secondary_status": "AD_STATUS_DELIVERY_OK", "ad_text": "زهرة الربيع",
+            "ad_id": "9", "advertiser_id": "7000000000000000002", "advertiser_name": "ACME Demo Co",
+            "ad_name": "install", "campaign_name": "AD_DEMO_X1_TT_iOS_Purchase", "adgroup_name": "g",
+            "operation_status": "ENABLE", "secondary_status": "AD_STATUS_DELIVERY_OK", "ad_text": "شركة العرض التجريبي",
         }]}}
         days = {"data": {"page_info": {"total_page": 1}, "list": [{
             "dimensions": {"ad_id": "9", "stat_time_day": "2026-10-01 00:00:00"},
             "metrics": {"spend": "50.00", "impressions": "100", "clicks": "3", "conversion": "1"},
         }]}}
         prev = {
+<<<<<<< well
+            "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Sample_TikTok_Leads", "group": "", "text": "", "live": False}},
+=======
             "ads": {"t2": {"platform": "tiktok", "name": "Hoven lead", "campaign": "Tiktok_Leads_HOVEN", "group": "", "text": "", "live": False}},
+>>>>>>> hoven
             "rows": [["t2", "2026-09-01", 10, 5, 1, 0, 0]],
             "objectives": {},
         }
@@ -534,7 +567,9 @@ class SupabaseStoreTests(unittest.TestCase):
         self.assertEqual(by_day["2026-10-17"][2], 9)
         self.assertFalse(got["ads"]["m1"]["live"])
         self.assertEqual(got["ads"]["m1"]["status"], "متوقف")
-        self.assertTrue(any(call[0] == "DELETE" and "like.m*" in call[1] for call in api.calls))
+        # the window is replaced by upsert first; only rows the fresh fetch no longer returns are deleted afterwards
+        self.assertTrue(any(call[0] == "GET" and "like.m*" in call[1] for call in api.calls))
+        self.assertFalse(any(call[0] == "DELETE" and "like.m*" in call[1] for call in api.calls))
         self.assertTrue(all("test-service-key" not in call[1] for call in api.calls))
 
 
@@ -558,6 +593,15 @@ class _MemoryApi:
                 row = self.tables["dashboard_state"].get(1)
                 return [row] if row else []
             rows = list(self.tables[table].values())
+            if table == "ad_metrics":
+                raw = qs.get("ad_key", [""])[0]
+                if raw.startswith("like."):
+                    rows = [r for r in rows if r["ad_key"].startswith(raw[5:].rstrip("*"))]
+                for item in qs.get("day", []):
+                    if item.startswith("gte."):
+                        rows = [r for r in rows if r["day"] >= item[4:]]
+                    if item.startswith("lte."):
+                        rows = [r for r in rows if r["day"] <= item[4:]]
             rng = headers.get("Range")
             if rng:
                 start, end = (int(x) for x in rng.split("-"))
@@ -577,6 +621,12 @@ class _MemoryApi:
                 self.tables["ad_metrics"].clear()
                 return None
             raw = qs.get("ad_key", [""])[0]
+            if raw.startswith("eq."):
+                days = (qs.get("day", [""])[0][4:-1]).split(",")
+                for key in list(self.tables["ad_metrics"]):
+                    if key[0] == raw[3:] and key[1] in days:
+                        del self.tables["ad_metrics"][key]
+                return None
             prefix = raw.split(".", 1)[1].rstrip("*") if "." in raw else ""
             start = end = None
             for item in qs.get("day", []):

@@ -1,16 +1,18 @@
 // «المدقق»: the owner sees a result badge next to the verdict and an audit page; anyone else sees nothing of it, no element and
 // no wording, and the page and API refuse them. Synthetic data only (a made-up dash.json in Leen's proportions).
 import { test, expect, type Page } from '@playwright/test';
-import { login, addSession } from './helpers';
+import { login, addSession, BASE } from './helpers';
 import { synth } from '../../src/modules/auditor/synth';
 
-// Few leads tied to ads: the judge says «no clear problem» while the CRM has 48 closings in ~4K results
+// Few leads tied to ads, 48 closings in ~4K results: the judge names the sales gap (whole CRM) and the auditor confirms it.
+// With targets lenient enough for «no problem», the auditor's own floor finds the data does not carry it.
 const data = synth({ tied: 0.12, paidTied: 4 });
+const lenient = { ...data, funnel_targets: { ctr: 0.1, clickToLead: 0.5, leadToClose: 0.5, cpl: 100000, costShare: 100, roas: 0.01 } };
 const TECH = /تدقيق|المدقق|مناقَض|أضعف مما يبدو|مؤكَّد|Audit|Contradicted|Weaker than it looks/;
 
-async function open(page: Page, request: import('@playwright/test').APIRequestContext, who: string, path = '/overview/') {
+async function open(page: Page, request: import('@playwright/test').APIRequestContext, who: string, path = '/overview/', body: unknown = data) {
   await addSession(page.context(), await login(request, who));
-  await page.route('**/api/overview/data*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) }));
+  await page.route('**/api/overview/data*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
   await page.goto(path);
   await expect(page.locator('#verdict-h')).not.toBeEmpty();
 }
@@ -20,13 +22,20 @@ test('the owner sees the audit badge next to the verdict, linking to the audit p
   const badge = page.getByTestId('audit-badge');
   await expect(badge).toBeVisible();
   await expect(badge).toContainText('تدقيق');
-  await expect(badge).toContainText('مناقَض');
+  // one status for the whole screen: the fixture's lead step is weak on some platforms, so the badge is not «confirmed»
+  await expect(badge).toContainText('أضعف مما يبدو');
   await expect(badge).toHaveAttribute('href', '/maestro/audit/');
+});
+
+test('a «no problem» the data does not carry gets a warning badge', async ({ page, request }) => {
+  await open(page, request, 'owner', '/overview/', lenient);
+  await expect(page.locator('#verdict-h')).toHaveText('لا توجد مشكلة');
+  await expect(page.getByTestId('audit-badge')).toContainText(/أضعف مما يبدو|مناقَض/);
 });
 
 test('the badge follows the page language', async ({ page, request }) => {
   await open(page, request, 'owner', '/overview/?lang=en');
-  await expect(page.getByTestId('audit-badge')).toContainText('Contradicted');
+  await expect(page.getByTestId('audit-badge')).toContainText('Weaker than it looks');
   await expect(page.getByTestId('audit-badge')).toHaveAttribute('href', '/maestro/audit/?lang=en');
 });
 
@@ -35,7 +44,7 @@ test('a normal user sees nothing technical: no badge, no audit wording, and the 
   await expect(page.getByTestId('audit-badge')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(TECH);
   expect((await page.request.get('/api/maestro/audit')).status()).toBe(403);
-  expect((await page.request.post('/api/maestro/critique', { data: {}, headers: { origin: 'http://localhost:8787' } })).status()).toBe(403);
+  expect((await page.request.post('/api/maestro/critique', { data: {}, headers: { origin: BASE } })).status()).toBe(403);
   const res = await page.request.get('/maestro/audit/', { maxRedirects: 0 });
   expect(res.status()).not.toBe(200);
   expect(await res.text()).not.toMatch(TECH);
