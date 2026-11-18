@@ -1,25 +1,18 @@
-// السوشال: التحقق من المنشور، وحدود كل منصة، والنشر. النشر الفعلي الحين لفيسبوك وانستقرام (Graph API)،
-// والباقي يطلع "قريباً" لين يكون عندنا تطبيق معتمد لكل منصة (ADR-0006).
+// السوشال: التحقق من المنشور، وحدود كل منصة، والنشر. فيسبوك وانستقرام ينشرهم كودنا مباشرة (Graph API)،
+// وتيك توك وX ولينكدإن عبر Postiz كمحرك نشر إضافي (postiz.ts)؛ كلهم بعد اعتماد المعتمد بس. الباقي يتحفظ كتذكير (ADR-0006).
 // التوكنات من الخزنة (صفحة الربط) بأسماء المتغيرات، وما ترجع للمتصفح أبداً.
 import { check, notice, type Rule } from '../compliance/compliance';
-
-export const SOCIAL = {
-  facebook: { name: 'فيسبوك', max: 63206, live: true },
-  instagram: { name: 'انستقرام', max: 2200, live: true, needsMedia: true },
-  tiktok: { name: 'تيك توك', max: 2200, live: false, needsMedia: true },
-  x: { name: 'X', max: 280, live: false },
-  linkedin: { name: 'لينكدإن', max: 3000, live: false },
-  snapchat: { name: 'سناب شات', max: 250, live: false, needsMedia: true },
-} as const;
-export type SocialPlatform = keyof typeof SOCIAL;
-export interface Media { url: string; type: 'image' | 'video' }
-export interface Draft { platforms: SocialPlatform[]; body: string; media: Media[]; publish_at: string; mode: 'auto' | 'manual' }
+import { SOCIAL, Fail, capCheck, engineOf, textLength, type Code, type Ctx, type Draft, type Media, type Result, type Results, type SocialPlatform, type Tokens } from './engine';
+import { postizPublish, platformLive, type EngineStatus } from './postiz';
+export { SOCIAL, capCheck, engineOf };
+export type { Code, Ctx, Draft, Media, Result, Results, SocialPlatform };
 
 const GRAPH = 'https://graph.facebook.com/v23.0';
 
 // Compliance (one list, src/modules/compliance) plus the company's forbidden words: a precise notice, never a block (Leen's rule).
 // The notice shows when a post is scheduled and on the post itself, so its approver sees it too.
-export function validate(input: Record<string, unknown>, now = Date.now(), extra: Rule[] = []): { draft?: Draft; error?: string; notices: string[] } {
+// isLive = can this platform go out by itself right now (engine set up and account connected); default: it has an engine
+export function validate(input: Record<string, unknown>, now = Date.now(), extra: Rule[] = [], isLive: (p: SocialPlatform) => boolean = p => SOCIAL[p].live): { draft?: Draft; error?: string; notices: string[] } {
   const platforms = [...new Set(Array.isArray(input.platforms) ? input.platforms : [])].filter((p): p is SocialPlatform => typeof p === 'string' && p in SOCIAL);
   const body = String(input.body || '').trim();
   const media = (Array.isArray(input.media) ? input.media : []).flatMap(m => {
@@ -39,10 +32,13 @@ export function validate(input: Record<string, unknown>, now = Date.now(), extra
   if (at < now - 60_000) return { error: 'وقت النشر راح', notices };
   for (const p of platforms) {
     const s = SOCIAL[p];
-    if (body.length > s.max) return { error: `النص أطول من حد ${s.name} (${s.max} حرف)`, notices };
+    if (textLength(p, body) > s.max) return { error: `النص أطول من حد ${s.name} (${s.max} حرف)`, notices };
     if ('needsMedia' in s && s.needsMedia && !media.length) return { error: `${s.name} يحتاج صورة أو فيديو`, notices };
+    // What the platform accepts of the media (count, video format), said now and not at the post's time
+    const fit = capCheck(p, { body, media });
+    if (fit) return { error: fit, notices };
   }
-  if (platforms.some(p => !SOCIAL[p].live)) notices.push('بعض المنصات المختارة ما ينشر لها تلقائي للحين، وبتنحفظ كتذكير.');
+  if (platforms.some(p => !isLive(p))) notices.push('بعض المنصات المختارة ما ينشر لها تلقائي للحين، وبتنحفظ كتذكير.');
   return { draft: { platforms, body, media, publish_at: new Date(at).toISOString(), mode }, notices };
 }
 
@@ -59,22 +55,10 @@ export const due = (p: { status: string; approved_at?: string | null; approved_b
 export const cleanApprovers = (v: unknown): string[] =>
   [...new Set((Array.isArray(v) ? v : []).map(x => String(x || '').trim().toLowerCase()).filter(x => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x)))].slice(0, 10);
 
-type Tokens = Record<string, string | undefined>;
 
-// ---- Results. One per platform, kept on the post (social_posts.results) so a crash or a retry knows what already went out.
-// code = the plain reason the page shows (the client has its words); detail = the platform's own message, for the owner only.
-export type Code = 'not_connected' | 'no_media' | 'token' | 'permission' | 'busy' | 'media_rejected' | 'video_failed' | 'video_timeout' | 'unconfirmed' | 'network' | 'platform' | 'unsupported';
-export interface Result {
-  ok: boolean; id?: string; code?: Code; detail?: string;
-  // sending = the call that posts was started (a crash here leaves it unknown); processing = Instagram is still preparing the
-  // media (the next run continues it); publishing = the container is ready and the publish call was started
-  state?: 'sending' | 'processing' | 'publishing'; creation_id?: string; since?: string;
-}
-export type Results = Record<string, Result>;
 export const STALE_MS = 15 * 60_000;          // a post 'publishing' longer than this lost its Worker
 export const VIDEO_WAIT_MS = 20 * 60_000;     // Instagram gets this long to prepare a video before it counts as failed
 
-class Fail extends Error { constructor(public code: Code, public detail = '') { super(code); } }
 type Reply = { ok: boolean; status: number; data: { id?: string; post_id?: string; status_code?: string; error?: { message?: string; code?: number; error_subcode?: number } } & Record<string, unknown> };
 
 // Meta's error codes, in plain buckets: a bad or expired token, a missing permission, a rate limit, media Meta could not use
@@ -100,19 +84,17 @@ async function call(f: typeof fetch, method: 'GET' | 'POST', path: string, param
 }
 const need = (r: Reply, what: string): string => { const id = r.data.id; if (!id) throw new Fail('platform', `no id for ${what}`); return id; };
 
-// Before scheduling: can this platform go out on its own with the accounts connected? '' = yes, else why not
-export function readiness(platform: SocialPlatform, t: Tokens): string {
-  if (!SOCIAL[platform].live) return 'النشر التلقائي لهالمنصة قريباً: بينحفظ كتذكير';
+// Before scheduling: can this platform go out on its own with the accounts connected? '' = yes, else why not.
+// `engine` = what the Postiz engine reported (routes.ts); without it a Postiz platform counts as not available.
+export function readiness(platform: SocialPlatform, t: Tokens, engine: EngineStatus | null = null): string {
+  const e = engineOf(platform);
+  if (!e) return 'النشر التلقائي لهالمنصة قريباً: بينحفظ كتذكير';
+  if (e === 'postiz') return platformLive(engine, platform) ? '' : 'غير متاح الحين: بينحفظ كتذكير';
   if (platform === 'facebook' && (!t.META_PAGE_ACCESS_TOKEN || !t.META_PAGE_ID)) return 'صفحة فيسبوك مو مربوطة: اربطها من صفحة الربط قبل الموعد';
   if (platform === 'instagram' && (!t.META_PAGE_ACCESS_TOKEN || !t.IG_USER_ID)) return 'حساب انستقرام مو مربوط: اربطه من صفحة الربط قبل الموعد';
   return '';
 }
 
-export interface Ctx {
-  save?: (r: Result) => Promise<void>;       // persist the platform's progress before the next step (crash safety)
-  wait?: (ms: number) => Promise<void>;
-  now?: number; polls?: number; pollMs?: number;
-}
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 async function facebook(post: Draft, t: Tokens, f: typeof fetch, prev: Result | undefined, ctx: Ctx): Promise<Result> {
@@ -153,7 +135,7 @@ async function instagram(post: Draft, t: Tokens, f: typeof fetch, prev: Result |
   }
   // A video (and a carousel) is prepared on Meta's side: publish only once the container says FINISHED
   if (video || imgs.length > 1) {
-    const wait = ctx.wait ?? sleep, polls = ctx.polls ?? 3;
+    const wait = ctx.wait ?? sleep, polls = ctx.polls ?? 2;   // two looks per run (2 subrequests); the cron run five minutes later looks again, so no run ever waits long
     let st = '';
     for (let i = 0; i < polls; i++) {
       st = String((await call(f, 'GET', cid, { fields: 'status_code', access_token: token })).data.status_code || '');
@@ -179,7 +161,12 @@ async function instagram(post: Draft, t: Tokens, f: typeof fetch, prev: Result |
 // prev = what an earlier run stored for this platform: an ok result is never repeated, an unfinished one is continued
 export async function publishOne(platform: SocialPlatform, post: Draft, t: Tokens, f: typeof fetch = fetch, prev?: Result, ctx: Ctx = {}): Promise<Result> {
   if (prev?.ok) return prev;
-  if (!SOCIAL[platform].live) return { ok: false, code: 'unsupported' };
+  const eng = engineOf(platform);
+  if (!eng) return { ok: false, code: 'unsupported' };
+  if (eng === 'postiz') {
+    // Params are checked inside before any call; a Postiz platform is only reached with an approved post (cron.ts)
+    try { return await postizPublish(platform, post, t, f, prev, ctx); } catch { return { ok: false, code: 'network' }; }
+  }
   const token = t.META_PAGE_ACCESS_TOKEN;
   try {
     if (platform === 'facebook') {
@@ -211,10 +198,19 @@ export function outcomeOf(platforms: string[], results: Results): Outcome {
 export async function publishPost(post: Draft, t: Tokens, f: typeof fetch = fetch, prev: Results = {}, o: Omit<Ctx, 'save'> & { save?: (r: Results) => Promise<void> } = {}): Promise<{ status: Outcome; results: Results }> {
   const results: Results = { ...prev };
   for (const p of post.platforms) {
-    if (results[p]?.ok) continue;
+    // 'unsaved' = it went out but the result could not be saved: it is never sent again, a person checks it
+    if (results[p]?.ok || results[p]?.code === 'unsaved') continue;
     const save = async (r: Result) => { results[p] = r; await o.save?.(results); };
     try { results[p] = await publishOne(p, post, t, f, results[p], { ...o, save }); } catch { results[p] = { ok: false, code: 'network' }; }
-    await o.save?.(results);
+    try { await o.save?.(results); }
+    catch {
+      // The platform answered but the database did not take the result. Mark it so a recovery run never publishes it again;
+      // try to store that mark too (the next save of this run usually works), and carry on with the other platforms.
+      if (results[p]?.ok) {
+        results[p] = { ...results[p], ok: false, code: 'unsaved' };
+        try { await o.save?.(results); } catch { /* the in-memory mark still reaches the final patch of cron.ts */ }
+      }
+    }
   }
   return { status: outcomeOf(post.platforms, results), results };
 }
@@ -232,7 +228,7 @@ export function retryPlan(p: { status: string; platforms: string[]; results?: Re
   let any = false;
   for (const k of p.platforms) {
     const r = results[k];
-    if (!r || r.ok || r.code === 'unsupported' || !SOCIAL[k as SocialPlatform]?.live) continue;
+    if (!r || r.ok || r.code === 'unsupported' || r.code === 'unsaved' || !SOCIAL[k as SocialPlatform]?.live) continue;
     delete results[k]; any = true;
   }
   return any ? { results } : { error: 'nothing' };

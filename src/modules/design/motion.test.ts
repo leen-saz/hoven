@@ -3,10 +3,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as A from '../../lib/auth';
 import { pick } from '../../lib/llm';
-import { checkUpload, cleanSpec, editPrompt, fileKey, ownKey, parseSpec, specPrompt, templateSpec, type Spec } from './motion';
+import { MIN_SCENE, checkUpload, cleanSpec, editPrompt, fileKey, ownKey, parseSpec, specPrompt, templateSpec, type Spec } from './motion';
 import { videoapprove, videoedit, video, videos } from './video';
 // The page's own frame logic (public/modules/design/frame.js), so the preview tested here is the one drawn
-import { frame } from '../../../public/modules/design/frame.js';
+import { anchors, frame } from '../../../public/modules/design/frame.js';
 
 const CO = '00000000-0000-0000-0000-000000000001';
 const KEY = (x: string, ext: string) => `motion/${CO}/${x.repeat(32)}.${ext}`;
@@ -29,12 +29,39 @@ describe('the plan', () => {
     expect(cleanSpec('nope', 10, '1:1')).toBeNull();
   });
 
+  it('holds a model caption shorter than 1.5 seconds up to 1.5 when the gap allows, and never past the next scene or the voice', () => {
+    const s = cleanSpec({ scenes: [
+      { from: 0, to: 1, text: 'واحد' }, { from: 3, to: 4, text: 'اثنين' }, { from: 4.8, to: 5.6, text: 'ثلاثة' }, { from: 9, to: 9.7, text: 'أخير' },
+    ] }, 10, '9:16')!;
+    expect(s.scenes.map(x => [x.from, x.to])).toEqual([[0, 1.5], [3, 4.5], [4.8, 6.3], [9, 10]]);
+    // no room (next scene starts 0.6s later): the caption stops where the next starts, and is dropped only when under half a second
+    const t = cleanSpec({ scenes: [{ from: 0, to: 0.6, text: 'أ' }, { from: 1, to: 2.5, text: 'ب' }] }, 10, '1:1')!;
+    expect(t.scenes.map(x => [x.from, x.to])).toEqual([[0, 1], [1, 2.5]]);
+  });
+
   it('builds v1 from a template without a model, spread over the voice, in brand colours', () => {
     const s = templateSpec({ headline: 'المفارش في بيتك', script: 'نجيك البيت. قطن مصري؟ احجز اليوم.', seconds: 12, ratio: '1:1', colors: ['#294036'] })!;
     expect(s.scenes.map(x => x.text)).toEqual(['المفارش في بيتك', 'نجيك البيت.', 'قطن مصري؟', 'احجز اليوم.']);
     expect(s.scenes.at(-1)!.to).toBeLessThanOrEqual(12);
     expect(s.cta?.text).toBe('احجز الحين');
     expect(s.colors.band).toBe('#294036');
+  });
+
+  it('never shows a template caption for less than 1.5 seconds: a long script on a short voice is merged, not dropped', () => {
+    const script = 'واحد، اثنين، ثلاثة، أربعة، خمسة، ستة، سبعة، ثمانية، تسعة، عشرة.';
+    for (const seconds of [4, 6, 8, 10, 15]) {
+      const s = templateSpec({ headline: 'عنوان', script, seconds, ratio: '9:16' })!;
+      expect(s.scenes.length).toBeGreaterThan(0);
+      expect(s.scenes[0]!.text).toBe('عنوان');
+      expect(s.scenes[0]!.from).toBe(0);
+      for (const x of s.scenes) expect(x.to - x.from).toBeGreaterThanOrEqual(MIN_SCENE - 0.11);
+    }
+    // nothing of the script is lost when it fits: ten clauses on 10 seconds become four captions after the headline
+    const s = templateSpec({ headline: 'عنوان', script, seconds: 10, ratio: '9:16' })!;
+    expect(s.scenes.slice(1).map(x => x.text).join(' ')).toBe(script);
+    expect(s.scenes).toHaveLength(5);
+    // without a headline the script still gets a caption on the shortest voice
+    expect(templateSpec({ headline: '', script, seconds: 4, ratio: '1:1' })!.scenes).toHaveLength(1);
   });
 
   it('reads JSON from a fenced answer and puts the current plan and the request in the edit prompt', () => {
@@ -78,6 +105,18 @@ describe('frames', () => {
     expect(pop[0].scale).toBeCloseTo(1, 2);
     expect(frame(spec, 7.9).cta).toBeNull();
     expect(frame(spec, 9.5).cta?.alpha).toBeCloseTo(1, 2);
+  });
+  it('keeps text and the CTA inside the Reels/Stories safe band on 9:16, and leaves other sizes as they were', () => {
+    const [W, H] = [720, 1280], a = anchors(W, H), px = (k: number) => k * H;
+    // 14% top and 35% bottom stay free; a one-line large caption is ~0.09*W*1.35 high, the CTA ~0.11*W
+    const half = (0.092 * W * 1.35 + 0.046 * W) / 2;
+    for (const k of ['top', 'center', 'bottom'] as const) {
+      expect(px(a[k]) - half).toBeGreaterThanOrEqual(0.14 * H);
+      expect(px(a[k]) + half).toBeLessThanOrEqual(0.65 * H);
+    }
+    expect(px(a.cta) + 0.054 * W).toBeLessThanOrEqual(0.68 * H);
+    expect(anchors(1080, 1080)).toEqual({ top: 0.18, center: 0.5, bottom: 0.78, cta: 0.9 });
+    expect(anchors(1280, 720).bottom).toBe(0.78);
   });
   it('zooms the design in over the whole video', () => {
     expect(frame(spec, 0).bg.scale).toBe(1);

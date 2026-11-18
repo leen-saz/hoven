@@ -1,4 +1,5 @@
 // صحة الداتا (للمالكة): بطاقات قراءة فقط. كل بطاقة تجيب أرقامها من /api/maestro/<اسمها>.
+import { ownerText } from '/assets/freshness.js';
 import { $, api, say, esc, fmt, shell, failure, pageFailure, when } from '/assets/common.js';
 
 const STATUS = { paid: 'مدفوع', unpaid: 'غير مدفوع', pending: 'معلّق', partial: 'مدفوع جزئي', refunded: 'مسترجع', '(empty)': 'فاضي', other: 'قيمة ثانية' };
@@ -21,6 +22,16 @@ export function crmCard(d) {
   const status = Object.entries(d.by_status).sort((a, b) => b[1] - a[1]).map(([s, n]) => [esc(STATUS[s] || s) + (STATUS[s] ? ` <span class="muted">(${esc(s)})</span>` : ''), fmt(n)]);
   const other = Object.entries(d.amount_not_paid_status).map(([s, n]) => [esc(STATUS[s] || s), fmt(n)]);
   const months = Object.entries(d.by_month).map(([m, v]) => [esc(m), fmt(v.closings), fmt(v.amount_sar)]);
+<<<<<<< well
+  return `<section class="card pad dh-sec"><h2>طلبات الـ CRM والدفع</h2><p class="muted" style="margin:0">الإقفالة = حالة الدفع «paid» ومبلغ أكبر من صفر.</p>${finds}
+    <div class="dh-kpis">${kpi(fmt(d.leads), 'طلبات مخزّنة')}${kpi(fmt(p.count), 'إقفالات (مدفوع ومبلغ)')}${kpi(fmt(p.amount_sar) + ' ريال', 'مبلغ الإقفالات')}
+      ${kpi(fmt(d.paid_status_no_amount), 'مدفوع بمبلغ صفر أو فاضي')}${kpi(fmt(p.linked), 'إقفالات مربوطة بإعلان')}${kpi(fmt(p.unlinked), 'إقفالات بدون إعلان')}</div>
+    <div class="dh-kpis">${kpi(when(d.newest_updated_at), 'أحدث تحديث')}${kpi(when(d.newest_paid_at), 'أحدث دفع')}</div>
+    <h3>الطلبات حسب حالة الدفع</h3>${status.length ? table(['الحالة', 'طلبات'], status) : '<p class="muted">لا شي.</p>'}
+    ${other.length ? `<h3>مبلغ مدفوع تحت حالة غير «مدفوع»</h3>${table(['الحالة', 'طلبات'], other)}` : ''}
+    <h3>الإقفالات والمبالغ حسب شهر الدفع</h3>${months.length ? table(['الشهر', 'إقفالات', 'المبلغ (ريال)'], months) : '<p class="muted">لا شي.</p>'}
+    ${p.count ? `<p class="muted">المربوطة بإعلان: ${fmt(p.linked_amount_sar)} ريال. بدون إعلان: ${fmt(p.unlinked_amount_sar)} ريال.</p>` : ''}</section>`;
+=======
   return `<section class="card pad dh-sec"><h2>طلبات الـ CRM والدفع</h2><p class="muted" style="margin:0">الإقفالة = حالة الدفع «paid» ومبلغ أكبر من صفر.</p>${finds}
     <div class="dh-kpis">${kpi(fmt(d.leads), 'طلبات مخزّنة')}${kpi(fmt(p.count), 'إقفالات (مدفوع ومبلغ)')}${kpi(fmt(p.amount_sar) + ' ر.س', 'مبلغ الإقفالات')}
       ${kpi(fmt(d.paid_status_no_amount), 'مدفوع بمبلغ صفر أو فاضي')}${kpi(fmt(p.linked), 'إقفالات مربوطة بإعلان')}${kpi(fmt(p.unlinked), 'إقفالات بدون إعلان')}</div>
@@ -29,6 +40,7 @@ export function crmCard(d) {
     ${other.length ? `<h3>مبلغ مدفوع تحت حالة غير «مدفوع»</h3>${table(['الحالة', 'طلبات'], other)}` : ''}
     <h3>الإقفالات والمبالغ حسب شهر الدفع</h3>${months.length ? table(['الشهر', 'إقفالات', 'المبلغ (ر.س)'], months) : '<p class="muted">لا شي.</p>'}
     ${p.count ? `<p class="muted">المربوطة بإعلان: ${fmt(p.linked_amount_sar)} ر.س. بدون إعلان: ${fmt(p.unlinked_amount_sar)} ر.س.</p>` : ''}</section>`;
+>>>>>>> hoven
 }
 
 const PLAT = { meta: 'Meta', snap: 'Snapchat', tiktok: 'TikTok', google: 'Google' };
@@ -39,19 +51,36 @@ const age = iso => { if (!iso) return ['—', 'bad']; const h = (Date.now() - Da
 const dayAge = d => { if (!d) return ['—', 'bad']; const h = (Date.now() - Date.parse(d + 'T00:00:00+03:00')) / 36e5; return [esc(d), h > 72 ? 'bad' : '']; };
 const cell = ([t, bad]) => (bad ? `<b style="color:#8A2A1B">${t}</b>` : t);
 
-const WHYTXT = { id: 'مربوطة برقم الإعلان', name: 'مربوطة باسم الإعلان', via_customer: 'منسوبة لإعلان سابق لنفس العميل', source: 'مصدرها مو إعلان (واتساب عضوي، يدوي…)', no_id: 'مصدرها إعلان بس بدون رقم إعلان', broken_id: 'رقم الإعلان تالف من الاستيراد', not_in_ads: 'رقم الإعلان مو بين الإعلانات المسحوبة' };
+const WHYTXT = { id: 'مربوطة برقم الإعلان', utm: 'مربوطة بحقل UTM أو رقم إعلان جديد من الـ CRM', name: 'مربوطة باسم الإعلان', via_customer: 'منسوبة لإعلان سابق لنفس العميل', source: 'مصدرها مو إعلان (واتساب عضوي، يدوي…)', no_id: 'مصدرها إعلان بس بدون رقم إعلان', broken_id: 'رقم الإعلان تالف من الاستيراد', not_in_ads: 'رقم الإعلان مو بين الإعلانات المسحوبة' };
 const attribution = A => !A || !A.paid ? '' : `<h3>وين راحت الإقفالات المدفوعة؟</h3>${table(['السبب', 'إقفالات'], Object.entries(A.why).filter(([, n]) => n).map(([k, n]) => [esc(WHYTXT[k] || k), fmt(n)]))}`
   + (Object.keys(A.unmatched_sources).length ? `<p class="muted">مصادر الإقفالات اللي بدون إعلان: ${Object.entries(A.unmatched_sources).map(([k, n]) => `<code>${esc(k)}</code> ${fmt(n)}`).join('، ')}</p>` : '');
 
+const STEP = { tiktok: 'تيك توك', crm: 'سحب الـ CRM', suggest: 'اقتراحات لوحة القرارات', learn: 'حلقة التعلّم', critic: 'المراجع', execute: 'تنفيذ القرارات المعتمدة' };
+// Each non-blocking step of the hourly run: did it work last time, and when did it last work
+const stepsTable = S => {
+  const rows = Object.entries(S || {}).map(([k, v]) => [esc(STEP[k] || k), v.ok === false ? '<b style="color:#8A2A1B">فشلت</b>' : v.ok ? 'اشتغلت' : '—', cell(age(v.at)), cell(age(v.last_ok))]);
+  return rows.length ? table(['الخطوة', 'آخر مرة', 'وقتها', 'آخر نجاح'], rows) : '<p class="muted">ما فيه حالة خطوات للحين (تظهر بعد أول تحديث ساعي).</p>';
+};
+
+// Same sentence as LINKED_DEF_AR in src/lib/linked.ts (the performance summary and the tracking page use that definition too)
+const LINKED_DEF = 'مربوط بإعلان = طلب (أو إقفالة) انطبق مع إعلان من إعلاناتنا برقم الإعلان أو باسمه الفريد، أو عبر نفس العميل لإعلان سابق. الباقي «غير منسوب».';
+
 export function healthCards(h) {
   const f = h.freshness, J = h.joins;
+  const warn = (h.data_status ? ownerText(h.data_status) : []).map(t => `<p class="dh-find bad">${esc(t)}</p>`).join('');
+  const fresh = h.data_status && h.data_status.level === 'ok' ? '<p class="dh-find ok">الأرقام محدّثة والتحديث الساعي يشتغل.</p>' : '';
   const plat = table(['المنصة', 'إعلانات', 'آخر تحديث للإعلانات', 'آخر يوم أرقام', 'انتهاء الربط'], f.platforms.map(p => [esc(PLAT[p.platform] || p.platform), fmt(p.ads), cell(age(p.newest_ad_update)), cell(dayAge(p.newest_metric_day)), p.token_expires_at ? when(p.token_expires_at) : '—']));
   const other = table(['المصدر', 'آخر مرة'], [
     ['مزامنة الـ CRM (آخر تشغيل)', cell(age(f.crm?.last_run_at))], ['أحدث تحديث وصل من الـ CRM', cell(age(f.crm?.last_updated_at))],
     ['جلب الرصد', cell(age(f.listening_last_fetch))], ['رفع ملف الأرقام (dash.json)', cell(age(f.dash_json_uploaded))]]);
   const counts = table(['الجدول', 'الصفوف'], Object.entries(h.counts).map(([t, n]) => [esc(TABLE[t] || t), n == null ? '<span class="muted">ما انقرا</span>' : fmt(n)]));
+<<<<<<< well
+  const joins = J ? table(['الربط', 'العدد', 'النسبة'], [['طلبات CRM', fmt(J.leads), ''], ['مربوطة بإعلان', fmt(J.matched), J.matched_pct == null ? '—' : J.matched_pct + '%'], ['بدون إعلان', fmt(J.unmatched), ''],
+    ['كل الإقفالات', fmt(J.closings_all), ''], ['إقفالات مربوطة بإعلان', fmt(J.closings_with_ad), J.closings_pct == null ? '—' : J.closings_pct + '%'], ['إقفالات غير منسوبة لإعلان', fmt(J.closings_unattributed), ''], ['منسوبة بالعميل لإعلان سابق', fmt(J.credited_via_customer), '']])
+=======
   const joins = J ? table(['الربط', 'العدد', 'النسبة'], [['طلبات CRM', fmt(J.leads), ''], ['مربوطة بإعلان', fmt(J.matched), J.matched_pct == null ? '—' : J.matched_pct + '%'], ['بدون إعلان', fmt(J.unmatched), ''],
     ['كل الإقفالات', fmt(J.closings_all), ''], ['إقفالات مربوطة بإعلان', fmt(J.closings_with_ad), J.closings_pct == null ? '—' : J.closings_pct + '%'], ['منسوبة بالعميل لإعلان سابق', fmt(J.credited_via_customer), '']])
+>>>>>>> hoven
     : '<p class="muted">ما فيه dash.json مرفوع للحين.</p>';
   const attr = J ? attribution(J.attribution) : '';
   const dups = table(['المكرر', 'الصفوف الزايدة'], Object.entries(h.duplicates).map(([k, n]) => [esc(DUP[k] || k), cell([fmt(n), n > 0])]));
@@ -60,7 +89,11 @@ export function healthCards(h) {
     ? `<p class="dh-find bad">مايقريشنات ما انطبقت (بالترتيب): ${[...new Set(h.migrations_missing.map(m => m.migration))].map(m => `<code>${esc(m)}</code>`).join('، ')}</p>` + table(['المايقريشن', 'الجدول', 'ناقص'], h.migrations_missing.map(m => [esc(m.migration), esc(m.table), m.reason === 'table' ? 'الجدول كله' : esc(m.columns.join(', '))]))
     : '<p class="dh-find ok">كل الجداول والأعمدة اللي يقراها الكود موجودة.</p>';
   const sec = (t, body, note = '') => `<section class="card pad dh-sec"><h2>${t}</h2>${note ? `<p class="muted" style="margin:0 0 8px">${note}</p>` : ''}${body}</section>`;
+<<<<<<< well
+  return (warn || fresh ? sec('حالة التحديث', warn + fresh + (h.data_status ? stepsTable(h.data_status.steps) : ''), 'عمر الأرقام، وهل بدأ التحديث الساعي. ما يلمس الداتابيس.') : '') + sec('حداثة المصادر', plat + other, 'آخر مرة وصلتنا بيانات كل منصة. الأحمر = أقدم من يومين.') + sec('الربط بين الطلبات والإعلانات', joins + attr + `<p class="muted">${LINKED_DEF}</p>`, 'من آخر ملف أرقام انرفع.')
+=======
   return sec('حداثة المصادر', plat + other, 'آخر مرة وصلتنا بيانات كل منصة. الأحمر = أقدم من يومين.') + sec('الربط بين الطلبات والإعلانات', joins + attr, 'من آخر ملف أرقام انرفع.')
+>>>>>>> hoven
     + sec('المكرر', dups) + sec('اليتيم', orph, 'صفوف تشير إلى شركة ما عاد لها وجود.') + sec('عدد الصفوف', counts) + sec('المايقريشنات', miss);
 }
 
@@ -79,36 +112,40 @@ export function vitalsCard(d) {
 export default async function mount() {
   shell({ active: 'maestro', title: 'صحة الداتا' }).then(async () => {
     const box = $('#sections');
-    try { box.innerHTML = crmCard(await api('/api/maestro/crm')); } catch (err) { failure(box, err, () => location.reload()); }
-    const vbox = document.createElement('div');
-    box.prepend(vbox);
-    const loadVitals = async () => { try { vbox.innerHTML = vitalsCard(await api('/api/maestro/vitals')); } catch (err) { failure(vbox, err, loadVitals); } };
+    // The cards sit in their final order from the start, and every request starts at once, but each card is FILLED in that order.
+    // A card that arrives early waits for the ones above it: filling out of order (or prepending) pushed the visible ones down (layout shift).
+    const vbox = document.createElement('div'), lbox = document.createElement('div'), cbox = document.createElement('div'), holder = document.createElement('div');
+    box.replaceChildren(vbox, lbox, cbox, holder);
     // Listening sources that are off, with the key names and where to get them (owner only: the Listening tab shows plain words)
-    const lbox = document.createElement('div');
-    vbox.after(lbox);
     const LISTEN = [
       { src: 'youtube', label: 'يوتيوب', keys: 'YOUTUBE_API_KEY', where: 'Google Cloud ← APIs ← YouTube Data API v3 ← Credentials ← API key' },
       { src: 'x', label: 'X وتيك توك عن طريق Grok', keys: 'XAI_API_KEY', where: 'console.x.ai ← API keys' },
       { src: 'reddit', label: 'ريديت', keys: 'REDDIT_CLIENT_ID و REDDIT_CLIENT_SECRET', where: 'reddit.com/prefs/apps ← create app ← نوع script' },
     ];
-    const loadListen = async () => {
+    const loadVitals = async (first) => { try { vbox.innerHTML = vitalsCard(await (first || api('/api/maestro/vitals'))); } catch (err) { failure(vbox, err, () => loadVitals()); } };
+    const loadListen = async (first) => {
       try {
-        const d = await api('/api/listening/watch');
+        const d = await (first || api('/api/listening/watch'));
         const off = d.missing ? [] : LISTEN.filter(k => !d.sources?.[k.src]);
         lbox.innerHTML = d.missing ? `<section class="card pad"><h2 style="margin:0 0 6px">الرصد: ما اكتمل تجهيزه</h2><p class="muted" style="margin:0">جداول الرصد ناقصة. شغّل <code>013_listening.sql</code> من مجلد supabase/migrations في Supabase ← SQL Editor، وبعدها ارجع هنا.</p></section>`
           : off.length ? `<section class="card pad"><h2 style="margin:0 0 6px">الرصد: مصادر ما انفعّلت</h2><p class="muted" style="margin:0 0 8px">أسرار في Cloudflare: Workers ← hoven ← Settings ← Variables and Secrets ← Add ← Secret.</p>
             <ul>${off.map(k => `<li><b>${esc(k.label)}</b>: <code>${esc(k.keys)}</code> · من ${esc(k.where)}</li>`).join('')}</ul></section>` : '';
-      } catch (err) { failure(lbox, err, loadListen); }
+      } catch (err) { failure(lbox, err, () => loadListen()); }
     };
-    loadListen();
-    loadVitals();
+    // The requests start together; the cards fill top to bottom
+    const pV = api('/api/maestro/vitals'), pL = api('/api/listening/watch'), pC = api('/api/maestro/crm');
+    for (const p of [pV, pL, pC]) p.catch(() => {});
+    await loadVitals(pV);
+    await loadListen(pL);
+    try { cbox.innerHTML = crmCard(await pC); } catch (err) { failure(cbox, err, () => location.reload()); }
     // One request per part: each stays under the platform's per-request call limit
     const h = { duplicates: {}, counts: {}, orphans: {}, migrations_missing: [], freshness: { platforms: [] }, joins: null };
-    const holder = document.createElement('div');
-    box.append(holder);
-    for (const part of ['sources', 'content', 'counts', 'schema']) {
+    // The four parts are separate requests (separate Worker calls, so the per-request limit still holds) and they run TOGETHER: one
+    // after the other the page waited for the sum of four slow database reads (about 10 s). Each part is drawn as it arrives;
+    // this block is the last on the page, so a late part only grows it downwards.
+    await Promise.all(['sources', 'content', 'counts', 'schema'].map(async part => {
       try { const r = await api('/api/maestro/health?part=' + part); Object.assign(h, r, { duplicates: { ...h.duplicates, ...(r.duplicates || {}) } }); holder.innerHTML = healthCards(h); }
       catch (err) { say($('#msg'), err.message); }
-    }
+    }));
   }).catch(pageFailure);
 }

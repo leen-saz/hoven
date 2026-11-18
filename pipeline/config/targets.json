@@ -1,4 +1,14 @@
 {
+<<<<<<< well
+  "_note": "الأهداف لكل منصة بالريال: cpl = تكلفة الليد، chat = تكلفة المحادثة (واتساب). null = متوسط آخر 30 يوم للمنصة. لين تعدّلها، وكل تغيير بـ PR.",
+  "meta": {"cpl": null, "chat": null},
+  "snap": {"cpl": null, "chat": null},
+  "tiktok": {"cpl": null, "chat": null},
+  "google": {"cpl": null, "chat": null},
+  "funnel": {"_note": "أهداف حكم رحلة العميل (افتراضي — عدّله). النسب بالمية، cpl بالريال، costShare = أقصى تكلفة للإقفالة من قيمتها، roas بالمرات، maturityDays = عمر الليد قبل ما ينحكم على إقفاله. كل تغيير بـ PR.",
+    "ctr": 1, "clickToLead": 8, "leadToClose": 8, "cpl": 60, "costShare": 0.33, "roas": 3, "maturityDays": 30}
+}
+=======
  "_note": "الأهداف لكل منصة بالريال: cpl = تكلفة الطلب (CPA) في هوفن. chat غير مستخدم في هوفن (عمود المحادثات = الإيراد، ADR-0007). null = متوسط آخر 30 يوم للمنصة. لين تعدّلها، وكل تغيير بـ PR.",
  "meta": {
   "cpl": null,
@@ -17,3 +27,4 @@
   "chat": null
  }
 }
+>>>>>>> hoven

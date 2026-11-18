@@ -1,0 +1,127 @@
+---
+import { ClientRouter } from 'astro:transitions';
+// الفيديو: مشروع فيديو (المقاس والمدة والأفاتار)، لقطات تتولّد بالخلفية مع حالتها، والناتج مسودة تبقى داخل النظام.
+---
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#F2F0E3">
+<title>الفيديو · Hoven</title>
+<link rel="preload" href="/assets/fonts/ibmplexsansarabic-regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/hoven-brand.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/app.css">
+<ClientRouter />
+<style is:global>
+.vd-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;align-items:start}
+@media (max-width:1000px){.vd-grid{grid-template-columns:1fr}}
+.vd-grid h2{margin:0 0 6px}
+.vd-two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:640px){.vd-two{grid-template-columns:1fr}}
+.vd-note{font-size:13px;color:var(--muted);margin:0}
+.vd-notready{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--pulse) 12%,transparent);font-size:14px;margin:0 0 14px}
+.vd-owner{margin-top:16px}
+.vd-hint{font-size:13px;margin:6px 0 0;color:var(--muted);direction:ltr;text-align:start}
+.vd-jobs{display:grid;gap:10px;margin-top:14px}
+.vd-job{padding:12px 14px;display:grid;gap:6px;border:1px solid var(--line);border-radius:var(--r-sm)}
+.vd-job header{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.vd-job video{width:100%;max-width:360px;border-radius:12px;background:#000}
+.vd-brief{margin-top:18px;padding-top:6px;border-top:1px solid var(--line)}
+.vd-shot{padding:12px 14px;display:grid;gap:6px;border:1px solid var(--line);border-radius:var(--r-sm);margin-top:10px}
+.vd-shot header{display:flex;gap:8px;align-items:center}
+.vd-shot details{font-size:13px;color:var(--muted)}
+.vd-notice{font-size:13px;padding:8px 12px;border-radius:12px;background:color-mix(in srgb,var(--pulse) 10%,transparent);display:grid;gap:2px}
+.vd-notices{display:grid;gap:8px;margin-top:12px}
+.vd-st{font-size:13px;padding:2px 10px;border-radius:999px;background:var(--tint-2)}
+.vd-st.done{background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.vd-st.failed{background:color-mix(in srgb,var(--pulse) 14%,transparent)}
+</style>
+</head>
+<body data-page="video" data-module>
+<div class="app" id="app">
+  <aside class="side" id="side" aria-label="القائمة" transition:persist="side"></aside>
+  <div class="scrim"></div>
+  <div class="main">
+    <header class="topbar" id="top"></header>
+    <main class="content" id="content">
+      <div class="sec-tabs" id="tabsw" hidden></div>
+      <p class="muted" style="margin:0 0 14px">اختر المقاس والمدة، وولّد لقطات فيديو. كل ناتج مسودة تبقى داخل النظام لين تنراجع وتنعتمد.</p>
+      <p class="vd-notready" id="notready" role="status" hidden></p>
+      <div class="vd-grid">
+        <section class="card pad">
+          <div class="bar" style="justify-content:space-between"><h2>الفيديو</h2>
+            <label class="sr" for="pick" style="flex:1;max-width:260px"><select id="pick" aria-label="الفيديو"></select></label></div>
+          <form id="pf" novalidate>
+            <label for="title">العنوان</label><input type="text" id="title" maxlength="120" placeholder="مثلاً: عرض الفحص المنزلي">
+            <div class="vd-two">
+              <div><label for="ratio">المقاس</label><select id="ratio"></select></div>
+              <div><label for="seconds">المدة</label><select id="seconds"></select></div>
+            </div>
+            <label for="avatar">أفاتار يتكلم <span class="muted">(اختياري)</span></label><select id="avatar"></select>
+            <p class="vd-note" id="avatarDoes"></p>
+            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit" id="save">أنشئ الفيديو</button></div>
+            <div class="msg" id="pmsg" role="status"></div>
+          </form>
+          <div class="vd-brief" id="briefBox" hidden>
+            <h2>الموجز</h2>
+            <p class="vd-note">الصق رابط صفحة المنتج أو الخدمة ونقرأ منها العرض والفوائد والسعر، وبعدها عدّل اللي تبي.</p>
+            <form id="uf" novalidate class="bar" style="gap:8px;align-items:end;flex-wrap:wrap">
+              <div style="flex:1;min-width:200px"><label for="url">رابط الصفحة</label><input type="url" id="url" dir="ltr" placeholder="https://"></div>
+              <button class="btn secondary" type="submit" id="read">اقرأ الصفحة</button>
+            </form>
+            <div class="msg" id="umsg" role="status"></div>
+            <form id="bf" novalidate>
+              <div class="vd-two">
+                <div><label for="b_service">الخدمة أو المنتج</label><input type="text" id="b_service" maxlength="120"></div>
+                <div><label for="b_price">السعر <span class="muted">(لو موجود)</span></label><input type="text" id="b_price" maxlength="60"></div>
+                <div><label for="b_audience">الجمهور</label><input type="text" id="b_audience" maxlength="160"></div>
+                <div><label for="b_cta">الدعوة للخطوة</label><input type="text" id="b_cta" maxlength="60"></div>
+              </div>
+              <label for="b_offer">العرض</label><input type="text" id="b_offer" maxlength="300">
+              <label for="b_benefits">الفوائد <span class="muted">(كل فايدة في سطر)</span></label><textarea id="b_benefits" rows="4" maxlength="800" dir="auto"></textarea>
+              <div class="bar" style="margin-top:14px"><button class="btn secondary" type="submit" id="bsave">احفظ الموجز</button><button class="btn primary" type="button" id="wscript">اكتب السكربت</button></div>
+              <div class="msg" id="bmsg" role="status"></div>
+            </form>
+          </div>
+        </section>
+        <section class="card pad">
+          <div id="scriptBox" hidden>
+            <h2>السكربت</h2>
+            <p class="vd-note" id="fit"></p>
+            <div id="shots"></div>
+            <div class="vd-notices" id="notices" role="status"></div>
+            <div id="avBox" hidden><label for="avvoice">رابط ملف صوت الأفاتار</label><input type="url" id="avvoice" dir="ltr" placeholder="https://"><p class="vd-note">جهّز الصوت من تاب الفويس أوفر أول.</p></div>
+            <div class="bar" style="margin-top:14px"><button class="btn secondary" type="button" id="ssave">احفظ تعديلات السكربت</button><button class="btn primary" type="button" id="render">ولّد الفيديو</button></div>
+            <div class="msg" id="smsg" role="status"></div>
+          </div>
+          <h2 style="margin-top:22px">اللقطات</h2>
+          <details id="manual" hidden><summary>أضف لقطة بإيدك</summary>
+          <form id="cf" novalidate>
+            <div class="vd-two">
+              <div><label for="kind">نوع اللقطة</label><select id="kind"></select></div>
+              <div><label for="clip">طول اللقطة</label><select id="clip"></select></div>
+            </div>
+            <label for="prompt">وصف اللقطة</label><textarea id="prompt" rows="3" maxlength="1500" dir="auto"></textarea>
+            <div id="imgBox" hidden><label for="img">رابط الصورة</label><input type="url" id="img" dir="ltr" placeholder="https://"></div>
+            <div id="voiceBox" hidden><label for="voice">رابط ملف الصوت</label><input type="url" id="voice" dir="ltr" placeholder="https://"><p class="vd-note">جهّز الصوت من تاب الفويس أوفر أول.</p></div>
+            <div class="bar" style="margin-top:14px"><button class="btn primary" type="submit" id="go">ولّد اللقطة</button></div>
+            <div class="msg" id="cmsg" role="status"></div>
+          </form></details>
+          <p class="vd-note" id="noproj">أنشئ فيديو أول عشان تضيف لقطات.</p>
+          <div class="vd-jobs" id="jobs" aria-live="polite"></div>
+        </section>
+      </div>
+      <details class="card pad vd-owner" id="ownerSetup" data-owner-only hidden>
+        <summary>حالة التجهيز (للمالكة فقط)</summary>
+        <p class="vd-note">هذي الأشياء لسا ناقصة عشان يشتغل الفيديو.</p>
+        <ul id="ownerList" class="vd-hint"></ul>
+      </details>
+    </main>
+  </div>
+</div>
+<script is:inline type="module" src="/assets/router.js"></script>
+</body>
+</html>

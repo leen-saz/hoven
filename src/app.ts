@@ -8,14 +8,23 @@ import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
 import { versionAssets } from './lib/assets';
 import { withWaiter } from './lib/usage';
+<<<<<<< well
+import { dispatchRefresh, dispatchWorkflow, hourlyTasks, type CronEnv, type HourlyTask } from './lib/cron';
+import { runWatchdog, type WatchdogEnv } from './lib/watchdog';
+=======
 import { dispatchRefresh, UPSTREAM_URL, type CronEnv } from './lib/cron';
+>>>>>>> hoven
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
 import { runSocial } from './modules/social/cron';
+import { runTranscribe } from './modules/transcribe/service';
+import { driveCampaigns } from './lib/campaign-cron';
 // Cloudflare Workflows: the class must be exported from the Worker entry
 export { JourneyRun } from './modules/journeys/workflow';
 
 type Bindings = Env & AuthEnv;
 const SOCIAL_CRON = '*/5 * * * *';
+// Two triggers only (Workers Free: 5 per account). The hourly one runs every periodic job that is due: src/lib/cron.ts hourlyTasks
+const HOURLY_CRON = '7 * * * *';
 
 // Requests produced by a gateway rewrite (department or creative copy) skip the gateway the second time.
 const REWRITTEN = new WeakSet<Request>();
@@ -45,9 +54,17 @@ app.use(async (c, next) => {
   if (d.rewrite) {
     const req = new Request(d.rewrite, c.req.raw);
     REWRITTEN.add(req);
-    return app.fetch(req, c.env, c.executionCtx);
+    const res = await app.fetch(req, c.env, c.executionCtx);
+    if (!d.cookie) return res;
+    const h = new Headers(res.headers); h.append('set-cookie', d.cookie);
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
   }
-  return next();
+  await next();
+  if (d.cookie) {
+    const h = new Headers(c.res.headers); h.append('set-cookie', d.cookie);
+    c.res = new Response(c.res.body, { status: c.res.status, statusText: c.res.statusText, headers: h });
+  }
+  return;
 });
 app.route('/', api);
 // Dashboards built by the pipeline, from R2 (phase 4.1)
@@ -65,9 +82,30 @@ app.use(pages());
 
 export default {
   fetch: app.fetch,
+<<<<<<< well
+  // Cloudflare Cron Triggers (production only): every 5 minutes the due social posts; hourly (minute 7) the data refresh on GitHub Actions,
+  // the data-age watchdog, and on their day the weekly backup and the monthly restore test. Each trigger is matched explicitly.
+  scheduled(event: ScheduledController, env: CronEnv & AuthEnv & WatchdogEnv, ctx: ExecutionContext) {
+    if (event.cron === SOCIAL_CRON) {
+      // Due social posts, one social-listening keyword that has not been fetched in a day, and the approved campaigns that are running (no page needed)
+      withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(Promise.allSettled([runSocial(env), runListening(env as ListenEnv), runTranscribe(env as Parameters<typeof runTranscribe>[0]), driveCampaigns(env as Parameters<typeof driveCampaigns>[0])]).then(rs => rs.forEach((r, i) => { if (r.status === 'rejected') console.error('cron: job failed', ['social', 'listening', 'transcribe', 'campaigns'][i], String(r.reason).slice(0, 200)); }))));
+      return;
+    }
+    if (event.cron !== HOURLY_CRON) { console.error('cron: unknown trigger', event.cron); return; }
+    const jobs: Record<HourlyTask, () => Promise<unknown>> = {
+      refresh: () => dispatchRefresh(env),
+      watchdog: () => runWatchdog(env),
+      backup: () => dispatchWorkflow(env, 'db-backup.yml'),
+      restore: () => dispatchWorkflow(env, 'db-restore-test.yml'),
+    };
+    const due = hourlyTasks(new Date(event.scheduledTime));
+    // One failing job must not stop the others (a broken watchdog must not skip the refresh)
+    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(Promise.allSettled(due.map(t => jobs[t]())).then(rs => rs.forEach((r, i) => { if (r.status === 'rejected') console.error('cron: job failed', due[i], String(r.reason).slice(0, 200)); }))));
+=======
   // Cloudflare Cron Triggers (production only): the hourly data refresh on GitHub Actions, and every 5 minutes the due social posts
   scheduled(event: ScheduledController, env: CronEnv & AuthEnv, ctx: ExecutionContext) {
     // Every 5 minutes: due social posts, then one social-listening keyword that has not been fetched in a day
     withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : Promise.all([dispatchRefresh(env), dispatchRefresh(env, fetch, UPSTREAM_URL)])));
+>>>>>>> hoven
   },
 };

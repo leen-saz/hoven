@@ -2,7 +2,11 @@
 """يسحب إعلانات تيك توك من Marketing API (Business API v1.3).
 
 الأسرار من البيئة فقط: TIKTOK_ACCESS_TOKEN و TIKTOK_ADVERTISER_IDS (مفصولة بفاصلة).
+<<<<<<< well
+حساب شركة ثانية مستبعد كما في merge.py ولا يُطلب أصلاً.
+=======
 الحسابات المستبعدة (EXCLUDED_ADVERTISER_IDS في merge.py) ما تنطلب أصلاً، وهوفن ما يستبعد شي.
+>>>>>>> hoven
 الصرف يُحوَّل للريال بنفس معامل الدولار المستخدم لميتا. أيام بلا أي رقم لا تُكتب.
 إذا غابت الأسرار أو فشل الطلب تُستخدم لقطة فرع tiktok-data، وإن كانت أقدم من البيانات
 المحفوظة تبقى المحفوظة. لا يُطبع التوكن.
@@ -11,8 +15,8 @@ import json, os, re, sys, time, urllib.parse
 from datetime import datetime, timedelta
 
 from tiktok.merge import (
-    EXCLUDED_ADVERTISER_IDS, GOAL, STATUS, is_spring_rose_account, is_spring_rose_ad,
-    tiktok_live, without_spring_rose,
+    GOAL, STATUS, is_excluded_account, is_excluded_ad,
+    tiktok_live, dest_for, without_excluded,
 )
 
 BASE = "https://business-api.tiktok.com/open_api/v1.3/"
@@ -34,6 +38,9 @@ AD_FIELDS = [
     "ad_id", "ad_name", "campaign_id", "campaign_name", "adgroup_id", "adgroup_name",
     "operation_status", "secondary_status", "tiktok_item_id", "ad_text", "advertiser_id",
 ]
+# Link / messaging fields that say where the ad opens. Optional: if the API rejects them the pull retries without.
+DEST_AD_FIELDS = ["landing_page_url", "deeplink"]
+DEST_GROUP_FIELDS = ["messaging_app_type"]
 REPORT_FILTER = [{"field_name": "ad_status", "filter_type": "IN", "filter_value": '["STATUS_ALL"]'}]
 
 
@@ -58,7 +65,7 @@ def parse_advertiser_ids(raw):
 def secrets_ready(env):
     env = env or {}
     token = str(env.get("TIKTOK_ACCESS_TOKEN") or "").strip()
-    ids = [i for i in parse_advertiser_ids(env.get("TIKTOK_ADVERTISER_IDS")) if not is_spring_rose_account(i, "")]
+    ids = [i for i in parse_advertiser_ids(env.get("TIKTOK_ADVERTISER_IDS")) if not is_excluded_account(i, "")]
     return bool(token and ids)
 
 
@@ -196,7 +203,16 @@ def _conversations(metrics):
     return int(round(total))
 
 
-def _describe(item, objectives, camp_on, group_on):
+def _get_optional(transport, token, path, params, extra):
+    """The pages with the optional destination fields; the plain fields if the API refuses them."""
+    try:
+        return list(_pages(transport, token, path, {**params, "fields": list(params["fields"]) + extra}))
+    except Exception as ex:  # noqa: BLE001 - destination fields are a bonus, never a reason to lose the pull
+        _log("tiktok: حقول الوجهة غير متاحة، نكمل بدونها — " + scrub(str(ex), token)[:120])
+        return list(_pages(transport, token, path, params))
+
+
+def _describe(item, objectives, camp_on, group_on, groups=None):
     ad = dict(item)
     cid = str(ad.get("campaign_id") or "")
     gid = str(ad.get("adgroup_id") or "")
@@ -211,7 +227,7 @@ def _describe(item, objectives, camp_on, group_on):
         word = "متوقف"
     item_id = ad.get("tiktok_item_id")
     link = f"https://www.tiktok.com/embed/v2/{item_id}" if item_id else None
-    return dict(
+    out = dict(
         platform="tiktok", family="tiktok",
         name=(ad.get("ad_name") or str(ad.get("ad_id") or "")).strip("‎ "),
         campaign=(ad.get("campaign_name") or "").strip(),
@@ -221,12 +237,16 @@ def _describe(item, objectives, camp_on, group_on):
         thumb=None, link=link,
         goal=GOAL.get(objectives.get(cid, ""), "other"),
     )
+    dest = dest_for(ad, (groups or {}).get(gid), out["goal"])
+    if dest:
+        out["dest"] = dest
+    return out
 
 
 def pull(env, start, end, transport, audience_due=False):
     """يسحب الإعلانات والصفوف داخل [start, end] فقط. يرمي عند الفشل ولا يرجّع أصفاراً."""
     token = str((env or {}).get("TIKTOK_ACCESS_TOKEN") or "").strip()
-    ids = [i for i in parse_advertiser_ids((env or {}).get("TIKTOK_ADVERTISER_IDS")) if not is_spring_rose_account(i, "")]
+    ids = [i for i in parse_advertiser_ids((env or {}).get("TIKTOK_ADVERTISER_IDS")) if not is_excluded_account(i, "")]
     if not token or not ids:
         raise RuntimeError("أسرار تيك توك غير مكتملة")
     start_s, end_s = _day(start), _day(end)
@@ -235,14 +255,23 @@ def pull(env, start, end, transport, audience_due=False):
     for account in info.get("list") or []:
         aid = str(account.get("advertiser_id") or "")
         name = account.get("name") or account.get("advertiser_name") or ""
+<<<<<<< well
+        if is_excluded_account(aid, name):
+            _log("tiktok: تخطي حساب مستبعد (حساب الشركة الثانية)")
+=======
         if is_spring_rose_account(aid, name):
             _log("tiktok: تخطي حساب مستبعد")
+>>>>>>> hoven
             continue
         if not aid:
             continue
         accounts.append(account)
     if not accounts:
+<<<<<<< well
+        raise RuntimeError("لا يوجد حساب تيك توك مسموح بعد استبعاد حساب الشركة الثانية")
+=======
         raise RuntimeError("لا يوجد حساب تيك توك مسموح بعد الاستبعاد")
+>>>>>>> hoven
 
     ads, rows, names = {}, [], {}
     all_objectives = {}
@@ -261,28 +290,29 @@ def pull(env, start, end, transport, audience_due=False):
             "filtering": {"primary_status": "STATUS_ALL"},
             "fields": ["campaign_id", "objective_type", "operation_status", "campaign_name"],
         }))
-        groups = list(_pages(transport, token, "adgroup/get/", {
+        groups = _get_optional(transport, token, "adgroup/get/", {
             "advertiser_id": aid,
             "filtering": {"primary_status": "STATUS_ALL"},
             "fields": ["adgroup_id", "operation_status"],
-        }))
-        ad_items = list(_pages(transport, token, "ad/get/", {
+        }, DEST_GROUP_FIELDS)
+        ad_items = _get_optional(transport, token, "ad/get/", {
             "advertiser_id": aid,
             "filtering": {"primary_status": "STATUS_ALL"},
             "fields": AD_FIELDS,
-        }))
+        }, DEST_AD_FIELDS)
         objectives = {str(c.get("campaign_id")): c.get("objective_type") or "" for c in campaigns}
         all_objectives.update(objectives)
         camp_on = {str(c.get("campaign_id")): c.get("operation_status") for c in campaigns}
         group_on = {str(g.get("adgroup_id")): g.get("operation_status") for g in groups}
+        group_by = {str(g.get("adgroup_id")): g for g in groups}
         for item in ad_items:
-            if is_spring_rose_ad(item) or is_spring_rose_account(item.get("advertiser_id"), item.get("advertiser_name")):
+            if is_excluded_ad(item) or is_excluded_account(item.get("advertiser_id"), item.get("advertiser_name")):
                 skipped.add(str(item.get("ad_id") or ""))
                 continue
             ad_id = str(item.get("ad_id") or "")
             if not ad_id:
                 continue
-            ads["t" + ad_id] = _describe(item, objectives, camp_on, group_on)
+            ads["t" + ad_id] = _describe(item, objectives, camp_on, group_on, group_by)
 
         for win_start, win_end in _windows(start, end, 30):
             report_params = {
@@ -314,7 +344,7 @@ def pull(env, start, end, transport, audience_due=False):
                     continue
                 if day < start_s or day > end_s:
                     continue
-                if is_spring_rose_ad(met):
+                if is_excluded_ad(met):
                     skipped.add(ad_id)
                     ads.pop("t" + ad_id, None)
                     continue
@@ -333,7 +363,7 @@ def pull(env, start, end, transport, audience_due=False):
 
     for ad_id, meta in names.items():
         key = "t" + ad_id
-        if key in ads or ad_id in skipped or is_spring_rose_ad(meta):
+        if key in ads or ad_id in skipped or is_excluded_ad(meta):
             continue
         cid = str(meta.get("campaign_id") or "")
         ads[key] = dict(
@@ -364,7 +394,7 @@ def pull(env, start, end, transport, audience_due=False):
         except Exception as ex:
             _log("tiktok: تفاصيل المشاهدين ما انسحبت — " + scrub(ex, token)[:160])
     # إعلان بلا تفاصيل يبقى ليُكمَل لاحقاً باسم «إعلان محذوف» إن لم يصل اسمه.
-    cleaned = without_spring_rose({"ads": ads, "rows": rows})
+    cleaned = without_excluded({"ads": ads, "rows": rows})
     return cleaned["ads"], cleaned["rows"]
 
 
@@ -373,7 +403,7 @@ def _read_branch(path):
         return None, ""
     try:
         with open(path, encoding="utf-8") as handle:
-            blob = without_spring_rose(json.load(handle))
+            blob = without_excluded(json.load(handle))
     except Exception as ex:
         return None, scrub(ex)
     if not isinstance(blob, dict):
@@ -472,7 +502,7 @@ def assemble(prev, fresh_ads, fresh_rows, recent, start_s, today_s, carry, branc
     for row in older + fresh:
         combined[(row[0], row[1])] = row
     rows = [combined[k] for k in sorted(combined)]
-    cleaned = without_spring_rose({"ads": ads, "rows": rows})
+    cleaned = without_excluded({"ads": ads, "rows": rows})
     return cleaned["ads"], cleaned["rows"]
 
 

@@ -3,6 +3,8 @@
 // Without ANTHROPIC_API_KEY the button says it is off; the findings themselves never need it.
 import Anthropic from '@anthropic-ai/sdk';
 import type { Finding } from './debugger';
+import { generate, withoutFallback, type LlmEnv } from '../../lib/llm';
+import type { UsageCtx } from '../../lib/usage';
 
 export interface ClaudeEnv { ANTHROPIC_API_KEY?: string; ANTHROPIC_MODEL?: string }
 export const CLAUDE_MODEL = 'claude-sonnet-5-5'; // Leen: Sonnet (half the price of Opus); ANTHROPIC_MODEL overrides
@@ -22,7 +24,14 @@ ${Object.entries(platforms).map(([p, v]) => `- ${p} | ${v.spend7} | ${v.leads7} 
 بحد أقصى 7 خطوات مرقمة. بدون مقدمة.`;
 }
 
-export async function explain(e: ClaudeEnv, findings: Finding[], platforms: Platforms, f?: typeof fetch): Promise<{ text: string; model: string }> {
+// The same plan on OpenRouter, when the owner routed the Debugger there (src/lib/ai-routes.ts). Workers AI is not a fallback here:
+// a failure throws, and the caller goes back to Claude.
+export async function explainViaOpenRouter(e: LlmEnv, findings: Finding[], platforms: Platforms, ctx: UsageCtx, f: typeof fetch = fetch): Promise<{ text: string; model: string }> {
+  const out = await generate(withoutFallback(e), 'debugger', { messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: explainPrompt(findings, platforms) }], max_tokens: 3000 }, f, ctx);
+  return { text: out.response.slice(0, 6000), model: out.model };
+}
+
+export async function explain(e: ClaudeEnv, findings: Finding[], platforms: Platforms, f?: typeof fetch): Promise<{ text: string; model: string; usage: { in: number; out: number } }> {
   if (!e.ANTHROPIC_API_KEY) throw new Error('no_key');
   const client = new Anthropic({ apiKey: e.ANTHROPIC_API_KEY, maxRetries: 1, ...(f ? { fetch: f } : {}) });
   const model = (e.ANTHROPIC_MODEL || '').replace(/[^a-z0-9.\-_]/gi, '') || CLAUDE_MODEL;
@@ -35,5 +44,5 @@ export async function explain(e: ClaudeEnv, findings: Finding[], platforms: Plat
   if (r.stop_reason === 'refusal') throw new Error('refused');
   const text = r.content.flatMap(b => (b.type === 'text' ? [b.text] : [])).join('').trim().slice(0, 6000);
   if (!text) throw new Error('empty');
-  return { text, model: r.model };
+  return { text, model: r.model, usage: { in: r.usage?.input_tokens ?? 0, out: r.usage?.output_tokens ?? 0 } };
 }
