@@ -77,6 +77,7 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `library_items` | 020 | shared library (copywriter and the other tabs) | yes (FK) | id, module, kind, title, content, platform, service, compliance_result, review_status, reviewed_by, approved_by, created_by, created_by_id | Forever; the owner edits and approves. Deleting is not offered yet. |
 | `library_favorites` | 020 | shared library | yes (FK) | item_id + user_id PK, created_at | Goes with its item (cascade). |
 | `web_vitals` | 022 | vitals beacon (`/api/vitals/report`) → data-health «الأداء» card | no (global: page path and timings only, no user, no company) | id, at, path (ids collapsed to `:id`), lcp, inp, cls, ttfb, mobile | 7 days: rows older than that are deleted when the owner opens the card. |
+| `buyer_settings` | 031 | media buyer (`/api/buyer/*`) | yes (PK) | company_id, goals (per platform: targetCpa, targetRoas, dailyBudget, stopSpend, maxStepPct), rules (Arabic lines), updated_by | One row per company, overwritten on save. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes
