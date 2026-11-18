@@ -1,7 +1,12 @@
 // /api/auth/*: login, logout, refresh, forgot, reset. Port of web/lib/routes/auth/*.js.
 import {
+<<<<<<< well
+  env, sb, loadProfile, sessionFor, sign, renew, verify, readCookie, setCookie, clearCookie, safePath, home, audit, html, json,
+  sameOrigin, readJson, handle, keyKind, auditEmail, SESSION, SESSION_HOURS, passwordError, type Profile,
+=======
   env, sb, loadProfile, sessionFor, sign, verify, readCookie, setCookie, clearCookie, safePath, home, audit, html, json,
   sameOrigin, readJson, handle, keyKind, auditEmail, SESSION, SESSION_HOURS, PASSWORD_MIN, type Profile, type Cfg,
+>>>>>>> hoven
 } from '../../lib/auth';
 import { signPending, readPending, open, checkTotp, hashCode, MAX_FAILS, LOCK_MS } from '../../lib/totp';
 
@@ -100,13 +105,11 @@ export const refresh = { GET: handle(async (request, e) => {
   const s = await verify(readCookie(request, SESSION), cfg.secret);
   const out = (to: string, cookie: string) => new Response(null, { status: 302, headers: { location: to, 'set-cookie': cookie, 'cache-control': 'no-store' } });
   if (!s) return out('/login/', clearCookie());
-  const profile = await loadProfile(cfg, s.uid);
-  if (!profile || profile.active === false) return out('/login/', clearCookie());
-  const fresh = sessionFor(profile, cfg);
-  fresh.exp = s.exp; // renewing never extends the session
-  const left = Math.max(0, Math.floor((s.exp - Date.now()) / 1000));
-  if (!left) return html(401, 'انتهت الجلسة.');
-  return out(safePath(url.searchParams.get('next')) || home(), setCookie(await sign(fresh, cfg.secret), left));
+  const r = await renew(cfg, s);
+  if (r.kind === 'login') return out('/login/', clearCookie());
+  if (r.kind === 'expired') return html(401, 'انتهت الجلسة.');
+  if (r.kind === 'error') return new Response(null, { status: 302, headers: { location: safePath(url.searchParams.get('next')) || home(), 'cache-control': 'no-store' } }); // hiccup: keep the cookie
+  return out(safePath(url.searchParams.get('next')) || home(), r.cookie);
 }) };
 
 // Sends a reset link. Same reply every time so nobody learns whether an email is registered.
@@ -134,7 +137,8 @@ export const reset = { POST: handle(async (request, e) => {
   const token = String(body.access_token || '');
   const password = String(body.password || '');
   if (!token) return json(400, { error: 'الرابط ناقص. اطلب رابط جديد.' });
-  if (password.length < PASSWORD_MIN) return json(400, { error: `الباسوورد لازم ${PASSWORD_MIN} أحرف أو أكثر` });
+  const bad = passwordError(password);
+  if (bad) return json(400, { error: bad });
   const r = await sb<{ id?: string; email?: string }>(cfg, '/auth/v1/user', { method: 'PUT', token, body: { password } });
   if (!r.ok) return json(400, { error: 'الرابط انتهى أو استُخدم. اطلب رابط جديد.' });
   await audit(cfg, { id: r.data?.id, email: r.data?.email }, 'password_set');

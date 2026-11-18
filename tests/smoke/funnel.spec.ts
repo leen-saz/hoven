@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { login, addSession } from './helpers';
+import { settle } from './settle';
 
 type Row = [string, string, number, number, number, number, number];
 const fixture = JSON.parse(readFileSync(join(import.meta.dirname, '../parity/fixtures/ads.json'), 'utf8')) as { rows: Row[]; crm?: unknown };
@@ -37,8 +38,10 @@ test('the funnel draws four stages and three links, with a verdict, a line per s
   await expect(stages(page)).toHaveCount(7);
   for (const n of ['الوعي', 'الاهتمام', 'التحويل', 'البيع']) await expect(page.locator('svg[role="group"]')).toContainText(n);
   await expect(verdict(page)).not.toBeEmpty();
-  // One line per step: cost per 1,000 impressions, click rate, click to lead, lead to closing, cost per lead
-  await expect(page.locator('section[aria-labelledby="analysis-h"] li')).toHaveCount(5);
+  // One line per rule (click rate, click to lead, lead to closing, cost per lead, cost per closing, return) and the end to end
+  await expect(page.locator('section[aria-labelledby="analysis-h"] li')).toHaveCount(7);
+  await expect(page.locator('section[aria-labelledby="analysis-h"]')).toContainText('مقابل هدف');
+  await expect(page.locator('section[aria-labelledby="analysis-h"]')).toContainText('كل 100 ألف ظهور');
   await expect(page.locator('section[aria-labelledby="analysis-h"] li').first()).toContainText('المسؤول');
   await expect(page.locator('#analysis-h')).toHaveText('التحليل');
   await page.getByText('الأرقام كجدول').click();
@@ -47,7 +50,7 @@ test('the funnel draws four stages and three links, with a verdict, a line per s
 
 test('a platform changes the shape and the numbers; focus shows a stage\'s details', async ({ page, request }) => {
   const band = await open(page, request, withCrm());
-  await page.waitForTimeout(900);
+  await settle(page);   // the opening animation of the band has finished (no fixed sleep)
   const before = await band.getAttribute('d');
   await page.locator('[aria-label="المنصة"] button', { hasText: 'فيسبوك' }).click();
   await expect.poll(() => band.getAttribute('d')).not.toBe(before);
@@ -60,6 +63,7 @@ test('reduced motion: the new shape lands at once', async ({ page, request }) =>
   const band = await open(page, request, withCrm());
   await page.locator('[aria-label="المنصة"] button', { hasText: 'سناب شات' }).click();
   const first = await band.getAttribute('d');
+  // a negative check on purpose: with reduced motion the shape must not keep moving after it landed, so a short fixed look is the test itself
   await page.waitForTimeout(400);
   expect(await band.getAttribute('d')).toBe(first);
 });
@@ -69,17 +73,59 @@ test('no CRM: the sale stage shows —, the link says «غير مربوط», and
   await expect(page.locator('svg[role="group"] g[role="button"][aria-label^="البيع"]')).toHaveAttribute('aria-label', /—/);
   await expect(page.locator('svg[role="group"] g[role="button"][aria-label^="من طلب إلى إقفالة"]')).toHaveAttribute('aria-label', /غير مربوط/);
   await expect(page.locator('svg[role="group"]')).not.toContainText('0.00%');
-  await expect(page.getByText('مرحلة البيع غير مربوطة')).toBeVisible();
+  await expect(page.getByText('الربط بالإعلانات ناقص')).toBeVisible();
 });
 
-test('paid closings with none tied to an ad: «غير مربوط», no 0% and no bottleneck on the sale link', async ({ page, request }) => {
+test('paid closings with none tied to an ad: sales are still judged on the whole CRM; only the ads\' share is «غير مربوط»', async ({ page, request }) => {
   const d = withCrm() as { crm: { rows: unknown[][]; paid_all: unknown[] } };
   d.crm.rows = d.crm.rows.map(r => [r[0], r[1], '', false, 0]);
   await open(page, request, d);
+<<<<<<< well
+  const sale = page.locator('svg[role="group"] g[role="button"][aria-label^="من ليد إلى إقفالة"]');
+  await expect(sale).not.toHaveAttribute('aria-label', /غير مربوط/);
+  await expect(sale).toHaveAttribute('aria-label', /%/);
+  await expect(page.locator('section[aria-labelledby="analysis-h"] li', { hasText: 'من ليد إلى إقفالة' })).toContainText('مقابل هدف 8%');
+  await expect(page.getByText('الربط بالإعلانات ناقص')).toBeVisible();
+  // No green «تمام» while a step is under target
+  await expect(page.locator('section[aria-labelledby="verdict-h"]')).toHaveAttribute('data-level', /^(watch|problem|disaster)$/);
+});
+
+test('the targets table: «افتراضي — عدّله», and an edit re-judges at once and stays in this browser', async ({ page, request }) => {
+  await open(page, request, withCrm());
+  await page.getByText('الأهداف اللي ينحكم عليها').click();
+  await expect(page.getByText('افتراضي — عدّله').first()).toBeVisible();
+  // Targets anyone meets: every step on target → «لا توجد مشكلة»
+  for (const [i, v] of [[0, '0.01'], [1, '0.01'], [2, '0.01'], [3, '100000'], [4, '100'], [5, '0.01']] as const) {
+    await page.locator('input[type="number"]').nth(i).fill(v);
+  }
+  await expect(verdict(page)).toHaveText('لا توجد مشكلة');
+  await expect(page.getByText('معدّل منك').first()).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('well-ads-funnel-targets'))).toContain('"ctr":0.01');
+  await page.getByRole('button', { name: 'رجّع الافتراضي' }).click();
+  await expect(verdict(page)).not.toHaveText('لا توجد مشكلة');
+});
+
+test('the data span card shows only when the owner-only endpoint answers, with days and counts', async ({ page, request }) => {
+  await page.route('**/api/overview/span*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    spend: { first: '2025-03-01', last: '2026-10-21', days: 600 }, channels: [{ channel: 'meta', first: '2025-03-01', last: '2026-10-21', days: 600, mmmReady: false }],
+    crm: { first: '2025-06-01', last: '2026-10-20', days: 210, closings: 480 }, mmm: { needDays: 730, ready: false } }) }));
+  await open(page, request, withCrm());
+  await expect(page.getByText('مدى البيانات')).toBeVisible();
+  await expect(page.getByText('ناقص 130 يوم')).toBeVisible();
+  await expect(page.getByText('480 إقفالة على 210 يوم', { exact: false })).toBeVisible();
+});
+
+test('no data span card when the endpoint refuses (not the owner)', async ({ page, request }) => {
+  await page.route('**/api/overview/span*', r => r.fulfill({ status: 403, contentType: 'application/json', body: '{}' }));
+  await open(page, request, withCrm());
+  await expect(verdict(page)).not.toBeEmpty();
+  await expect(page.getByText('مدى البيانات')).toHaveCount(0);
+=======
   const sale = page.locator('svg[role="group"] g[role="button"][aria-label^="من طلب إلى إقفالة"]');
   await expect(sale).toHaveAttribute('aria-label', /غير مربوط/);
   await expect(sale).not.toHaveAttribute('aria-label', /عنق الزجاجة/);
   await expect(page.locator('section[aria-labelledby="analysis-h"]')).toContainText('مو صفر');
+>>>>>>> hoven
 });
 
 test('English: every word in the journey card is English and the band reads left to right', async ({ page, request }) => {

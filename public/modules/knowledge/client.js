@@ -41,24 +41,50 @@ export default async function mount() {
     }));
   }
 
+  // The form's lists come from the first list that arrives, however late: a failed or superseded first load must not leave them empty
+  let filled = false;
+  function fill() {
+    if (filled || !Object.keys(S.kinds).length) return;
+    filled = true;
+    $('#kind').innerHTML = Object.entries(S.kinds).map(([k, v]) => `<option value="${k}">${esc(v.ar)}</option>`).join('');
+    $('#mods').innerHTML = S.modules.map(m => `<label><input type="checkbox" value="${m}"> ${esc(MOD[m] || m)}</label>`).join('');
+    $('#pv').innerHTML = S.modules.map(m => `<option value="${m}">${esc(MOD[m] || m)}</option>`).join('');
+    setKind();
+    if (!S.canEdit) $('#f').hidden = $('#ftitle').hidden = true;
+  }
+  // Only the newest request may draw: an older answer (a failure, or the first load finishing after the tab was reopened)
+  // must not replace what a newer request already put on the page, such as a retry that worked.
+  let loadSeq = 0;
   async function load() {
-    try { S = await api('/api/knowledge/list'); draw(); }
-    catch (err) { failure($('#list'), err, load); }
+    const mine = ++loadSeq;
+    try { const r = await api('/api/knowledge/list'); if (mine !== loadSeq) return; S = r; draw(); fill(); }
+    catch (err) { if (mine === loadSeq) failure($('#list'), err, load); }
   }
 
   // Training chat: the agent asks, the trainer answers; each answer becomes an entry (editable under "كل المعرفة")
   const skipped = [];
   let Q = null;
+  let chatSeq = 0;
   async function chat() {
-    try {
-      const r = await api(`/api/knowledge/train?skip=${encodeURIComponent(skipped.join(','))}`);
+    const mine = ++chatSeq, qs = `skip=${encodeURIComponent(skipped.join(','))}`;
+    const draw = (r, waiting) => {
       Q = r.next;
-      $('#prog').textContent = `الأسئلة الأساسية: ${r.covered} من ${r.total}` + (Q ? '' : ' · ما عندي أسئلة ثانية الحين');
+      $('#prog').textContent = `الأسئلة الأساسية: ${r.covered} من ${r.total}` + (Q || waiting ? '' : ' · ما عندي أسئلة ثانية الحين');
       $('#chat').innerHTML = r.history.map(h => `<p class="kn-q" dir="auto">${esc(h.question)}</p><p class="kn-a" dir="auto">${esc(h.answer)}${h.active ? '' : '<small>ينتظر اعتماد المدير</small>'}</p>`).join('')
-        + (Q ? `<p class="kn-q" dir="auto"><b>${esc(Q.q)}</b></p>` : `<p class="kn-q">${r.history.length ? 'المعرفة مكتملة الحين. أي شي يتغير، عدّله من «كل المعرفة».' : 'ما فيه أسئلة.'}</p>`);
+        + (Q ? `<p class="kn-q" dir="auto"><b>${esc(Q.q)}</b></p>` : waiting ? '<div class="sk" style="height:44px;max-width:420px" aria-hidden="true"></div><p class="muted">يجهّز السؤال التالي…</p>'
+          : `<p class="kn-q">${r.history.length ? 'المعرفة مكتملة الحين. أي شي يتغير، عدّله من «كل المعرفة».' : 'ما فيه أسئلة.'}</p>`);
       $('#tf').hidden = !Q || !r.canEdit;
       if (Q && r.canEdit) $('#ans').focus();
-    } catch (err) { failure($('#chat'), err, chat); }
+    };
+    try {
+      // The answers so far first; the question the AI writes (several seconds) comes after, so the page is never an empty «loading»
+      const r = await api(`/api/knowledge/train?${qs}&ai=0`);
+      if (mine !== chatSeq) return;
+      draw(r, r.later);
+      if (!r.later) return;
+      try { const r2 = await api(`/api/knowledge/train?${qs}`); if (mine === chatSeq) draw(r2, false); }
+      catch { if (mine === chatSeq) draw(r, false); }   // the history stays; only the new question is missing
+    } catch (err) { if (mine === chatSeq) failure($('#chat'), err, chat); }
   }
   function tab(t) {
     $$('[data-tab]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.tab === t)));
@@ -112,7 +138,12 @@ export default async function mount() {
   // Images are downscaled in the browser first (logos keep PNG transparency); fonts, PDFs and SVG go as they are
   async function prepared(file, kind) {
     if (!/^image\/(png|jpeg|webp)$/.test(file.type) || !['logo', 'reference'].includes(kind)) return file;
-    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(file); });
+    const img = await new Promise((ok, no) => {
+      const fr = new FileReader();
+      fr.onerror = () => no(new Error('ما قدرت أقرا الصورة. جرّب ملف ثاني (PNG أو JPG).'));
+      fr.onload = () => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('ما قدرت أقرا الصورة. جرّب ملف ثاني (PNG أو JPG).')); i.src = fr.result; };
+      fr.readAsDataURL(file);
+    });
     const max = kind === 'logo' ? 512 : 1024, s = Math.min(1, max / Math.max(img.width, img.height));
     const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * s)); c.height = Math.max(1, Math.round(img.height * s));
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
@@ -139,7 +170,9 @@ export default async function mount() {
     try { const r = await api('/api/knowledge/brandcolors', { method: 'POST', body: { colors: $('#colors').value } }); say($('#bmsg'), r.pending ? 'انحفظت، وتنتظر اعتماد المدير.' : 'انحفظت.', true); $('#colors').value = ''; await brandLoad(); }
     catch (err) { say($('#bmsg'), err.message); }
   });
-  $$('[data-tab]').forEach(b => b.addEventListener('click', () => tab(b.dataset.tab)));
+  // A tab picked before the first load finished is the user's choice: the start-up must not switch back to the chat
+  let picked = false;
+  $$('[data-tab]').forEach(b => b.addEventListener('click', () => { picked = true; tab(b.dataset.tab); }));
   $('#tf').addEventListener('submit', async e => {
     e.preventDefault(); if (!Q) return; const btn = $('#send'); busy(btn, true);
     try {
@@ -153,12 +186,8 @@ export default async function mount() {
 
   await shell({ active: 'knowledge', title: 'المعرفة' });
   await load();
-  tab('train');
-  $('#kind').innerHTML = Object.entries(S.kinds).map(([k, v]) => `<option value="${k}">${esc(v.ar)}</option>`).join('');
-  $('#mods').innerHTML = S.modules.map(m => `<label><input type="checkbox" value="${m}"> ${esc(MOD[m] || m)}</label>`).join('');
-  $('#pv').innerHTML = S.modules.map(m => `<option value="${m}">${esc(MOD[m] || m)}</option>`).join('');
-  setKind();
-  if (!S.canEdit) $('#f').hidden = $('#ftitle').hidden = true;
+  if (!picked) tab('train');
+  fill();
 
   $('#kind').addEventListener('change', setKind);
   $('#cancel').addEventListener('click', reset);

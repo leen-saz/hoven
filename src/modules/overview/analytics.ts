@@ -1,7 +1,7 @@
 // The rest of the analytics overview page, for the overview tab: each platform's share, the month's pace and forecast,
 // cost per lead by weekday, and departments. Pure functions over /dash.json, same rules as pipeline/template.html
 // (renderBI, renderPace, renderDeptMini). rows = [key, day, spend, impr, clicks, leads, conv]
-import { type Ad, type Dash, DEP_AR, DEP_EN, HIDDEN, addDays, family, holes, platformName } from './numbers';
+import { type Ad, type Dash, DEP_AR, DEP_EN, HIDDEN, addDays, countsAsLead, family, holes, platformName } from './numbers';
 import { type Lang, T, pageLang, pick } from './lang';
 
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
@@ -40,7 +40,7 @@ export interface Heat { platform: string; cpl: (number | null)[] }
 export function heat(d: Dash, from: string, to: string): { rows: Heat[]; lo: number; hi: number } {
   const by = new Map<string, { s: number; l: number }[]>();
   for (const x of rows(d, from, to)) {
-    if (x.ad.goal !== 'lead') continue;
+    if (!countsAsLead(x.ad)) continue;
     const w = new Date(x.day + 'T00:00:00Z').getUTCDay();
     const days = by.get(x.ad.platform) ?? Array.from({ length: 7 }, () => ({ s: 0, l: 0 }));
     days[w]!.s += x.spend; days[w]!.l += x.leads;
@@ -104,7 +104,7 @@ export function depts(d: Dash, from: string, to: string): Dept[] {
   for (const x of rows(d, from, to)) {
     const k = x.ad.dept || 'brand', o = by.get(k) ?? { spend: 0, leads: 0, ls: 0, ln: 0 };
     o.spend += x.spend; o.leads += x.leads;
-    if (x.ad.goal === 'lead') { o.ls += x.spend; o.ln += x.leads; }
+    if (countsAsLead(x.ad)) { o.ls += x.spend; o.ln += x.leads; }
     by.set(k, o);
   }
   return keys.map(k => { const o = by.get(k) ?? { spend: 0, leads: 0, ls: 0, ln: 0 }; return { key: k, name: (pageLang() === 'en' ? DEP_EN[k] : undefined) ?? names[k]!.ar ?? DEP_AR[k] ?? k, spend: o.spend, leads: o.leads, cpl: o.ln ? o.ls / o.ln : null }; });
@@ -122,6 +122,11 @@ export interface Outcome {
   // The CRM as a whole in the period, whatever the platform filter: every paid closing, and those tied to an ad.
   // A platform's 0 closings only means something when the CRM ties closings to ads at all.
   closingsAll: number; bookedAll: number;
+  // Paid closings in the period that no ad got (the CRM total minus the ad-linked ones): shown beside the ad-linked count
+  closingsUnattributed: number;
+  // Lead to closing across the whole CRM: every paid closing ÷ the ads' leads and chats. Judged even when the closings
+  // aren't tied to their ads (only the per-ad split is «غير مربوط» then). null with a platform filter: the CRM can't split it.
+  closeRateAll: number | null;
 }
 type CrmData = { rows?: unknown[][]; paid_all?: unknown[][] };
 const ratio = (a: number, b: number): number | null => (b ? a / b : null);
@@ -134,7 +139,7 @@ export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead', p
     if (day < from || day > to || !d.ads?.[String(r[0])] || (plat && d.ads[String(r[0])]!.platform !== plat)) continue;
     const s = num(r[2]), l = num(r[5]);
     spend += s; impr += num(r[3]); clicks += num(r[4]); leads += l; conv += num(r[6]);
-    if (d.ads[String(r[0])]!.goal === 'lead') { ls += s; ln += l; }
+    if (countsAsLead(d.ads[String(r[0])]!)) { ls += s; ln += l; }
   }
   const crmData = (d as { crm?: CrmData }).crm;
   let crmLeads = 0, booked = 0, value = 0, closings = 0, paid = 0, bookedAll = 0, closingsAll = 0;
@@ -155,7 +160,8 @@ export function outcome(d: Dash, from: string, to: string, by: CrmBy = 'lead', p
     spend, impr, clicks, leads, conv, crm: !plat && !!crmData?.paid_all, crmLinked: !!crmData, crmLeads, booked, value, closings, paid,
     cpm: impr ? (1000 * spend) / impr : null, cpc: ratio(spend, clicks), ctr: impr ? (100 * clicks) / impr : null, cpl: ratio(ls, ln),
     clickToResult: clicks ? (100 * (leads + conv)) / clicks : null, closeRate: crmLeads ? (100 * booked) / crmLeads : null,
-    roas: spend && value ? value / spend : null, mer: ratio(paid, spend), cac: ratio(spend, closings), closingsAll, bookedAll,
+    roas: spend && value ? value / spend : null, mer: ratio(paid, spend), cac: ratio(spend, closings), closingsAll, bookedAll, closingsUnattributed: Math.max(0, closingsAll - bookedAll),
+    closeRateAll: !plat && crmData?.paid_all && leads + conv ? (100 * closings) / (leads + conv) : null,
   };
 }
 
@@ -174,6 +180,9 @@ export const NO_CRM_EN = "The sale stage is empty because the CRM numbers did no
 
 export const UNLINKED = 'غير مربوط';
 export const UNLINKED_EN = 'Not linked';
+// The CRM is connected but has no paid closing in the period: nothing to divide by, not a missing link
+export const NO_CLOSINGS = 'لا توجد إقفالات';
+export const NO_CLOSINGS_EN = 'No closings';
 // The ad-to-sale step can't be judged: no CRM, too few leads tied to an ad, or paid closings in the CRM with none tied to
 // an ad (counted across all platforms, so a platform filter can't turn missing attribution into a 0% close rate).
 // Then the step is «غير مربوط», never 0% and never the bottleneck.
@@ -189,10 +198,15 @@ export function journey(a: Outcome, l: Lang = 'ar'): { stages: JStage[]; noCrm: 
     ({ label, key: on ? key : null, now: on ? (a[key] as number | null) : null, fmt, lowerIsBetter });
   const linked = a.crmLinked, tied = !unattributed(a);
   // Counted only when the closings are tied to their ads; else «غير مربوط», no number and no change
+  const none = linked && a.crm && a.closingsAll === 0;
   const ad = (label: string, key: keyof Outcome, fmt: Fmt, lowerIsBetter = false): JStat =>
-    (tied ? st(label, key, fmt, lowerIsBetter) : { label, key: null, now: null, fmt, lowerIsBetter, missing: t(UNLINKED, UNLINKED_EN) });
+    none ? { label, key: null, now: null, fmt, lowerIsBetter, missing: t(NO_CLOSINGS, NO_CLOSINGS_EN) } : (tied ? st(label, key, fmt, lowerIsBetter) : { label, key: null, now: null, fmt, lowerIsBetter, missing: t(UNLINKED, UNLINKED_EN) });
   const cpm = st(t('تكلفة الألف ظهور', 'Cost per 1,000 impressions'), 'cpm', 'sar', true), cpc = st(t('تكلفة النقرة', 'Cost per click'), 'cpc', 'sar', true);
+<<<<<<< well
+  const cpl = st(t('تكلفة الطلب', 'Cost per lead'), 'cpl', 'sar', true), cac = a.crm && none ? { label: t('تكلفة العميل', 'Cost per customer'), key: null, now: null, fmt: 'sar' as Fmt, lowerIsBetter: true, missing: t(NO_CLOSINGS, NO_CLOSINGS_EN) } : st(t('تكلفة العميل', 'Cost per customer'), 'cac', 'sar', true, linked);
+=======
   const cpl = st(t('تكلفة الطلب', 'Cost per lead'), 'cpl', 'sar', true), cac = st(t('تكلفة العميل', 'Cost per customer'), 'cac', 'sar', true, linked);
+>>>>>>> hoven
   // The sales amount: every paid closing in the CRM (all platforms), or this platform's ad-linked ones. When the closings
   // aren't tied to ads it is the CRM's total, said so, and the ads' share is «غير مربوط» rather than 0.
   const amount = st(a.crm && !tied ? t('إجمالي المدفوع (CRM)', 'Total paid (CRM)') : t('مبلغ المبيعات', 'Sales amount'), 'paid', 'sar', false, linked);
@@ -207,8 +221,14 @@ export function journey(a: Outcome, l: Lang = 'ar'): { stages: JStage[]; noCrm: 
       // Same as the main dashboard: every paid closing in the CRM, or the ad-linked ones when that list is missing
       main: st(t('إقفالات مدفوعة', 'Paid closings'), a.crm ? 'closings' : 'booked', 'qty', false, linked),
       sub: [amount, ...(a.crm ? [ad(t('المبيعات من الإعلانات', 'Sales from ads'), 'value', 'sar')] : []), ad(t('إقفالات من الإعلانات', 'Closings from ads'), 'booked', 'qty'),
+        ...(a.crm && a.closingsUnattributed > 0 ? [st(t('إقفالات غير منسوبة لإعلان', 'Closings not tied to an ad'), 'closingsUnattributed', 'qty')] : []),
         ad(t('العائد من الإعلانات', 'Return from ads'), 'roas', 'x'), cac],
+<<<<<<< well
+      // CRM-wide when the CRM has its paid list (judged even when not tied to ads); else the ad-linked rate or «غير مربوط»
+      rate: a.closeRateAll != null ? st(t('من طلب إلى إقفالة', 'Lead to closing'), 'closeRateAll', 'pct') : ad(t('من طلب إلى إقفالة', 'Lead to closing'), 'closeRate', 'pct'), cost: cac, amount },
+=======
       rate: ad(t('من طلب إلى إقفالة', 'Lead to closing'), 'closeRate', 'pct'), cost: cac, amount },
+>>>>>>> hoven
   ];
   return { stages: raw.map((s, i) => ({ ...s, width: FUNNEL_WIDTHS[i]!, colour: FUNNEL_COLOURS[i]! })), noCrm: linked ? null : t(NO_CRM, NO_CRM_EN) };
 }
@@ -229,7 +249,7 @@ const cplOf = (o: Sum) => (o.ln ? o.ls / o.ln : null);
 function sums(d: Dash, from: string, to: string) {
   const tot = blank(), plat = new Map<string, Sum>(), dept = new Map<string, Sum>(), idea = new Map<string, Sum & { name: string }>(), day = new Map<string, number>(), ads = new Set<string>();
   for (const x of rows(d, from, to)) {
-    const lead = x.ad.goal === 'lead';
+    const lead = countsAsLead(x.ad);
     for (const o of [tot, plat.get(x.ad.platform) ?? (plat.set(x.ad.platform, blank()), plat.get(x.ad.platform)!), dept.get(x.ad.dept || 'brand') ?? (dept.set(x.ad.dept || 'brand', blank()), dept.get(x.ad.dept || 'brand')!)]) {
       o.spend += x.spend; o.leads += x.leads; o.conv += x.conv; if (lead) { o.ls += x.spend; o.ln += x.leads; }
     }
@@ -317,8 +337,13 @@ export function buckets(d: Dash, from: string, to: string, g: Gran = 'auto'): Bu
     const b = out.get(key(x.day))!;
     b.spend += x.spend; b.results += x.leads; b.leads += x.leads; b.impr += x.impr; b.clicks += x.clicks;
     const p = x.ad.platform;
+<<<<<<< well
+    if (!HIDDEN.has(p)) { const o = (b.plat[p] ??= { spend: 0, results: 0, leads: 0 }); o.spend += x.spend; o.results += x.leads; o.leads += x.leads; }
+    if (countsAsLead(x.ad) && !HIDDEN.has(p)) { b.ls[p] = (b.ls[p] ?? 0) + x.spend; b.ln[p] = (b.ln[p] ?? 0) + x.leads; }
+=======
     if (!HIDDEN.has(p)) { const o = (b.plat[p] ??= { spend: 0, results: 0, leads: 0 }); o.spend += x.spend; o.results += x.leads; o.leads += x.leads; }
     if (x.ad.goal === 'lead' && !HIDDEN.has(p)) { b.ls[p] = (b.ls[p] ?? 0) + x.spend; b.ln[p] = (b.ln[p] ?? 0) + x.leads; }
+>>>>>>> hoven
   }
   return [...out.values()].map(({ ls, ln, ...b }) => ({ ...b, cpl: Object.fromEntries(Object.keys(ls).map(p => [p, ln[p] && ls[p]! > 0 ? ls[p]! / ln[p]! : null])) }));
 }

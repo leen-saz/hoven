@@ -29,6 +29,16 @@ class Rules(unittest.TestCase):
                           "s2": {"platform": "snap", "goal": "lead", "live": False, "name": "b"}})
         self.assertFalse({k for k in got if k[1] == "pause"})
 
+    def test_last_seven_days_are_seven_full_days_not_eight(self):
+        # today is 2026-10-28: the window is 10-21 .. 10-27. A day exactly 7 days back (10-21) counts, 10-20 and today do not.
+        ads = {"s1": {"platform": "snap", "goal": "lead", "live": True, "name": "a", "campaign": "C"}}
+        inside = self.kinds([["s1", "2026-10-21", 12.0, 500, 5, 0.0, 0]], ads)
+        self.assertIn(("1", "pause"), inside)
+        before = self.kinds([["s1", "2026-10-20", 12.0, 500, 5, 0.0, 0]], ads)
+        self.assertNotIn(("1", "pause"), before)
+        partial_today = self.kinds([["s1", "2026-10-28", 12.0, 500, 5, 0.0, 0]], ads)
+        self.assertNotIn(("1", "pause"), partial_today)
+
     def test_budget_up_for_cheap_winners(self):
         # TikTok: target 100/20 = 5, the winner costs 3 per lead
         rows = [["t0", "2026-10-10", 100.0, 1000, 10, 20.0, 0], ["t3", "2026-10-26", 30.0, 900, 9, 10.0, 0]]
@@ -102,3 +112,25 @@ class Sync(unittest.TestCase):
         db = FakeDb([{"id": 7, "platform": "snap", "target_id": "1", "kind": "pause", "digest": s["digest"], "revision": 1}])
         self.assertEqual(sync([s], db), (0, 0, 1, 0))
         self.assertFalse([c for c in db.calls if c[0] == "PATCH"])
+
+
+class WhatsAppDestination(unittest.TestCase):
+    """TikTok ads that open WhatsApp report no leads on the platform: zero leads is not a pause."""
+    ADS = {"t0": {"platform": "tiktok", "goal": "lead", "live": False, "name": "old", "campaign": "C"}}
+    BASE = [["t0", "2026-10-10", 100.0, 1000, 10, 20.0, 0]]
+
+    def kinds(self, rows, ad):
+        out = suggest.build(data(self.BASE + rows, {**self.ADS, "t1": ad}))
+        return {(s["target_id"], s["kind"]) for s in out}
+
+    def test_zero_leads_pauses_a_plain_lead_ad(self):
+        ad = {"platform": "tiktok", "goal": "lead", "live": True, "name": "a", "campaign": "C"}
+        self.assertIn(("1", "pause"), self.kinds([["t1", "2026-10-25", 12.0, 500, 5, 0.0, 0]], ad))
+
+    def test_zero_leads_does_not_pause_a_whatsapp_ad_that_gets_clicks(self):
+        ad = {"platform": "tiktok", "goal": "lead", "live": True, "name": "a", "campaign": "C", "dest": "whatsapp"}
+        self.assertNotIn(("1", "pause"), self.kinds([["t1", "2026-10-25", 12.0, 500, 5, 0.0, 0]], ad))
+
+    def test_a_whatsapp_ad_with_no_clicks_at_all_still_pauses(self):
+        ad = {"platform": "tiktok", "goal": "lead", "live": True, "name": "a", "campaign": "C", "dest": "whatsapp"}
+        self.assertIn(("1", "pause"), self.kinds([["t1", "2026-10-25", 12.0, 500, 0, 0.0, 0]], ad))

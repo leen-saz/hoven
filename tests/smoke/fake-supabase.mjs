@@ -15,13 +15,15 @@ export function profileFor(email, n, all = []) {
   if (local === 'nobody') return { ...base, role: 'member', dashboards: [] };
   // A normal member who may open every tab (the technical-text test reads what such a user sees)
   if (local === 'member') return { ...base, role: 'member', dashboards: all };
+  // Overview on, analytics (ceo) off: the summary's numbers are refused, so the strip must not offer the summary or the ads board
+  if (local === 'ovnoceo') return { ...base, role: 'member', dashboards: ['overview', 'creative', 'listening'] };
   const m = local.match(/^u-([a-z]+)$/);
   // The overview numbers also need analytics (src/modules/overview/routes.ts)
   return { ...base, role: 'member', dashboards: m ? (m[1] === 'overview' ? ['overview', 'ceo'] : [m[1]]) : [] };
 }
 
 export function startFake(port, keys) {
-  const accounts = [OWNER, `nobody@${DOMAIN}`, `member@${DOMAIN}`, ...keys.map(k => `u-${k}@${DOMAIN}`)];
+  const accounts = [OWNER, `nobody@${DOMAIN}`, `member@${DOMAIN}`, `ovnoceo@${DOMAIN}`, ...keys.map(k => `u-${k}@${DOMAIN}`)];
   const profiles = accounts.map((e, i) => profileFor(e, i + 1, keys));
   // POST /__mode {"missing":true}: every table except profiles answers like a table that was never created (PGRST205)
   let missing = false;
@@ -40,6 +42,16 @@ export function startFake(port, keys) {
       }
       if (url.pathname === '/__mode') { try { missing = !!JSON.parse(raw || '{}').missing; } catch { missing = false; } return send(res, 200, { missing }); }
       if (missing && url.pathname.startsWith('/rest/v1/') && url.pathname !== '/rest/v1/profiles') return send(res, 404, { code: 'PGRST205', message: 'Could not find the table in the schema cache' });
+      // Owner tools: one auth account without a profile (made by hand), creating a login, and a profile insert that echoes the row
+      const ORPHAN = { id: uuid(900), email: `by-hand@${DOMAIN}`, user_metadata: { name: 'Made By Hand' } };
+      if (url.pathname === '/auth/v1/admin/users' && req.method === 'GET') return send(res, 200, { users: [ORPHAN] });
+      if (url.pathname === '/auth/v1/admin/users' && req.method === 'POST') {
+        let b = {}; try { b = JSON.parse(raw || '{}'); } catch { /* bad body */ }
+        if (b.email === `taken@${DOMAIN}`) return send(res, 422, { error_code: 'email_exists' });
+        return send(res, 200, { id: uuid(901), email: b.email });
+      }
+      if (url.pathname === `/auth/v1/admin/users/${ORPHAN.id}` && req.method === 'GET') return send(res, 200, ORPHAN);
+      if (url.pathname === '/rest/v1/profiles' && req.method === 'POST') { let b = {}; try { b = JSON.parse(raw || '{}'); } catch { /* bad body */ } return send(res, 201, [b]); }
       if (url.pathname === '/rest/v1/profiles' && req.method === 'GET') {
         const id = (url.searchParams.get('id') || '').replace(/^eq\./, '');
         return send(res, 200, profiles.filter(p => p.id === id));

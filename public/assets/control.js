@@ -1,6 +1,6 @@
 // لوحة القرارات: صندوق قرارات مرتب حسب الأثر بالريال، مع لوحة تفاصيل وقرارات جماعية واختصارات.
 // المرحلة الحالية: القرار ينحفظ في السجل بس، وما ينرسل شي للمنصات.
-import { $, $$, esc, api, icon, when, day, fmt, sar, shell, toast, busy, t, pageSignal, LANG, failure } from './common.js';
+import { $, $$, esc, api, icon, when, day, fmt, sar, shell, toast, busy, t, pageSignal, LANG, failure, safeUrl, safeSrc, arabicOr } from './common.js';
 import { hitsHTML } from './compliance-ui.js';
 
 // Runs on every visit of this page (assets/router.js calls it after each ClientRouter navigation).
@@ -15,21 +15,25 @@ export default async function mount() {
 
   // ?tab=log opens the past decisions (the «السجل» link in the sidebar, and /history/)
   const urlTab = new URLSearchParams(location.search).get('tab');
-  const S = { kill: { kill: false }, tab: ['log', 'learn'].includes(urlTab) ? urlTab : 'all', q: '', kind: '', level: '', sort: 'impact', open: [], done: [], ads: {}, gen: null, settings: [], owner: false, sel: new Set(), cursor: 0, hist: { status: '' } };
+  // Tabs whose list is the suggestions inbox, and the elements a shortcut must leave alone
+  const INBOX_KEYS = tab => !['log', 'learn', 'buyer', 'rules'].includes(tab);
+  const NO_KEYS = 'input,textarea,select,button,a,[role="dialog"],dialog,#panel,.pop,[contenteditable]';
+  const S = { kill: { kill: false }, tab: ['log', 'learn', 'buyer', 'rules'].includes(urlTab) ? urlTab : 'all', q: '', kind: '', level: '', sort: 'impact', open: [], done: [], ads: {}, gen: null, settings: [], owner: false, sel: new Set(), cursor: 0, hist: { status: '' } };
 
   // الأثر بالريال لكل أسبوع: الإيقاف يوفر صرف آخر 7 أيام، والرفع يضيف نسبة منه
   function impact(s) {
     const sp = (s.evidence || {}).spend;
     if (sp == null) return null;
-    if (s.kind === 'pause' || s.kind === 'pause_campaign') return { v: sp, n: `~${sar(sp)}`, l: 'ر.س/أسبوع توفير متوقع', t: `تقدير: يوفر ~${sar(sp)} ر.س/أسبوع (صرفه آخر 7 أيام)` };
-    if (s.kind === 'budget_up') { const v = sp * ((s.params || {}).pct || 0) / 100; return { v, n: `+~${sar(v)}`, l: 'ر.س/أسبوع صرف إضافي متوقع', t: `تقدير: +~${sar(v)} ر.س/أسبوع (${(s.params || {}).pct || 0}% من صرف آخر 7 أيام)` }; }
+    if (s.kind === 'pause' || s.kind === 'pause_campaign') return { v: sp, n: `~${sar(sp)}`, l: 'ريال/أسبوع توفير متوقع', t: `تقدير: يوفر ~${sar(sp)} ريال/أسبوع (صرفه آخر 7 أيام)` };
+    if (s.kind === 'budget_up') { const v = sp * ((s.params || {}).pct || 0) / 100; return { v, n: `+~${sar(v)}`, l: 'ريال/أسبوع صرف إضافي متوقع', t: `تقدير: +~${sar(v)} ريال/أسبوع (${(s.params || {}).pct || 0}% من صرف آخر 7 أيام)` }; }
     return null;
   }
   const adOf = s => S.ads[(PRE[s.platform] || '') + s.target_id] || null;
   const ageOf = s => { const a = adOf(s); if (!a || !a.first) return null; return Math.round((Date.now() - new Date(a.first + 'T00:00:00+03:00')) / 864e5); };
-  // المراجع الثاني: الاقتراح اللي ما عدّى قواعد لين ينرفض بس
-  const blocked = s => s.critic && s.critic.ok === false ? (s.critic.issues || [])[0] || 'المراجع رفضه' : s.kind === 'new_campaign' && !S.owner ? 'لين بس توافق على الحملات الجديدة' : '';
-  const criticChip = s => !s.critic ? '' : s.critic.ok ? `<span class="chip line crit" data-tip="عدّى قواعد لين">${icon('check')}المراجع</span>`
+  // المراجع الثاني: الاقتراح اللي ما عدّى قواعد الشركة ينرفض بس
+  const blocked = s => s.critic && s.critic.ok === false ? (s.critic.issues || [])[0] || 'المراجع رفضه' : s.kind === 'new_campaign' && !S.owner ? 'المالك بس يوافق على الحملات الجديدة' : '';
+  const PSTATE = { ACTIVE: 'شغّال', PAUSED: 'موقوف', ARCHIVED: 'مؤرشف', DELETED: 'محذوف' };   // the platform's words for a status, in ours
+  const criticChip = s => !s.critic ? '' : s.critic.ok ? `<span class="chip line crit" data-tip="عدّى قواعد الشركة">${icon('check')}المراجع</span>`
     : `<span class="chip line crit bad" data-tip="${esc((s.critic.issues || []).join(' · '))}">${icon('alert')}المراجع رفضه</span>`;
   // إعلان واتساب ومعه إعلانات ثانية شغّالة في مجموعته: Meta يرفض إيقافه بمفتاحنا (ما عنده صلاحية واتساب)، فينفّذه الفريق يدوي
   const waManual = s => s.platform === 'meta' && s.level === 'ad' && s.kind === 'pause' ? (adOf(s) || {}).wa_siblings || 0 : 0;
@@ -55,8 +59,10 @@ export default async function mount() {
   // ---------- الأعلى
   function topTools() {
     const fresh = S.gen ? `<span class="chip" data-tip="آخر سحب للأرقام من المنصات"><span class="dot"></span>آخر تحديث للبيانات ${esc(when(S.gen))}</span>` : '';
-    const kill = S.kill.kill
-      ? `<button class="btn sm danger" id="killBtn" data-on="0"${S.owner ? '' : ' disabled'} data-tip="${S.owner ? 'إلغاء إيقاف الطوارئ' : 'لين بس تلغي إيقاف الطوارئ'}">${icon('power')}إيقاف الطوارئ مفعّل</button>`
+    const kill = S.kill.unknown
+      ? `<button class="btn sm danger" id="killBtn" disabled data-tip="ما قدرنا نقرأ حالة إيقاف الطوارئ">${icon('power')}حالة الطوارئ غير معروفة</button>`
+      : S.kill.kill
+      ? `<button class="btn sm danger" id="killBtn" data-on="0"${S.owner ? '' : ' disabled'} data-tip="${S.owner ? 'إلغاء إيقاف الطوارئ' : 'المالك بس يلغي إيقاف الطوارئ'}">${icon('power')}إيقاف الطوارئ مفعّل</button>`
       : `<button class="btn sm secondary" id="killBtn" data-on="1" data-tip="يوقف أي تنفيذ على حسابات الإعلانات فوراً">${icon('power')}إيقاف طوارئ</button>`;
     const n = (S.kill.canary || []).length;
     const exec = S.kill.kill ? '' : n
@@ -67,14 +73,16 @@ export default async function mount() {
   function drawTop() {
     $('#tools').innerHTML = topTools();
     $('#killBanner').hidden = !S.kill.kill;
-    $('#killBanner').innerHTML = S.kill.kill ? `${icon('power')}<b>إيقاف الطوارئ مفعّل</b><span>أي تنفيذ على حسابات الإعلانات موقوف${S.kill.by ? ` · شغّلها ${esc(S.kill.by)} ${esc(when(S.kill.at))}` : ''}.</span>` : '';
+    $('#killBanner').innerHTML = S.kill.unknown ? `${icon('alert')}<b>ما قدرنا نقرأ حالة إيقاف الطوارئ</b><span>الموافقة والتنفيذ موقوفين لين تنقرأ.</span><button class="btn sm secondary" id="killRetry" type="button">حاول مرة ثانية</button>` : S.kill.kill ? `${icon('power')}<b>إيقاف الطوارئ مفعّل</b><span>أي تنفيذ على حسابات الإعلانات موقوف${S.kill.by ? ` · شغّلها ${esc(S.kill.by)} ${esc(when(S.kill.at))}` : ''}.</span>` : '';
+    const rt = $('#killRetry');
+    if (rt) rt.onclick = async () => { busy(rt, true); try { S.kill = await api('/api/control/kill'); drawTop(); render(); window.dispatchEvent(new Event('buyer-reload')); } catch { busy(rt, false); toast('لسا ما قدرنا نقرأ حالة إيقاف الطوارئ'); } };
     const b = $('#killBtn'); if (!b || b.disabled) return;
     b.onclick = () => {
       const on = b.dataset.on === '1';
-      popover(b, `<h3>${on ? 'تفعيل إيقاف الطوارئ؟' : 'إلغاء إيقاف الطوارئ؟'}</h3><p class="muted" style="margin:0 0 12px">${on ? 'يوقف أي تنفيذ على حسابات الإعلانات فوراً. لين بس تقدر توقفه بعدين.' : 'يرجع التنفيذ حسب الحدود والموافقات.'}</p>
+      popover(b, `<h3>${on ? 'تفعيل إيقاف الطوارئ؟' : 'إلغاء إيقاف الطوارئ؟'}</h3><p class="muted" style="margin:0 0 12px">${on ? 'يوقف أي تنفيذ على حسابات الإعلانات فوراً. المالك بس يقدر يوقفه بعدين.' : 'يرجع التنفيذ حسب الحدود والموافقات.'}</p>
         <div class="bar" style="justify-content:flex-end"><button class="btn sm ghost" data-x>إلغاء</button><button class="btn sm ${on ? 'danger' : 'primary'}" data-go>${on ? 'فعّل الإيقاف' : 'ألغِ الإيقاف'}</button></div><div class="msg"></div>`, pop => {
         $('[data-x]', pop).onclick = closePop;
-        $('[data-go]', pop).onclick = async e => { busy(e.currentTarget, true); try { S.kill = await api('/api/control/kill', { method: 'POST', body: { on } }); closePop(); drawTop(); toast(on ? 'إيقاف الطوارئ مفعّل' : 'انلغى إيقاف الطوارئ'); } catch (err) { busy(e.currentTarget, false); const m = $('.msg', pop); m.className = 'msg err'; m.textContent = err.message; } };
+        $('[data-go]', pop).onclick = async e => { busy(e.currentTarget, true); try { S.kill = await api('/api/control/kill', { method: 'POST', body: { on } }); closePop(); drawTop(); window.dispatchEvent(new Event('buyer-reload')); toast(on ? 'إيقاف الطوارئ مفعّل' : 'انلغى إيقاف الطوارئ'); } catch (err) { busy(e.currentTarget, false); const m = $('.msg', pop); m.className = 'msg err'; m.textContent = err.message; } };
       });
     };
   }
@@ -85,7 +93,7 @@ export default async function mount() {
     const decided = S.done.filter(s => s.status !== 'expired');
     const rate = decided.length ? 100 * decided.filter(s => s.status === 'approved' || s.status === 'modified' || s.status === 'executed').length / decided.length : null;
     const k = (t, v, u = '') => `<div class="card kpi"><div class="k">${t}</div><div class="v">${v}${u ? `<small>${u}</small>` : ''}</div></div>`;
-    $('#kpis').innerHTML = k('مبلغ معرّض للهدر (تقدير)', sar(wasted), 'ر.س/أسبوع حسب آخر 7 أيام') + k('اقتراحات مفتوحة', fmt(S.open.length)) + k('نُفّذ هالأسبوع', fmt(executed)) + k('نسبة الموافقة', rate == null ? '—' : fmt(rate, 0) + '%');
+    $('#kpis').innerHTML = k('مبلغ معرّض للهدر (تقدير)', sar(wasted), 'ريال/أسبوع حسب آخر 7 أيام') + k('اقتراحات مفتوحة', fmt(S.open.length)) + k('نُفّذ هالأسبوع', fmt(executed)) + k('نسبة الموافقة', rate == null ? '—' : fmt(rate, 0) + '%');
   }
   function modes() {
     const same = S.settings.every(x => x.mode === (S.settings[0] || {}).mode);
@@ -104,7 +112,7 @@ export default async function mount() {
       <li>${icon('check')}أقصى تغيير ميزانية بخطوة وحدة: <b class="num">20%</b></li>
       <li>${icon('check')}سقف الصرف اليومي: يتحدد مع المرحلة B</li>
       <li>${icon('check')}ما فيه إيقاف قبل <b class="num">3</b> أيام من التشغيل</li>
-      <li>${icon('check')}أي حملة جديدة تحتاج موافقة لين، حتى في التنفيذ التلقائي</li>
+      <li>${icon('check')}أي حملة جديدة تحتاج موافقة المالك، حتى في التنفيذ التلقائي</li>
       <li>${icon('check')}التنفيذ الحين: <b>إيقاف إعلان في Meta بس</b>، داخل حملات التجربة، وبحد أقصى <b class="num">10</b> بالساعة</li></ul>
       <h3 style="margin-top:14px">حملات التجربة</h3>${canaryHtml()}`, pop => {
       const save = $('[data-canary]', pop); if (!save) return;
@@ -126,7 +134,9 @@ export default async function mount() {
     $('#tabs').innerHTML = [['all', 'كل المنصات'], ...Object.entries(PLAT)].map(([k, t]) =>
       `<button role="tab" data-t="${k}" aria-selected="${S.tab === k}">${t}<span class="cnt">${n(k)}</span></button>`).join('')
       + `<button role="tab" data-t="log" aria-selected="${S.tab === 'log'}">${icon('clock')}القرارات السابقة<span class="cnt">${S.done.length}</span></button>`
-      + `<button role="tab" data-t="learn" aria-selected="${S.tab === 'learn'}">${icon('refresh')}التعلّم</button>`;
+      + `<button role="tab" data-t="learn" aria-selected="${S.tab === 'learn'}">${icon('refresh')}التعلّم</button>`
+      + `<button role="tab" data-t="buyer" aria-selected="${S.tab === 'buyer'}">${icon('check')}توصيات القواعد</button>`
+      + (S.owner ? `<button role="tab" data-t="rules" aria-selected="${S.tab === 'rules'}">${icon('gavel')}قواعد الإدارة</button>` : '');
   }
   function filters() {
     if (S.tab === 'log') {
@@ -151,16 +161,25 @@ export default async function mount() {
   }
   function thumb(s, cls = 'thumb48') {
     const a = adOf(s);
-    return a && a.thumb ? `<img class="${cls}" src="${a.thumb}" alt="" loading="lazy">` : `<span class="${cls} ph">${icon('image')}</span>`;
+    return a && safeSrc(a.thumb) ? `<img class="${cls}" src="${esc(safeSrc(a.thumb))}" alt="" loading="lazy">` : `<span class="${cls} ph">${icon('image')}</span>`;
   }
   function evidence(s) {
     const e = s.evidence || {}, b = [];
+<<<<<<< well
+    if (e.spend != null) b.push(`<span class="ev-i">صرف <span class="num">${sar(e.spend)}</span></span>`);
+    if (e.leads != null) b.push(`<span class="ev-i">${t(e.metric === 'chats' ? 'محادثات' : 'طلبات')} <span class="num">${fmt(e.leads)}</span></span>`);
+    if (e.cpl != null) b.push(`<span class="ev-i">تكلفة <span class="num">${sar(e.cpl)}</span></span>`);
+    if (e.target_cpl != null) b.push(`<span class="ev-i">الهدف <span class="num">${sar(e.target_cpl)}</span></span>`);
+    if (e.ctr != null) b.push(`<span class="ev-i">نقر <span class="num">${fmt(e.ctr, 2)}%</span></span>`);
+    return b.join('');
+=======
     if (e.spend != null) b.push(`صرف <span class="num">${sar(e.spend)}</span>`);
     if (e.leads != null) b.push(`${t(e.metric === 'chats' ? 'محادثات' : 'طلبات')} <span class="num">${fmt(e.leads)}</span>`);
     if (e.cpl != null) b.push(`تكلفة <span class="num">${sar(e.cpl)}</span>`);
     if (e.target_cpl != null) b.push(`الهدف <span class="num">${sar(e.target_cpl)}</span>`);
     if (e.ctr != null) b.push(`نقر <span class="num">${fmt(e.ctr, 2)}%</span>`);
     return b.join(' · ');
+>>>>>>> hoven
   }
   function inbox() {
     const list = rows();
@@ -172,10 +191,10 @@ export default async function mount() {
       ${list.map((s, i) => { const im = impact(s), age = ageOf(s); return `<tr data-id="${s.id}" aria-selected="${S.sel.has(s.id)}" class="${i === S.cursor ? 'cursor' : ''}">
         <td class="c-pick"><input type="checkbox" data-pick aria-label="تحديد"${S.sel.has(s.id) ? ' checked' : ''}></td>
         <td class="c-thumb">${thumb(s)}</td>
-        <td class="ad c-ad"><b>${esc(s.target_name || s.target_id)}</b><span>${esc(s.campaign || '')}</span></td>
+        <td class="ad c-ad"><b dir="auto">${esc(s.target_name || s.target_id)}</b><span dir="auto">${esc(s.campaign || '')}</span></td>
         <td class="c-plat"><span class="chip">${PLAT[s.platform]}</span></td>
-        <td class="sg c-sg"><span class="chip solid">${KIND[s.kind] || esc(s.kind)}${(s.params || {}).pct ? ` ${s.params.pct}%` : ''}</span><span>${esc(ruleOf(s))}</span>${criticChip(s)}${waChip(s)}${outcomeChip(s)}${siblingChip(s)}</td>
-        <td class="imp c-imp">${im ? `<b class="num">${esc(im.n)}</b><span>${esc(im.l)}</span>` : '<span class="muted">—</span>'}</td>
+        <td class="sg c-sg"><div class="sg-chips"><span class="chip solid">${KIND[s.kind] || esc(s.kind)}${(s.params || {}).pct ? ` ${s.params.pct}%` : ''}</span>${criticChip(s)}${waChip(s)}${outcomeChip(s)}${siblingChip(s)}</div><div class="sg-why">${esc(ruleOf(s))}</div></td>
+        <td class="imp c-imp">${im ? `<b class="num"><bdi dir="ltr">${esc(im.n)}</bdi></b><span>${esc(im.l)}</span>` : '<span class="muted">—</span>'}</td>
         <td class="ev c-ev">${evidence(s)}</td>
         <td class="num c-age">${age == null ? '—' : `${age} يوم`}</td>
         <td class="c-acts"><div class="acts"><button class="btn sm ghost" data-a="approve" data-tip="${blocked(s) ? esc(blocked(s)) : `${esc(outcome(s).t)} (a a)`}"${blocked(s) ? ' disabled' : ''}>${icon('check')}وافق</button>
@@ -190,7 +209,7 @@ export default async function mount() {
     $('#inbox').innerHTML = list.length ? `<table><thead><tr><th>الوقت</th><th>الإعلان</th><th>المنصة</th><th>الاقتراح</th><th>القرار</th><th>مين</th><th>الملاحظة</th></tr></thead><tbody>
       ${list.map(s => `<tr><td class="num">${esc(when(s.decided_at))}</td><td class="ad"><b>${esc(s.target_name || s.target_id)}</b></td><td><span class="chip">${PLAT[s.platform]}</span></td>
         <td>${KIND[s.kind] || esc(s.kind)}</td><td><span class="chip ${s.status === 'rejected' || s.status === 'expired' ? 'line' : 'solid'}">${STATUS[s.status] || s.status}${s.status === 'approved' ? (s.platform === 'meta' && (s.level === 'ad' || s.level === 'adset') && (s.kind === 'pause' || s.kind === 'resume') && !waManual(s) ? ' · ينتظر التنفيذ' : ' · ينفّذ يدوي') : ''}</span></td>
-        <td>${esc(s.decided_by || '')}</td><td>${esc(s.note || '')}${s.result && s.result.error ? `<div class="muted">${icon('alert')}${esc(s.result.error)}</div>` : ''}${s.result && s.result.after ? `<div class="muted">Meta: ${esc(s.result.before)} ← ${esc(s.result.after)}${s.result.via_adset ? ' · تنفّذ على المجموعة كاملة (إعلان واتساب)' : ''}</div>` : ''}
+        <td>${esc(s.decided_by || '')}</td><td>${esc(s.note || '')}${s.result && s.result.error ? `<div class="muted">${icon('alert')}${esc(arabicOr(s.result.error, 'ما تنفّذ التغيير على المنصة. جرّب مرة ثانية.'))}</div>` : ''}${s.result && s.result.after ? `<div class="muted">ميتا: ${esc(PSTATE[s.result.before] || s.result.before)} ← ${esc(PSTATE[s.result.after] || s.result.after)}${s.result.via_adset ? ' · تنفّذ على المجموعة كاملة (إعلان واتساب)' : ''}</div>` : ''}
         ${s.status === 'executed' && s.kind === 'pause' && s.platform === 'meta' ? `<button class="btn sm secondary" data-revert="${s.id}">${icon('refresh')}تراجع</button>` : ''}</td></tr>`).join('')}</tbody></table>` : `<div class="empty">${icon('clock')}<div>ما فيه قرارات سابقة</div></div>`;
     $('#selbar').hidden = true;
     $('#inbox').querySelectorAll('[data-revert]').forEach(b => b.onclick = e => { e.stopPropagation(); const id = +b.dataset.revert;
@@ -204,8 +223,27 @@ export default async function mount() {
           catch (err) { busy(ev.currentTarget, false); m.className = 'msg err'; m.textContent = err.message; } };
       }); });
   }
-  function render() { kpis(); tabs(); filters(); S.tab === 'log' ? history() : S.tab === 'learn' ? learning() : inbox(); }
-  // التعلّم: الدروس، وحركات الفريق داخل المنصات، ونتايج القرارات بعد 3 و7 أيام
+  // توصيات القواعد: توصيات الميديا باير وتنفيذها بموافقة المالك، داخل اللوحة (public/modules/buyer/client.js). تتحمّل أول ما ينفتح التبويب
+  function buyerPane() {
+    $('#filters').innerHTML = ''; $('#selbar').hidden = true;
+    if (S.buyerLoaded) { $('#buyerPane').hidden = false; return; }
+    S.buyerLoaded = true;
+    import('/modules/buyer/client.js').then(m => m.mountPane()).catch(err => { S.buyerLoaded = false; $('#buyerPane').hidden = false; $('#by-list').innerHTML = `<div class="empty">${icon('alert')}<div>${esc(err.message || 'ما قدرت أحمّل التوصيات')}</div></div>`; });
+  }
+  // قواعد الإدارة: للمالكة بس (public/modules/buyer/rules.js)
+  function rulesPane() {
+    $('#filters').innerHTML = ''; $('#selbar').hidden = true;
+    if (S.rulesLoaded) { $('#by-rulesBox').hidden = false; return; }
+    S.rulesLoaded = true;
+    import('/modules/buyer/rules.js').then(m => m.mountRules()).catch(() => { S.rulesLoaded = false; });
+  }
+  function render() {
+    if (S.tab === 'rules' && !S.owner) S.tab = 'all';           // the owner's section: nobody else gets it, even with ?tab=rules
+    const b = S.tab === 'buyer', r = S.tab === 'rules'; $('#inbox').hidden = b || r; if ($('#buyerPane')) $('#buyerPane').hidden = !b || !S.buyerLoaded; if ($('#by-rulesBox')) $('#by-rulesBox').hidden = !r || !S.rulesLoaded;
+    if (r || b || S.tab === 'log' || S.tab === 'learn') S.list = null;   // the old list must not stay armed under a hidden inbox
+    kpis(); tabs(); filters(); r ? rulesPane() : b ? buyerPane() : S.tab === 'log' ? history() : S.tab === 'learn' ? learning() : inbox();
+  }
+  // التعلّم: الدروس، وحركات الفريق داخل المنصات، ونتائج القرارات بعد 3 و7 أيام
   async function learning() {
     $('#filters').innerHTML = ''; $('#selbar').hidden = true;
     $('#inbox').innerHTML = `<div class="empty">يحمّل…</div>`;
@@ -221,8 +259,8 @@ export default async function mount() {
     const O = r.outcomes.length ? `<table><thead><tr><th>القرار</th><th>بعد</th><th>تكلفة الطلب قبل ← بعد</th><th>التغيّر</th></tr></thead><tbody>${r.outcomes.map(o => `<tr style="cursor:default">
         <td>#${o.suggestion_id} · ${esc(STATUS[o.metrics.decision] || o.metrics.decision)}</td><td class="num">${o.day} أيام</td>
         <td class="num">${sar(o.metrics.before.cpl)} ← ${sar(o.metrics.after.cpl)}</td><td class="num">${o.vs_expect && o.vs_expect.cpl_change_pct != null ? `${o.vs_expect.cpl_change_pct > 0 ? '+' : ''}${o.vs_expect.cpl_change_pct}%` : '—'}</td></tr>`).join('')}</tbody></table>`
-      : '<div class="empty">النتايج تطلع بعد 3 أيام من أول قرار.</div>';
-    $('#inbox').innerHTML = `<div class="pad"><h2>الدروس</h2><p class="muted" style="margin-top:-6px">من قرارات الفريق وملاحظاته ونتايجها، ومن حركاتهم داخل المنصات. المراجع والاقتراحات يقرونها كل ساعة.</p><ul class="lessons">${L}</ul></div>
+      : '<div class="empty">النتائج تطلع بعد 3 أيام من أول قرار.</div>';
+    $('#inbox').innerHTML = `<div class="pad"><h2>الدروس</h2><p class="muted" style="margin-top:-6px">من قرارات الفريق وملاحظاته ونتائجها، ومن حركاتهم داخل المنصات. المراجع والاقتراحات يقرونها كل ساعة.</p><ul class="lessons">${L}</ul></div>
       <div class="pad"><h2>حركات الفريق داخل المنصات · آخر 7 أيام</h2><p class="muted" style="margin-top:-6px">Meta وGoogle. Snap وTikTok ما يعطون سجل نشاط.</p></div><div class="tbl">${A}</div>
       <div class="pad"><h2>نتيجة القرارات</h2></div><div class="tbl">${O}</div>`;
   }
@@ -239,6 +277,8 @@ export default async function mount() {
 
   // ---------- القرارات
   async function decide(ids, decision, note = '', btn) {
+    // With the emergency-stop state unknown, nothing is approved (rejecting is always safe)
+    if (decision !== 'reject' && S.kill.unknown) { toast('ما نقدر نوافق: حالة إيقاف الطوارئ غير معروفة. حاول مرة ثانية فوق'); return; }
     busy(btn, true);
     try {
       const r = await api('/api/control/suggestions', { method: 'POST', body: { ids, decision, note } });
@@ -283,7 +323,7 @@ export default async function mount() {
     const by = Object.fromEntries(a.days.map(([d, s, l]) => [d, [s, l]]));
     const ms = Math.max(1, ...days.map(d => (by[d] || [0])[0])), ml = Math.max(1, ...days.map(d => (by[d] || [0, 0])[1]));
     const x = i => W - (i + 1) * bw;   // يمين لليسار
-    const bars = days.map((d, i) => { const s = (by[d] || [0])[0], h = s / ms * (H - 12); return `<rect x="${x(i) + 3}" y="${H - h}" width="${bw - 6}" height="${h}" rx="3" fill="var(--soft)"><title>${day(d)}: ${sar(s)} ر.س</title></rect>`; }).join('');
+    const bars = days.map((d, i) => { const s = (by[d] || [0])[0], h = s / ms * (H - 12); return `<rect x="${x(i) + 3}" y="${H - h}" width="${bw - 6}" height="${h}" rx="3" fill="var(--soft)"><title>${day(d)}: ${sar(s)} ريال</title></rect>`; }).join('');
     const pts = days.map((d, i) => `${x(i) + bw / 2},${H - (by[d] || [0, 0])[1] / ml * (H - 12)}`).join(' ');
     return `<svg class="spark" viewBox="0 0 ${W} ${H}" role="img" aria-label="الصرف مقابل الطلبات آخر 14 يوم">${bars}<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>
       <div class="bar muted"><span class="chip" style="background:var(--soft);color:var(--ink)">الصرف</span><span class="chip line" style="border-color:var(--accent)">الطلبات</span></div>`;
@@ -293,17 +333,24 @@ export default async function mount() {
     const p = $('#panel');
     p.innerHTML = `<header><h2 style="margin:0">${esc(s.target_name || s.target_id)}</h2><button class="btn icon ghost" data-close aria-label="إغلاق">${icon('x')}</button></header>
       <div class="body">
-        ${a && a.thumb ? `<img class="hero" src="${a.thumb}" alt="">` : ''}
+        ${a && safeSrc(a.thumb) ? `<img class="hero" src="${esc(safeSrc(a.thumb))}" alt="">` : ''}
         <div class="bar"><span class="chip">${PLAT[s.platform]}</span><span class="chip solid">${KIND[s.kind] || esc(s.kind)}${(s.params || {}).pct ? ` ${s.params.pct}%` : ''}</span><span class="chip line">${LEVEL[s.level]}</span>
-          ${a && a.open ? `<a class="btn sm secondary" href="${esc(a.open)}" target="_blank" rel="noopener">${icon('ext')}افتح في المنصة</a>` : ''}</div>
+          ${a && safeUrl(a.open) ? `<a class="btn sm secondary" href="${esc(safeUrl(a.open))}" target="_blank" rel="noopener">${icon('ext')}افتح في المنصة</a>` : ''}</div>
         ${waManual(s) ? `<p class="msg err">${icon('alert')}${esc(WA_NOTE(waManual(s)))}</p>` : ''}
         <div><h3>ليش؟</h3><p style="margin:6px 0 0">${esc(s.reason)}</p><p class="muted" style="margin:4px 0 0">${esc(t(ruleOf(s)))}${s.campaign ? ` · ${esc(s.campaign)}` : ''}</p></div>
         <dl class="kv">
           ${im ? `<dt>الأثر</dt><dd class="num">${esc(im.t)}</dd>` : ''}
+<<<<<<< well
+          ${e.spend != null ? `<dt>الصرف آخر 7 أيام</dt><dd class="num">${sar(e.spend)} ريال</dd>` : ''}
+          ${e.leads != null ? `<dt>${e.metric === 'chats' ? 'المحادثات' : 'الطلبات'} آخر 7 أيام</dt><dd class="num">${fmt(e.leads)}</dd>` : ''}
+          ${e.cpl != null ? `<dt>${e.metric === 'chats' ? 'تكلفة المحادثة' : 'تكلفة الطلب'}</dt><dd class="num">${sar(e.cpl)} ريال</dd>` : ''}
+          ${e.target_cpl != null ? `<dt>الهدف</dt><dd><span class="num">${sar(e.target_cpl)} ريال</span> <span class="muted">(${e.target_source === 'written' ? 'هدف مكتوب' : 'متوسط 30 يوم للمنصة'})</span></dd>` : ''}
+=======
           ${e.spend != null ? `<dt>الصرف آخر 7 أيام</dt><dd class="num">${sar(e.spend)} ر.س</dd>` : ''}
           ${e.leads != null ? `<dt>${e.metric === 'chats' ? 'المحادثات' : 'الطلبات'} آخر 7 أيام</dt><dd class="num">${fmt(e.leads)}</dd>` : ''}
           ${e.cpl != null ? `<dt>${e.metric === 'chats' ? 'تكلفة المحادثة' : 'تكلفة الطلب'}</dt><dd class="num">${sar(e.cpl)} ر.س</dd>` : ''}
           ${e.target_cpl != null ? `<dt>الهدف</dt><dd><span class="num">${sar(e.target_cpl)} ر.س</span> <span class="muted">(${e.target_source === 'written' ? 'هدف مكتوب' : 'متوسط 30 يوم للمنصة'})</span></dd>` : ''}
+>>>>>>> hoven
           ${age != null ? `<dt>عمر الإعلان</dt><dd class="num">${age} يوم</dd>` : ''}
           <dt>انقترح</dt><dd>${esc(when(s.created_at))}</dd>
         </dl>
@@ -316,6 +363,7 @@ export default async function mount() {
     $('[data-close]', p).focus();
     try {
       const r = await api('/api/control/history?target=' + encodeURIComponent(s.target_id));
+      if (String(p.dataset.id) !== String(s.id)) return;   // another suggestion was opened while this was loading
       $('#phist').innerHTML = r.log.length ? r.log.map(x => `<div>${esc(when(x.at))} · ${esc(x.email || '')} · ${esc(STATUS[x.action.replace('suggestion_', '')] || x.action)}${x.note ? ` · ${esc(x.note)}` : ''}</div>`).join('') : 'ما فيه قرارات سابقة على هذا الإعلان';
     } catch { $('#phist').textContent = 'ما قدرت أقرأ السجل'; }
   }
@@ -323,20 +371,28 @@ export default async function mount() {
     if (!o) return '—';
     if (o.status) return o.status === 'PAUSED' ? 'موقوف' : 'شغّال';
     if (o.change_pct != null) return `${o.change_pct > 0 ? '+' : ''}${o.change_pct}% ميزانية`;
-    if ('budget' in o) return o.budget == null ? 'الميزانية الحالية (تنقرا وقت التنفيذ)' : `${sar(o.budget)} ر.س`;
+    if ('budget' in o) return o.budget == null ? 'الميزانية الحالية (تنقرا وقت التنفيذ)' : `${sar(o.budget)} ريال`;
     return '—';
   }
   const FIELD = { dept: 'القسم', objective: 'الهدف', budget: 'الميزانية اليومية', start: 'البداية', end: 'النهاية', geo: 'الموقع', age_min: 'العمر من', age_max: 'إلى', gender: 'الجنس', lang: 'اللغة',
-    influencer: 'المؤثرة', wa_message: 'رسالة واتساب', creative: 'المادة الإعلانية', primary: 'النص', headline: 'العنوان', cta: 'الزر', destination: 'الوجهة', optimization: 'التحسين', placements: 'أماكن الظهور',
+    influencer: 'المؤثر', wa_message: 'رسالة واتساب', creative: 'المادة الإعلانية', primary: 'النص', headline: 'العنوان', cta: 'الزر', destination: 'الوجهة', optimization: 'التحسين', placements: 'أماكن الظهور',
     budget_type: 'نوع الميزانية', partnership: 'شراكة', radius: 'نصف القطر', pixel: 'البكسل', ad_type: 'نوع الإعلان', goal: 'الهدف في سناب', qualify: 'سؤال التأهيل', bid: 'المزايدة', spark: 'Spark',
     spark_code: 'كود Spark', lead_form: 'نموذج فوري', type: 'النوع', keywords: 'الكلمات', negatives: 'السلبية', headlines: 'العناوين', descriptions: 'الأوصاف', final_url: 'الرابط', bidding: 'المزايدة' };
   function campaignHTML(s) {
     const p = s.params || {}, e = s.evidence || {}, pend = new Set(e.missing || e.ai_pending || []);  // ai_pending: requests saved before the form stopped promising AI filling
+<<<<<<< well
+    const VAL = { hoven: 'هوفن', leads: 'جمع الطلبات', sales: 'مبيعات', all: 'الكل', female: 'نساء', male: 'رجال',
+      ar: 'عربي', en: 'إنجليزي', whatsapp: 'واتساب', form: 'نموذج فوري', site: 'الموقع', conversations: 'المحادثات', purchase: 'الشراء', abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)',
+      single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن', lead_form: 'نموذج طلب داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)', auto: 'تلقائي', target: 'تكلفة مستهدفة',
+      complete_payment: 'إتمام الدفع', max_conv: 'أكبر عدد تحويلات', tcpa: 'تكلفة تحويل مستهدفة', book: 'احجز الآن', learn: 'اعرف أكثر', signup: 'سجّل', '65': '65+',
+      fb_feed: 'فيسبوك فيد', ig_feed: 'انستقرام فيد', ig_stories: 'ستوري', ig_reels: 'ريلز' };
+=======
     const VAL = { hoven: 'هوفن', leads: 'Leads', sales: 'Sales', all: 'الكل', female: 'نساء', male: 'رجال',
       ar: 'عربي', en: 'إنجليزي', whatsapp: 'واتساب', form: 'نموذج فوري', site: 'الموقع', conversations: 'المحادثات', purchase: 'الشراء', abo: 'على المجموعة (ABO)', cbo: 'على الحملة (CBO)',
       single: 'صورة أو فيديو', story: 'ستوري', collection: 'كولكشن', lead_form: 'نموذج طلب داخل سناب', website: 'سوايب للموقع', pixel_purchase: 'شراء (Pixel)', auto: 'تلقائي', target: 'تكلفة مستهدفة',
       complete_payment: 'Complete Payment', max_conv: 'أكبر عدد تحويلات', tcpa: 'تكلفة تحويل مستهدفة', book: 'احجز الآن', learn: 'اعرف أكثر', signup: 'سجّل', '65': '65+',
       fb_feed: 'فيسبوك فيد', ig_feed: 'إنستغرام فيد', ig_stories: 'ستوري', ig_reels: 'ريلز' };
+>>>>>>> hoven
     const lab = v => VAL[v] || v;
     const val = (k, v) => pend.has(k) ? '<span class="chip line">ناقص</span>' : v === '' || v == null ? '—' : Array.isArray(v) ? esc(v.map(lab).join('، ')) : typeof v === 'string' && VAL[v] && k !== 'creative' ? esc(lab(v)) : Array.isArray(v) ? esc(v.join('، ')) : typeof v === 'boolean' ? (v ? 'نعم' : 'لا')
       : k === 'creative' || k === 'final_url' ? `<a href="${/^https?:/i.test(v) ? esc(v) : '#'}" target="_blank" rel="noopener">${esc(v)}</a>` : esc(v);
@@ -348,15 +404,20 @@ export default async function mount() {
   function planHTML(s) {
     if (!s.before && !s.after && !s.measure_plan && !(s.risk || []).length) return '';
     const ex = s.expect || {};
+<<<<<<< well
+    const exp = [ex.save_per_week != null ? `يوفر ~${sar(ex.save_per_week)} ريال/أسبوع` : '', ex.extra_spend_per_week != null ? `+${sar(ex.extra_spend_per_week)} ريال/أسبوع صرف` : '',
+      ex.extra_leads_per_week != null ? `+${fmt(ex.extra_leads_per_week, 1)} طلب/أسبوع متوقع` : ''].filter(Boolean).join(' · ');
+=======
     const exp = [ex.save_per_week != null ? `يوفر ~${sar(ex.save_per_week)} ر.س/أسبوع` : '', ex.extra_spend_per_week != null ? `+${sar(ex.extra_spend_per_week)} ر.س/أسبوع صرف` : '',
       ex.extra_leads_per_week != null ? `+${fmt(ex.extra_leads_per_week, 1)} طلب/أسبوع متوقع` : ''].filter(Boolean).join(' · ');
+>>>>>>> hoven
     return `<div><h3>الخطة</h3><dl class="kv">
       ${s.before || s.after ? `<dt>قبل ← بعد</dt><dd>${esc(fmtState(s.before))} ← ${esc(fmtState(s.after))}</dd>` : ''}
       ${exp ? `<dt>التوقّع</dt><dd>${esc(exp)}</dd>` : ''}
       ${s.measure_plan ? `<dt>القياس</dt><dd>${esc(s.measure_plan)}</dd>` : ''}
       ${s.reversal_plan ? `<dt>التراجع</dt><dd>${esc(s.reversal_plan)}</dd>` : ''}
       ${(s.risk || []).length ? `<dt>الخطر</dt><dd>${s.risk.map(r => `<span class="chip line">${esc(r)}</span>`).join(' ')}</dd>` : ''}
-      ${s.critic ? `<dt>المراجع</dt><dd>${s.critic.ok ? 'عدّى قواعد لين' : esc((s.critic.issues || []).join(' · '))}</dd>` : ''}
+      ${s.critic ? `<dt>المراجع</dt><dd>${s.critic.ok ? 'عدّى قواعد الشركة' : esc((s.critic.issues || []).join(' · '))}</dd>` : ''}
     </dl></div>`;
   }
   function closePanel() { const p = $('#panel'); p.classList.remove('open'); p.setAttribute('aria-hidden', 'true'); $('#veil').classList.remove('open'); }
@@ -388,7 +449,9 @@ export default async function mount() {
     $('#veil').onclick = closePanel;
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') { if (POP) closePop(); else closePanel(); return; }
-      if (e.target.closest('input,textarea,select') || e.metaKey || e.ctrlKey || e.altKey || S.tab === 'log' || !S.list || !S.list.length) return;
+      // The shortcuts act on the inbox rows only. On the other tabs (القرارات السابقة، التعلّم، توصيات القواعد، قواعد الإدارة) the inbox is hidden:
+      // a key there must never approve a suggestion nobody can see. Nor when focus is on a button, a link or inside a dialog or the side panel.
+      if (!INBOX_KEYS(S.tab) || e.target.closest(NO_KEYS) || e.metaKey || e.ctrlKey || e.altKey || !S.list || !S.list.length) return;
       const cur = S.list[S.cursor];
       const row = () => $(`tr[data-id="${S.list[S.cursor].id}"]`);
       if (e.key === 'j' || e.key === 'k') { S.cursor = Math.max(0, Math.min(S.list.length - 1, S.cursor + (e.key === 'j' ? 1 : -1))); inbox(); row().scrollIntoView({ block: 'nearest' }); }
@@ -400,7 +463,6 @@ export default async function mount() {
         else { S.armed = { key: ids.join(','), at: Date.now() }; toast(ids.length > 1 ? `اضغط a مرة ثانية للموافقة على ${ids.length}` : `اضغط a مرة ثانية: ${outcome(cur).t}`); }
       }
       else if (e.key === 'r') askNote(row(), S.sel.size ? [...S.sel] : [cur.id], 'reject');
-      else if (e.key === 'Enter') openPanel(cur);
       else return;
       e.preventDefault();
     }, { signal: pageSignal() });
@@ -413,7 +475,7 @@ export default async function mount() {
   async function load() {
     skeleton();
     try {
-      const [sug, set, ads, kill] = await Promise.all([api('/api/control/suggestions'), api('/api/control/settings'), fetch('/control/ads.json', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { ads: {} }).catch(() => ({ ads: {} })), api('/api/control/kill').catch(() => ({ kill: false }))]);
+      const [sug, set, ads, kill] = await Promise.all([api('/api/control/suggestions'), api('/api/control/settings'), fetch('/control/ads.json', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : { ads: {} }).catch(() => ({ ads: {} })), api('/api/control/kill').catch(() => ({ kill: true, unknown: true }))]);
       Object.assign(S, { open: sug.open, done: sug.done, settings: set.settings, owner: set.owner, ads: ads.ads || {}, gen: ads.generated_at || null, kill });
       drawTop();
       modes(); render();

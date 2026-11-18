@@ -11,7 +11,8 @@ const TABS = [
   { page: '/knowledge/', api: '**/api/knowledge/train*' },
   { page: '/listening/', api: '**/api/listening/demand*', open: '[role="tab"]:has-text("تفاعل منشوراتنا")' },
   { page: '/content/', api: '**/api/content/plans*' },
-  { page: '/copy/', api: '**/api/copy/projects*' },
+  { page: '/content/?tab=copy', api: '**/api/copy/projects*' },
+  { page: '/video/', api: '**/api/video/engines*' },
   { page: '/journeys/', api: '**/api/journeys/list*' },
   { page: '/social/', api: '**/api/social/posts*' },
   { page: '/maestro/', api: '**/api/maestro/state*' },
@@ -53,7 +54,7 @@ test('the page itself cannot start (the sidebar call fails): a banner with reloa
   await expect(banner).toContainText('ما قدرت أوصل للخادم');
   failing = false;
   await banner.locator('[data-retry]').click();
-  await expect(page.locator('a.navi[data-k="knowledge"]')).toBeVisible();
+  await expect(page.locator('a.navi[data-grp="system"]')).toBeVisible();
 });
 
 test('a request that never answers ends with an error, not an endless spinner', async ({ page, context, request }) => {

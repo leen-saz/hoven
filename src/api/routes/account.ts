@@ -1,6 +1,10 @@
 // /api/account/password. Port of web/api/account/password.js: changing the password needs the current one.
+<<<<<<< well
+import { sb, json, readJson, handle, requireUser, audit, passwordError, can } from '../../lib/auth';
+=======
 import { sb, json, readJson, handle, requireUser, audit, loadProfile, PASSWORD_MIN, can } from '../../lib/auth';
 import { newSecret, seal, open, checkTotp, otpauth, newRecoveryCodes, hashCode } from '../../lib/totp';
+>>>>>>> hoven
 import { MODULES } from '../../modules/registry';
 
 export const password = {
@@ -8,7 +12,8 @@ export const password = {
     const { cfg, user } = await requireUser(request, e, 'any', { write: true });
     const body = await readJson(request);
     const current = String(body.current || ''), pw = String(body.password || '');
-    if (pw.length < PASSWORD_MIN) return json(400, { error: `الباسوورد لازم ${PASSWORD_MIN} أحرف أو أكثر` });
+    const bad = passwordError(pw);
+    if (bad) return json(400, { error: bad });
     const r = await sb<{ access_token?: string }>(cfg, '/auth/v1/token?grant_type=password', { method: 'POST', body: { email: user.email, password: current } });
     if (!r.ok || !r.data || !r.data.access_token) return json(400, { error: 'الباسوورد الحالي غلط' });
     const u = await sb(cfg, '/auth/v1/user', { method: 'PUT', token: r.data.access_token, body: { password: pw } });
@@ -19,7 +24,7 @@ export const password = {
   GET: handle(async (request, e) => {
     const { user } = await requireUser(request, e, 'any');
     // The sidebar draws every module from here: locked = switched off for the company, ok = this user may open it
-    const modules = MODULES.map(m => ({ key: m.key, ar: m.ar, en: m.en, icon: m.icon, group: m.group, status: m.status, does: m.does, doesEn: m.doesEn, pages: m.pages ?? [],
+    const modules = MODULES.map(m => ({ key: m.key, ar: m.ar, en: m.en, icon: m.icon, group: m.group, status: m.status, does: m.does, doesEn: m.doesEn, pages: m.pages ?? [], into: m.into ?? '',
       locked: !!user.off?.includes(m.key), ok: m.status === 'soon' || can(user, m.key) }));
     return json(200, { email: user.email, name: user.name, role: user.role, dashboards: user.dash, departments: user.depts || [], modules });
   }),
