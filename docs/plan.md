@@ -1,6 +1,6 @@
 # Plan — Hoven on upstream's stack
 
-Source: `docs/prd.md`. One branch + PR per piece; Leen approves each phase. Status in `docs/plan-progress.md`.
+Source: `docs/prd-2026-11-01.md`. One branch + PR per piece; Leen approves each phase. Status in `docs/plan-progress.md`.
 The old system (`leen-saz/hoven-dashboard` on Vercel) stays live and untouched until phase 6.
 
 | Phase | Work | Done when |
