@@ -21,7 +21,7 @@
 | 4 | `impl/m4-dream-media` | `src/modules/dream/media.ts` (الصور عبر OpenRouter، خطة الموشن من `design/motion.ts`، الصوت عبر Gemini TTS) | `dream-media.test.ts` | `GEMINI_API_KEY` |
 | 5-6 | `impl/m5-ad-writes` | `034_ad_writes.sql`، `src/lib/ads-write/{guard,idempotency,meta}.ts`، `dream` `publish`/`activate` | `ads-write.test.ts` (عدم التكرار، الحدود، زر الطوارئ، mock لـ Graph) | توكن Meta بصلاحية `ads_management` |
 | 7-8 | `impl/m7-social` | `035_social_more.sql`، `overrides` و `slots` في السوشال، عرض تقويم، صحة الحسابات بمهلة ساعة، زر «حوّلها لفكرة» في الرصد | توسيع `social.test.ts`، `health-grace.test.ts` | تشغيل `035` |
-| 10 | `impl/m10-mcp` | خادم MCP على Workers (`src/mcp/`: Streamable HTTP، OAuth 2.1 + PKCE، نطاقا `read` و`read_write`)، شكل طلب موحّد، `src/lib/ads-write/meta.ts` يصير Adapter، `dream/publish.ts` يستدعي الأدوات | `mcp.test.ts` (النطاقات، عدم التكرار، العزل لكل شركة)، واختبار يمنع عناوين المنصات خارج الـ Adapters | قرار: خادم Well أو خادم في هوفن |
+| 10 | `impl/m10-mcp` | خادم MCP على Workers (`src/mcp/`: Streamable HTTP، OAuth 2.1 + PKCE، نطاقا `read` و`read_write`)، شكل طلب موحّد، `src/lib/ads-write/meta.ts` يصير Adapter، `dream/publish.ts` يستدعي الأدوات | `mcp.test.ts` (النطاقات، عدم التكرار، العزل لكل شركة)، واختبار يمنع عناوين المنصات خارج الـ Adapters | إعادة ربط كل حساب بصلاحيات الكتابة (`docs/PRD.md` §3.10) |
 | 11 | `impl/m11-mcp-rest` | النشر الاجتماعي، و`account-health.ts`، ومجدّد التوكنات، و`jobs.get`، والأحداث الصادرة، ثم سحب الإحصاءات | توسيع `mcp.test.ts`، و`social.test.ts` | لا شيء |
 | 12 | `impl/m12-auto` | `036_agent_modes.sql` (`agent_modes`)، حدود الصرف والميزانية داخل الخادم، زر إطفاء واحد، قياس ٣/٧ أيام لتغييرات «تلقائي» | `auto-mode.test.ts` (السقف، النطاق، الإطفاء الفوري، السجل قبل/بعد) | تفعيل «تلقائي» لكل وكيل بنفسها |
 | 9 | لاحقاً | نقل باقي `app.css` إلى Tailwind | | قرار جعل المستودع خاصاً |
@@ -43,5 +43,5 @@
 ## تحديث 2026-11-20: MCP واحد ووضع «تلقائي»
 قرار لين: كل عمل على المنصات يمر بخادم MCP واحد (`docs/PRD.md` §3.10)، ويُضاف وضع «تلقائي» لكل وكيل (§6.3). المراحل 10 إلى 12 فوق.
 - PRs #39-#45 مدموجة، فما فيه PRs مفتوحة نعدّلها. الكتابة المباشرة على Meta في #44 تنتقل خلف أدوات MCP في المرحلة 10، ولا تتغيّر حدودها (موقوفة عند الإنشاء، 20٪، الحملات المُدارة، زر الطوارئ).
-- المرحلة 10 تبدأ بعد رد لين على سؤال خادم Well (§8.3).
+- قرار لين: «MCP لكل ريبو». خادم هوفن داخل `src/mcp/` بنفس واجهة Well، بدون خادم مشترك، وبصلاحية كتابة (`read_write`) لوكلاء هوفن. المرحلة 10 تقدر تبدأ.
 - PR #46 يصلح اختبار smoke الذي أفشل نشر staging.
