@@ -21,8 +21,8 @@ describe('parts', () => {
       { id: 3, kind: 'audience', version: 1, status: 'approved', content: {} },
     ];
     expect(latest(rows).strategy?.id).toBe(2);
-    expect(missing(rows)).toEqual(['strategy', 'budget', 'copy']);
-    expect(missing(TEXT_PARTS.map((k, i) => ({ id: i, kind: k, version: 1, status: 'approved' as const, content: {} })))).toEqual([]);
+    expect(missing(rows)).toEqual(['strategy', 'budget', 'copy', 'design']);
+    expect(missing([...TEXT_PARTS, 'design' as const].map((k, i) => ({ id: i, kind: k, version: 1, status: 'approved' as const, content: {} })))).toEqual([]);
   });
   it('reads the JSON object out of a model answer, fences and chatter included', () => {
     expect(parseJson('هذا الجواب:\n```json\n{"goal":"مبيعات"}\n```')).toEqual({ goal: 'مبيعات' });
@@ -136,7 +136,7 @@ describe('dream API', () => {
     const seen = world(owner, { parts });
     const r = await call('/api/dream/approve', owner, { id: 2 });
     expect(r.status).toBe(200);
-    expect(await r.json()).toMatchObject({ missing: ['audience', 'budget', 'copy'] });
+    expect(await r.json()).toMatchObject({ missing: ['audience', 'budget', 'copy', 'design'] });
     expect(seen.find(s => s.url.includes('/dream_parts?id=eq.2') && s.method === 'PATCH')!.body).toMatchObject({ status: 'approved', approved_by: 'owner@example.test' });
   });
   it('before 033_dream.sql the list says what to run instead of failing', async () => {
@@ -144,5 +144,76 @@ describe('dream API', () => {
     const r = await call('/api/dream/projects', owner);
     expect(r.status).toBe(200);
     expect(JSON.stringify(await r.json())).toContain('033_dream.sql');
+  });
+});
+
+// ---- Media parts (milestone 4)
+import { designPrompt, cleanDesign, cleanVoice, missing as missingParts } from '../../src/modules/dream/dream';
+
+describe('media parts', () => {
+  const KEY = `motion/${HOVEN_COMPANY}/${'a'.repeat(32)}.jpg`;
+  it('the picture prompt keeps words out of the picture and follows the ad text', () => {
+    const p = designPrompt({ message: 'نومة أحلى' }, { headline: 'مفارش رمضان', format: 'ستوري' });
+    expect(p).toContain('No text'); expect(p).toContain('مفارش رمضان'); expect(p).toContain('Vertical');
+  });
+  it('a design version takes only this company\'s uploaded files, three at most', () => {
+    const other = `motion/00000000-0000-0000-0000-000000000009/${'b'.repeat(32)}.jpg`;
+    const d = cleanDesign(HOVEN_COMPANY, [{ key: KEY, platform: 'meta', headline: 'ع' }, { key: other }, { key: '../x' }, { key: KEY }, { key: KEY }])!;
+    expect((d['images'] as unknown[]).length).toBe(3);
+    expect(cleanDesign(HOVEN_COMPANY, [{ key: other }])).toBeNull();
+  });
+  it('a voice-over script gets its length and safe reading settings', () => {
+    const v = cleanVoice({ script: 'كلمة '.repeat(46), voice: 'Nobody', accent: 'hijazi', tone: 'loud' })!;
+    expect(v).toMatchObject({ seconds: 20, voice: 'Charon', accent: 'hijazi', tone: 'warm', audio_key: null });
+  });
+  it('publishing needs the designs as well as the text parts; motion and voice-over are optional', () => {
+    const ok = (k: string) => ({ id: 1, kind: k as PartRow['kind'], version: 1, status: 'approved' as const, content: {} });
+    expect(missingParts(['strategy', 'audience', 'budget', 'copy'].map(ok))).toEqual(['design']);
+    expect(missingParts(['strategy', 'audience', 'budget', 'copy', 'design'].map(ok))).toEqual([]);
+  });
+});
+
+describe('media API', () => {
+  const KEY = `motion/${HOVEN_COMPANY}/${'c'.repeat(32)}.jpg`;
+  const copy: PartRow = { id: 4, kind: 'copy', version: 1, status: 'approved', content: { items: [{ platform: 'meta', format: 'ستوري', headline: 'مفارش رمضان', body: 'ن', cta: 'اطلب' }] } };
+  const callE = async (path: string, who: A.Profile, env: Record<string, unknown>, init: RequestInit = {}) => api.request('https://hoven.example' + path,
+    { ...init, headers: { cookie: await cookie(who), origin: 'https://hoven.example', 'content-type': 'application/json', ...(init.headers as Record<string, string> || {}) } }, { ...E, ...env });
+
+  it('drawing needs approved copy, and returns a picture for that text', async () => {
+    world(editor, { parts: [{ ...copy, status: 'draft' }] });
+    expect((await call('/api/dream/draw', editor, { id: 7, index: 0 })).status).toBe(400);
+    const seen = world(editor, { parts: [copy] });
+    const orig = globalThis.fetch;
+    vi.stubGlobal('fetch', async (u: string, init?: RequestInit) => String(u).includes('/images')
+      ? new Response(JSON.stringify({ data: [{ b64_json: 'AAAA', media_type: 'image/jpeg' }] }), { status: 200 }) : orig(u, init));
+    const r = await call('/api/dream/draw', editor, { id: 7, index: 0 });
+    expect(r.status, await r.clone().text()).toBe(200);
+    expect(await r.json()).toMatchObject({ image: 'data:image/jpeg;base64,AAAA', item: { headline: 'مفارش رمضان' }, of: 1 });
+    void seen;
+  });
+  it('the uploaded pictures become a new design version; another company\'s file is refused', async () => {
+    const seen = world(editor, { parts: [copy] });
+    expect((await call('/api/dream/media', editor, { id: 7, kind: 'design', images: [{ key: `motion/00000000-0000-0000-0000-000000000009/${'d'.repeat(32)}.jpg` }] })).status).toBe(400);
+    const r = await call('/api/dream/media', editor, { id: 7, kind: 'design', images: [{ key: KEY, platform: 'meta', headline: 'مفارش رمضان' }] });
+    expect(r.status).toBe(200);
+    expect(seen.find(s => s.url.includes('/dream_parts') && s.method === 'POST')!.body).toMatchObject({ kind: 'design', version: 1, status: 'draft' });
+  });
+  it('a file is served only by its own company\'s key', async () => {
+    world(owner);
+    const FILES = { get: async (k: string) => (k === KEY ? { body: 'img', httpMetadata: { contentType: 'image/jpeg' } } : null) };
+    expect((await callE(`/api/dream/file?key=${encodeURIComponent(KEY)}`, owner, { FILES })).status).toBe(200);
+    expect((await callE(`/api/dream/file?key=${encodeURIComponent(`motion/00000000-0000-0000-0000-000000000009/${'c'.repeat(32)}.jpg`)}`, owner, { FILES })).status).toBe(404);
+  });
+  it('motion waits for approved designs and a voice-over', async () => {
+    world(editor, { parts: [copy] });
+    const r = await call('/api/dream/draft', editor, { id: 7, kind: 'motion' });
+    expect(r.status).toBe(400);
+    expect((await r.json() as { error: string }).error).toContain('التصاميم');
+  });
+  it('the voice-over is read only with the Gemini key, and only after a script exists', async () => {
+    world(editor, { parts: [copy] });
+    expect((await call('/api/dream/speak', editor, { id: 7 })).status).toBe(503);
+    world(editor, { parts: [copy] });
+    expect((await callE('/api/dream/speak', editor, { GEMINI_API_KEY: 'g' }, { method: 'POST', body: JSON.stringify({ id: 7 }) })).status).toBe(400);
   });
 });

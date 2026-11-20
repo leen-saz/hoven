@@ -2,6 +2,8 @@
 // an instruction) and «اعتمد» (locks that version). «جهّز الحملة» writes the text parts in order, one call each, so the
 // page shows progress. «انشر» arrives with the platform connection (docs/implementation-plan.md, milestone 5).
 import { $, $$, api, say, esc, shell, fmt, busy, toast, failure } from '/assets/common.js';
+import { wav } from '/modules/voice/client.js';
+import { frame, draw as paint, SIZE } from '/modules/design/frame.js';
 
 const FAM = { meta: 'ميتا', snap: 'سناب شات', tiktok: 'تيك توك', google: 'جوجل' };
 const STATUS = { draft: 'مسودة', approved: 'معتمد', stale: 'يحتاج تحديث' };
@@ -10,6 +12,9 @@ let ST = null, P = null, tab = 'strategy', working = false;
 const q = new URLSearchParams(location.search);
 const setUrl = id => history.replaceState(null, '', id ? `/dream/?id=${id}` : '/dream/');
 const latest = kind => (P?.parts || []).filter(p => p.kind === kind).sort((a, b) => b.version - a.version)[0];
+
+const fileUrl = key => `/api/dream/file?key=${encodeURIComponent(key)}`;
+const VOICE = { najdi: 'نجدية', hijazi: 'حجازية', gulf: 'خليجية', msa: 'فصحى' }, TONE = { warm: 'دافئة', energetic: 'حماسية', calm: 'هادية', formal: 'رسمية' };
 
 // ---- rendering one part's content, per kind
 const list = xs => (xs || []).filter(Boolean).map(esc).join('، ');
@@ -27,31 +32,44 @@ const VIEW = {
   copy: c => (c.items || []).map(i => `<div class="dr-item"><span class="dr-tag">${esc(FAM[i.platform] || i.platform)}${i.format ? ` · ${esc(i.format)}` : ''}</span>
     ${i.headline ? `<h3 style="margin-top:8px">${esc(i.headline)}</h3>` : ''}<p style="white-space:pre-wrap;margin:6px 0">${esc(i.body)}</p>${i.cta ? `<b>${esc(i.cta)}</b>` : ''}
     ${(i.notices || []).map(n => `<p class="muted" style="margin:6px 0 0">⚠︎ ${esc(n.title)}: «${esc(n.match)}». ${esc(n.fix)}</p>`).join('')}</div>`).join(''),
+  // The words sit on top of the picture as a layer (never baked in), the way the ad will carry them
+  design: c => `<div class="dr-designs">${(c.images || []).map(i => `<figure class="dr-design"><img src="${fileUrl(i.key)}" alt="${esc(i.headline || 'تصميم')}" loading="lazy">
+    <figcaption><b>${esc(i.headline)}</b>${i.cta ? `<span>${esc(i.cta)}</span>` : ''}</figcaption><small class="dr-tag">${esc(FAM[i.platform] || i.platform || '')}${i.format ? ` · ${esc(i.format)}` : ''}</small></figure>`).join('')}</div>`,
+  voiceover: c => `<p style="white-space:pre-wrap">${esc(c.script)}</p><p class="muted">${fmt(c.seconds)} ثانية تقريباً · لهجة ${esc(VOICE[c.accent] || c.accent)} · نبرة ${esc(TONE[c.tone] || c.tone)} · صوت ${esc(c.voice)}</p>
+    ${c.audio_key ? `<audio controls preload="none" src="${fileUrl(c.audio_key)}"></audio>` : '<p class="muted">ما انولد الصوت للحين.</p>'}`,
+  motion: c => `<canvas class="dr-motion" id="mcanvas" aria-label="معاينة الموشن"></canvas>
+    <div class="dr-acts"><button class="btn secondary sm" type="button" id="mplay">شغّل المعاينة</button></div>
+    <ol class="muted">${(c.spec?.scenes || []).map(x => `<li>${fmt(x.from, 1)}–${fmt(x.to, 1)} ث: ${esc(x.text)}</li>`).join('')}${c.spec?.cta ? `<li>${esc(c.spec.cta.text)}</li>` : ''}</ol>`,
 };
 
 function drawTabs() {
   $('#tabs').innerHTML = ST.parts.map(k => {
-    const p = latest(k), text = ST.textParts.includes(k);
-    return `<button type="button" role="tab" class="btn ${k === tab ? 'secondary' : 'ghost'} sm" data-k="${k}" aria-selected="${k === tab}"><span class="dr-dot ${p ? p.status : ''}" aria-hidden="true"></span>${esc(ST.names[k])}${text ? '' : ' <small class="muted">قريباً</small>'}</button>`;
+    const p = latest(k), optional = !(ST.required || []).includes(k);
+    return `<button type="button" role="tab" class="btn ${k === tab ? 'secondary' : 'ghost'} sm" data-k="${k}" aria-selected="${k === tab}"><span class="dr-dot ${p ? p.status : ''}" aria-hidden="true"></span>${esc(ST.names[k])}${optional ? ' <small class="muted">اختياري</small>' : ''}</button>`;
   }).join('');
 }
 
 function drawPart() {
-  const p = latest(tab), text = ST.textParts.includes(tab);
-  if (!text) { $('#part').innerHTML = `<p class="muted">${esc(ST.names[tab])} يجي في التحديث الجاي: يتولّد من النصوص المعتمدة.</p>`; return; }
+  const p = latest(tab);
+  const make = tab === 'design'
+    ? (ST.draw ? `<button class="btn secondary" type="button" id="drawBtn">${p ? 'ارسم من جديد' : 'ارسم التصاميم'}</button>` : `<span class="muted">${esc(ST.why?.draw || '')}</span>`)
+    : `<button class="btn ${p ? 'ghost' : 'secondary'}" type="button" data-draft="${tab}">${p ? 'اكتب من جديد' : `اكتب ${esc(ST.names[tab])}`}</button>`;
   if (!p) {
-    $('#part').innerHTML = `<p class="muted">ما انكتب للحين. اضغط «جهّز الحملة» يكتب كل الأجزاء، أو اكتب هذا الجزء بس.</p>
-      ${P.canEdit ? `<div class="dr-acts"><button class="btn secondary" type="button" data-draft="${tab}">اكتب ${esc(ST.names[tab])}</button></div>` : ''}`;
+    const hint = { design: 'تصميم لكل نص معتمد (حتى ٣)، والكلام فوق الصورة مو مكتوب فيها. يحتاج النصوص معتمدة.', voiceover: 'نص تعليق صوتي قصير من النصوص المعتمدة، وبعدها تولّد الصوت.', motion: 'خطة مشاهد تتحرك فوق التصميم المعتمد على وقت الفويس أوفر.' }[tab]
+      || 'ما انكتب للحين. اضغط «جهّز الحملة» يكتب كل الأجزاء، أو اكتب هذا الجزء بس.';
+    $('#part').innerHTML = `<p class="muted">${esc(hint)}</p>${P.canEdit ? `<div class="dr-acts">${make}</div>` : ''}`;
     return;
   }
   const versions = (P.parts || []).filter(x => x.kind === tab).length;
   $('#part').innerHTML = `<p style="margin:0 0 10px"><span class="dr-tag ${p.status}">${STATUS[p.status]}</span> <span class="muted">النسخة ${fmt(p.version)}${versions > 1 ? ` من ${fmt(versions)}` : ''}${p.instruction ? ` · تعديلك: «${esc(p.instruction)}»` : ''}</span></p>
     ${(VIEW[tab] || (c => `<pre>${esc(JSON.stringify(c, null, 2))}</pre>`))(p.content || {})}
     <div class="dr-acts">
-      ${P.canEdit ? `<button class="btn secondary" type="button" data-edit="${tab}">عدّل</button>` : ''}
+      ${P.canEdit && tab !== 'design' ? `<button class="btn secondary" type="button" data-edit="${tab}">عدّل</button>` : ''}
+      ${P.canEdit && tab === 'voiceover' ? (ST.voice ? `<button class="btn secondary" type="button" id="speakBtn">${p.content?.audio_key ? 'ولّد الصوت من جديد' : 'ولّد الصوت'}</button>` : `<span class="muted">${esc(ST.why?.voice || '')}</span>`) : ''}
       ${P.canApprove && p.status !== 'approved' ? `<button class="btn primary" type="button" data-ok="${p.id}">اعتمد</button>` : ''}
-      ${P.canEdit ? `<button class="btn ghost" type="button" data-draft="${tab}">اكتب من جديد</button>` : ''}
+      ${P.canEdit ? make : ''}
     </div>`;
+  if (tab === 'motion') preview(p.content);
 }
 
 function drawPublish() {
@@ -83,10 +101,79 @@ async function open(id) {
   P = await api(`/api/dream/item?id=${id}`);
   setUrl(id);
   $('#start').hidden = true; $('#work').hidden = false;
-  const first = ST.textParts.find(k => latest(k)?.status !== 'approved');
+  const first = (ST.required || ST.textParts).find(k => latest(k)?.status !== 'approved');
   tab = first || tab;
   drawAll();
 }
+
+// Motion preview: the design picture with the scene plan animated on a canvas (the design tab's own renderer)
+function preview(c) {
+  const cv = $('#mcanvas'); if (!cv || !c?.spec) return;
+  const [w, h] = SIZE[c.spec.ratio] || SIZE['9:16'];
+  cv.width = w / 2; cv.height = h / 2;
+  const ctx = cv.getContext('2d'), img = new Image();
+  const at = t => { ctx.save(); ctx.scale(0.5, 0.5); paint(ctx, c.spec, frame(c.spec, t), img); ctx.restore(); };
+  img.onload = () => at(Math.min(1.5, c.spec.seconds));
+  if (c.design_key) img.src = fileUrl(c.design_key); else at(1.5);
+  $('#mplay').onclick = () => {
+    const audio = c.voice_key ? new Audio(fileUrl(c.voice_key)) : null, t0 = performance.now();
+    audio?.play().catch(() => {});
+    const tick = () => { const t = (performance.now() - t0) / 1000; at(t); if (t < c.spec.seconds && document.contains(cv)) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  };
+}
+
+// A data: URL to a Blob without fetch (the page's CSP allows connect-src 'self' only)
+function dataBlob(url) {
+  const [head, b64] = String(url).split(',', 2), type = /^data:([^;,]+)/.exec(head || '')?.[1] || 'image/jpeg';
+  const bin = atob(b64 || ''), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  return new Blob([u8], { type });
+}
+
+// Raw upload of a picture or a voice file to R2; returns its key
+async function upload(blob, kind) {
+  const r = await fetch(`/api/dream/file?kind=${kind}`, { method: 'POST', body: blob, headers: { 'content-type': blob.type }, credentials: 'same-origin' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'ما انرفع الملف');
+  return j.key;
+}
+
+// One picture per approved ad text (up to 3): drawn on the server, uploaded from here, then saved as one design version
+async function drawDesigns(btn) {
+  busy(btn, true);
+  try {
+    const images = [];
+    for (let i = 0, of = 1; i < of; i++) {
+      $('#prog').textContent = `أرسم التصميم ${fmt(i + 1)}…`;
+      const r = await api('/api/dream/draw', { method: 'POST', body: { id: P.project.id, index: i }, timeout: 180000 });
+      of = r.of;
+      const blob = dataBlob(r.image);
+      images.push({ key: await upload(blob, 'design'), ...r.item });
+    }
+    const r = await api('/api/dream/media', { method: 'POST', body: { id: P.project.id, kind: 'design', images } });
+    P.parts = [r.part, ...markStale(r.stale)];
+    $('#prog').textContent = `انرسمت ${fmt(images.length)} تصاميم. راجعها واعتمدها.`;
+    drawAll();
+  } catch (e) { $('#prog').textContent = ''; toast(e.message, true); busy(btn, false); }
+}
+
+// Gemini reads the script; the PCM becomes a WAV here, is uploaded, and saved on a new voice-over version
+async function speakVoice(btn) {
+  busy(btn, true); $('#prog').textContent = 'أولّد الصوت…';
+  try {
+    const j = await api('/api/dream/speak', { method: 'POST', body: { id: P.project.id }, timeout: 120000 });
+    const d = j?.candidates?.[0]?.content?.parts?.find(x => x.inlineData)?.inlineData;
+    if (!d?.data) throw new Error('ما رجع صوت، جرّب مرة ثانية');
+    const key = await upload(wav(d.data, d.mimeType), 'voice');
+    const r = await api('/api/dream/media', { method: 'POST', body: { id: P.project.id, kind: 'voiceover', audio_key: key } });
+    P.parts = [r.part, ...markStale(r.stale)];
+    $('#prog').textContent = 'انولد الصوت.';
+    drawAll();
+  } catch (e) { $('#prog').textContent = ''; toast(e.message, true); busy(btn, false); }
+}
+
+const markStale = stale => (P.parts || []).map(x => (stale || []).includes(x.kind) && x.status === 'approved' ? { ...x, status: 'stale' } : x);
 
 function startView() {
   P = null; setUrl(null);
@@ -97,8 +184,8 @@ function startView() {
 // One part at a time, so a slow model never hits one long request; the page says where it is
 async function draft(kind, instruction = '') {
   const r = await api('/api/dream/draft', { method: 'POST', body: { id: P.project.id, kind, instruction }, timeout: 150000 });
-  P.parts = [r.part, ...(P.parts || []).map(x => (r.stale || []).includes(x.kind) && x.status === 'approved' ? { ...x, status: 'stale' } : x)];
-  P.missing = ST.textParts.filter(k => latest(k)?.status !== 'approved');
+  P.parts = [r.part, ...markStale(r.stale)];
+  P.missing = (ST.required || ST.textParts).filter(k => latest(k)?.status !== 'approved');
   return r;
 }
 
@@ -170,13 +257,15 @@ export default async function mount() {
 
   $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; tab = b.dataset.k; drawTabs(); drawPart(); });
   $('#part').addEventListener('click', async e => {
+    if (e.target.closest('#drawBtn')) return drawDesigns(e.target.closest('#drawBtn'));
+    if (e.target.closest('#speakBtn')) return speakVoice(e.target.closest('#speakBtn'));
     const ok = e.target.closest('[data-ok]'), ed = e.target.closest('[data-edit]'), dr = e.target.closest('[data-draft]');
     if (ok) {
       busy(ok, true);
       try {
         const r = await api('/api/dream/approve', { method: 'POST', body: { id: Number(ok.dataset.ok) } });
         P.parts = P.parts.map(x => (x.id === Number(ok.dataset.ok) ? { ...x, status: 'approved' } : x)); P.missing = r.missing;
-        const next = ST.textParts.find(k => latest(k)?.status !== 'approved');
+        const next = (ST.required || ST.textParts).find(k => latest(k)?.status !== 'approved');
         if (next) tab = next;
         drawTabs(); drawPart(); drawPublish(); toast('اعتمدته');
       } catch (err) { toast(err.message, true); busy(ok, false); }

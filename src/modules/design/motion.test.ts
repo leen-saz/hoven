@@ -33,7 +33,7 @@ describe('the plan', () => {
     const s = templateSpec({ headline: 'المفارش في بيتك', script: 'نجيك البيت. قطن مصري؟ احجز اليوم.', seconds: 12, ratio: '1:1', colors: ['#294036'] })!;
     expect(s.scenes.map(x => x.text)).toEqual(['المفارش في بيتك', 'نجيك البيت.', 'قطن مصري؟', 'احجز اليوم.']);
     expect(s.scenes.at(-1)!.to).toBeLessThanOrEqual(12);
-    expect(s.cta?.text).toBe('احجز الحين');
+    expect(s.cta?.text).toBe('اطلب الحين');
     expect(s.colors.band).toBe('#294036');
   });
 

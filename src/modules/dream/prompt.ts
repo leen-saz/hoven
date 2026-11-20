@@ -39,6 +39,7 @@ const SHAPES: Partial<Record<Part, string>> = {
   audience: '{"segments":[{"platform":"meta|snap|tiktok|google","name":"اسم الشريحة","age":"25-44","gender":"الكل|نساء|رجال","regions":["الرياض"],"interests":["ديكور المنزل"],"notes":"ليش هالشريحة"}]}',
   budget: '{"days":14,"split":[{"platform":"meta|snap|tiktok|google","daily":300}],"learning":"كم يوم تعلّم تحتاج المنصات وكيف نوزع"}',
   copy: '{"items":[{"platform":"meta|snap|tiktok|google","format":"صورة مربعة|ستوري|فيديو|بحث","headline":"عنوان قصير","body":"النص","cta":"اطلب الحين"}]}',
+  voiceover: '{"script":"نص التعليق الصوتي، ٢٠ إلى ٣٠ ثانية، جمل قصيرة","voice":"Charon|Orus|Puck|Fenrir|Kore|Aoede|Zephyr|Leda","accent":"najdi|hijazi|gulf|msa","tone":"warm|energetic|calm|formal"}',
 };
 
 export function partPrompt(kind: Part, c: Context, conversation: string, approved: Partial<Record<Part, unknown>>, instruction = ''): string {
@@ -48,6 +49,7 @@ export function partPrompt(kind: Part, c: Context, conversation: string, approve
     c.platforms.length ? `المنصات: ${c.platforms.join(', ')} فقط.` : 'اختر المنصات المناسبة من: meta, snap, tiktok, google.',
     kind === 'budget' ? 'الميزانية بالريال السعودي. لا تتعدى الميزانية اليومية في أهداف لين لكل منصة إن وجدت.' : '',
     kind === 'copy' ? 'نصوص بلهجة سعودية بيضاء، جمل قصيرة، فائدة قبل الميزة، ودعوة واضحة. بدون ادعاءات ممنوعة. نص لكل منصة وصيغة.' : '',
+    kind === 'voiceover' ? 'تعليق صوتي لإعلان فيديو قصير مبني على النصوص المعتمدة: يبدأ بخطّاف في أول ثانيتين، ويختم بدعوة واضحة. يخاطب المستمع بالمذكر.' : '',
     instruction ? `تعديل لين على النسخة السابقة: ${instruction}` : '',
     `رد بكائن JSON واحد فقط بهالشكل بالضبط، بدون أي نص قبله أو بعده:\n${SHAPES[kind]}`,
     before,
