@@ -7,6 +7,7 @@ import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
 import { serveSite } from './lib/site';
 import { versionAssets } from './lib/assets';
+import { withTheme } from './lib/theme';
 import { withWaiter } from './lib/usage';
 import { dispatchRefresh, type CronEnv } from './lib/cron';
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
@@ -37,6 +38,11 @@ app.use(async (c, next) => {
 app.use(async (c, next) => {
   await next();
   c.res = versionAssets(c.res);
+});
+// The theme script goes in first (registered after, so it runs before versionAssets rewrites the page)
+app.use(async (c, next) => {
+  await next();
+  c.res = withTheme(c.res);
 });
 app.use(async (c, next) => {
   if (REWRITTEN.has(c.req.raw)) return next();

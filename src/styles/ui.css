@@ -13,27 +13,28 @@
 :root {
   /* Prefixed so they never clash with app.css (--accent, --muted…); portals (menus, sheet) see them too */
   --ui-radius: 14px;
-  --ui-background: #FFFFFF;
-  --ui-foreground: #293342;
-  --ui-card: #FFFFFF;
-  --ui-card-foreground: #293342;
-  --ui-popover: #FFFFFF;
-  --ui-popover-foreground: #293342;
-  --ui-primary: #294036;
-  --ui-primary-foreground: #FFFFFF;
-  --ui-secondary: color-mix(in srgb, #294036 7%, #FFFFFF);
-  --ui-secondary-foreground: #293342;
-  --ui-muted: color-mix(in srgb, #294036 7%, #FFFFFF);
-  --ui-muted-foreground: color-mix(in srgb, #293342 62%, #FFFFFF);
-  --ui-accent: color-mix(in srgb, #294036 10%, #FFFFFF);
-  --ui-accent-foreground: #293342;
-  --ui-destructive: #B3261E;
-  --ui-border: color-mix(in srgb, #7fb59a 35%, #FFFFFF);
-  --ui-input: color-mix(in srgb, #7fb59a 45%, #FFFFFF);
-  --ui-ring: #294036;
-  --ui-chart-1: #294036;
-  --ui-chart-2: #141414;
-  --ui-chart-3: #7fb59a;
+  /* Values from /assets/tokens.css (loaded by app.css on every page that loads this file), so dark mode follows */
+  --ui-background: var(--surface);
+  --ui-foreground: var(--heading);
+  --ui-card: var(--surface);
+  --ui-card-foreground: var(--heading);
+  --ui-popover: var(--surface);
+  --ui-popover-foreground: var(--heading);
+  --ui-primary: var(--accent);
+  --ui-primary-foreground: var(--on-accent);
+  --ui-secondary: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  --ui-secondary-foreground: var(--heading);
+  --ui-muted: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  --ui-muted-foreground: color-mix(in srgb, var(--heading) 62%, var(--surface));
+  --ui-accent: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --ui-accent-foreground: var(--heading);
+  --ui-destructive: var(--pulse);
+  --ui-border: color-mix(in srgb, var(--soft) 35%, var(--surface));
+  --ui-input: color-mix(in srgb, var(--soft) 45%, var(--surface));
+  --ui-ring: var(--accent);
+  --ui-chart-1: var(--accent);
+  --ui-chart-2: var(--text);
+  --ui-chart-3: var(--soft);
 }
 .ui { font-family: var(--f-ar); color: var(--ui-foreground); }
 /* app.css styles table, th, td, input, label and headings without a layer, so it would beat these layered

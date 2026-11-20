@@ -45,7 +45,8 @@ export function sections(me, L) {
   const pick = (...keys) => keys.map(byKey).filter(Boolean).flatMap(m => [mod(m), ...sub(m)]);
   const analytics = one(ov, core('/overview/', 'التحليلات', 'Analytics', 'chart', 'overview', true), core('/', 'التحليلات', 'Analytics', 'chart', 'ceo'));
   const HOVEN = [
-    ['main', L('الرئيسية', 'Main'), [...pick('dream'), analytics, ...pick('buyer'), ...(has('control') ? [core('/control/', 'لوحة القرارات', 'Decision board', 'gavel', 'control')] : [])]],
+    // The decision board sits under the media buyer (docs/PRD.md §3.1): the buyer's proposals are decided there
+    ['main', L('الرئيسية', 'Main'), [...pick('dream'), analytics, ...pick('buyer'), ...(has('control') ? [{ ...core('/control/', 'لوحة القرارات', 'Decision board', 'gavel', 'control'), sub: true }] : [])]],
     ['auto', L('الأتمتة والرصد', 'Automation and listening'), [...pick('social', 'listening'), ...pick('knowledge')]],
     ['system', L('الربط والإعدادات', 'Connections and settings'), [core('/connectors/', 'الربط', 'Connectors', 'plug', 'connectors'),
       ...(me.role === 'owner' ? [core('/admin/', 'الصلاحيات', 'Permissions', SHIELD, 'admin', true)] : [])]],
@@ -53,4 +54,6 @@ export function sections(me, L) {
   void items;
   return HOVEN.map(([key, label, list]) => ({ key, label, items: list })).filter(s => s.items.length);
 }
+// Live counts of what waits for a decision (/api/nav/counts), shown next to these entries
+export const COUNTS = { control: 'control', social: 'social', dream: 'dream' };
 export const TIP = { noaccess: ['ما عندك صلاحية', 'No access'], locked: ['مقفل لشركتك', 'Locked for your company'] };

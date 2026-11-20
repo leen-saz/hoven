@@ -1,0 +1,59 @@
+/* Hoven's colours, the one source (docs/PRD.md §4.2). app.css imports this file; src/styles/ui.css (shadcn) imports it too.
+   Light is the default. Dark applies when the viewer picks it (html[data-theme=dark], set by /assets/theme.js), or picks
+   "automatic" (html[data-theme=auto]) and the device is dark. One strong colour for actions only: --accent. */
+:root{
+  color-scheme:light;
+  --bg:#F2F0E3;        /* Hoven ivory */
+  --surface:#FFFFFF;
+  --ink:#293342;       /* Hoven navy: dark sections, tooltips, toasts */
+  --deep:#141414;
+  --accent:#294036;    /* Hoven forest green: actions only */
+  --soft:#7FB59A;      /* soft green */
+  --pulse:#B3261E;     /* emergency only */
+  --text:#141414;
+  --heading:#293342;   /* titles and shadcn foreground */
+  --muted:#5B6070;
+  --line:rgba(20,20,20,.08);
+  --on-accent:#FFFFFF; /* text on accent and pulse */
+  --on-ink:#FFFFFF;    /* text on ink */
+  --hi:#FFFFFF;        /* glass highlight and edges */
+  --bg-1:#F4F2E8; --bg-2:#EEEBDD; --bg-3:#F2EFE2;   /* page background gradient */
+}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#0F141C;
+  --surface:#1B2230;
+  --ink:#0A0E14;
+  --deep:#000000;
+  --accent:#7FB59A;
+  --soft:#294036;
+  --pulse:#F2B8B5;
+  --text:#F2F0E3;
+  --heading:#F2F0E3;
+  --muted:#A9AEBB;
+  --line:rgba(255,255,255,.08);
+  --on-accent:#0F141C;
+  --on-ink:#F2F0E3;
+  --hi:#2A3344;
+  --bg-1:#111723; --bg-2:#0D121A; --bg-3:#121926;
+}
+@media (prefers-color-scheme:dark){
+  :root[data-theme=auto]{
+    color-scheme:dark;
+    --bg:#0F141C;
+    --surface:#1B2230;
+    --ink:#0A0E14;
+    --deep:#000000;
+    --accent:#7FB59A;
+    --soft:#294036;
+    --pulse:#F2B8B5;
+    --text:#F2F0E3;
+    --heading:#F2F0E3;
+    --muted:#A9AEBB;
+    --line:rgba(255,255,255,.08);
+    --on-accent:#0F141C;
+    --on-ink:#F2F0E3;
+    --hi:#2A3344;
+    --bg-1:#111723; --bg-2:#0D121A; --bg-3:#121926;
+  }
+}

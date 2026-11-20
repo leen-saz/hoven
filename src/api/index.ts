@@ -7,6 +7,7 @@ import * as connectors from './routes/connectors';
 import * as control from './routes/control';
 import * as dash from './routes/dash';
 import * as lessons from './routes/lessons';
+import * as nav from './routes/nav';
 import { list as libraryRoot, item as libraryItem, star as libraryStar, approve as libraryApprove } from './routes/library';
 import * as today from './routes/today';
 import * as vitals from './routes/vitals';
@@ -28,7 +29,7 @@ export const api = new Hono<{ Bindings: AuthEnv }>().basePath('/api');
 // Always 200 when the Worker answers: `ok` and `checks` say what is down. Never cached.
 api.get('/health', async c => c.json(await health((c.env ?? {}) as unknown as HealthEnv), 200, { 'cache-control': 'no-store' }));
 // Every route group: the core ones, then one per live module (src/modules/routes.ts). Exported for the error-behaviour test.
-export const GROUPS: Record<string, Group> = { auth, admin, account, connectors, control, dash, lessons, today, vitals, ...ROUTES, library: { list: libraryRoot, item: libraryItem, star: libraryStar, approve: libraryApprove, ...ROUTES.library } };
+export const GROUPS: Record<string, Group> = { auth, admin, account, connectors, control, dash, lessons, nav, today, vitals, ...ROUTES, library: { list: libraryRoot, item: libraryItem, star: libraryStar, approve: libraryApprove, ...ROUTES.library } };
 for (const [key, routes] of Object.entries(GROUPS)) api.all(`/${key}/:action`, group(routes));
 // The shared library also answers on the bare path: GET/POST /api/library
 api.on(['GET', 'POST'], '/library', c => (libraryRoot[c.req.method as 'GET' | 'POST'] as Handler)(c.req.raw, c.env));

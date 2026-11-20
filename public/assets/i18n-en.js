@@ -19,7 +19,7 @@ export const EN = {
   '٣. تعدّل أي جزء وتعتمده': '3. Edit any part and approve it',
   '٤. «انشر» ينشئ الحملة في المنصات موقوفة، وأنت تشغّلها': '4. «Publish» creates the campaign on the platforms paused; you switch it on',
   'المحادثة تنفتح هنا قريب.': 'The chat opens here soon.',
-  'التحليلات': 'Analytics', 'ملخص الأداء': 'Performance summary', 'المواد الإعلانية بالتفصيل': 'Creatives in detail', 'الحملات والمنصات': 'Campaigns & platforms', 'ملخص اليوم': 'Today', 'الأداء': 'Performance', 'إنشاء المحتوى': 'Content creation', 'المراجعة والتنفيذ': 'Review & execution', 'إدارة النظام': 'System', 'الصلاحيات': 'Permissions', 'اليوم': 'Today', 'إغلاق القائمة': 'Close menu', 'المادة الإعلانية': 'Creative', 'بموافقتي': 'With my approval', 'تنفيذ تلقائي': 'Auto-run', 'التنفيذ التلقائي': 'auto-run', 'الصلاحيات والدخول': 'Access & sign-in', 'السوشال': 'Social', 'صورة أو فيديو': 'Photo or video', 'أو حط رابط': 'Or paste a link', 'يرفع…': 'Uploading…', 'انرفع ✓': 'Uploaded ✓', 'الرحلات والرسائل': 'Journeys', 'المدير': 'Manager', 'الموديولات': 'Modules', 'موديولات الشركة': 'Company modules', 'الإعدادات': 'Settings', 'أساسي': 'Core', 'أساسية لتشغيل النظام': 'Needed to run the system',
+  'التحليلات': 'Analytics', 'ملخص الأداء': 'Performance summary', 'المواد الإعلانية بالتفصيل': 'Creatives in detail', 'الحملات والمنصات': 'Campaigns & platforms', 'ملخص اليوم': 'Today', 'الأداء': 'Performance', 'إنشاء المحتوى': 'Content creation', 'المراجعة والتنفيذ': 'Review & execution', 'إدارة النظام': 'System', 'الصلاحيات': 'Permissions', 'اليوم': 'Today', 'إغلاق القائمة': 'Close menu', 'المادة الإعلانية': 'Creative', 'بموافقتي': 'With my approval', 'تنفيذ تلقائي': 'Auto-run', 'التنفيذ التلقائي': 'auto-run', 'الصلاحيات والدخول': 'Access & sign-in', 'السوشال': 'Social', 'التواصل الاجتماعي': 'Social media', 'صورة أو فيديو': 'Photo or video', 'أو حط رابط': 'Or paste a link', 'يرفع…': 'Uploading…', 'انرفع ✓': 'Uploaded ✓', 'الرحلات والرسائل': 'Journeys', 'المدير': 'Manager', 'الموديولات': 'Modules', 'موديولات الشركة': 'Company modules', 'الإعدادات': 'Settings', 'أساسي': 'Core', 'أساسية لتشغيل النظام': 'Needed to run the system',
   'حسابي': 'My account', 'خروج': 'Sign out', 'المالكة': 'Owner', 'عضو': 'Member', 'القائمة': 'Menu', 'التنقل': 'Navigation',
   'عربي': 'عربي', 'English': 'English', 'اللغة': 'Language',
   // الدخول
@@ -638,6 +638,9 @@ export const EN = {
   "السجل ما ينعدّل ولا ينحذف. بدون تاريخ: آخر 200 فعل.": "The log is never edited or deleted. Without a date: the last 200 actions.",
   "السعر بالريال": "Price in riyals",
   "السقف الشهري (ر.س)": "Monthly cap (SAR)",
+  "السقف الشهري لتاب احلم": "Monthly cap for the Dream tab",
+  "السقف الشهري لتاب الميديا باير": "Monthly cap for the Media buyer tab",
+  "السقف الشهري لتاب التواصل الاجتماعي": "Monthly cap for the Social media tab",
   "السقف الشهري لتاب الامتثال": "Monthly cap for the Compliance tab",
   "السقف الشهري لتاب التتبع": "Monthly cap for the Tracking tab",
   "السقف الشهري لتاب التصميم": "Monthly cap for the Design tab",

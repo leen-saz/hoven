@@ -40,6 +40,8 @@ export function need(pathname: string, search: string): Need | null {
   if (/^\/api\/dash\//.test(pathname)) return 'any';
   // Lessons of any tab: the route checks that tab's own level
   if (/^\/api\/lessons\//.test(pathname)) return 'any';
+  // Sidebar counts: the route counts only what this user may open
+  if (/^\/api\/nav\//.test(pathname)) return 'any';
   // The shared library API (save from any tab, list, star, approve): the routes check each item's own tab.
   // Hoven: the Library page and its templates/documents need the library permission (module gate below).
   if (/^\/api\/library(\/(list|item|star|approve))?\/?$/.test(pathname)) return 'any';
@@ -113,7 +115,8 @@ export async function gate(request: Request, e: AuthEnv): Promise<Decision> {
     return { pass: true };
   }
   if (api) return json(403, { error: 'ما عندك صلاحية' });
-  const to = home();
+  // Refused here: the start page (Dream), or Today for a user who may not open Dream either
+  const to = can(s, 'dream', cfg) ? home() : '/today/';
   if (to === back) return html(403, 'ما عندك صلاحية على هذي اللوحة.');
   return redirect(new URL(to, url.origin).toString());
 }

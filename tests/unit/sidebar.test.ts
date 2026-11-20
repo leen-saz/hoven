@@ -33,7 +33,16 @@ describe('sidebar', () => {
   it("is Hoven's simple menu, in Leen's order: Dream, Analytics, Media buyer, then the rest", () => {
     const list = items(me()).map(i => i.text);
     expect(list.slice(0, 3)).toEqual(['احلم', 'التحليلات', 'الميديا باير']);
-    expect(list).toEqual(expect.arrayContaining(['السوشال', 'الرصد', 'المعرفة', 'الربط']));
+    expect(list).toEqual(expect.arrayContaining(['التواصل الاجتماعي', 'الرصد', 'المعرفة', 'الربط']));
     for (const gone of ['التصميم', 'الصوت', 'المايسترو', 'التتبع', 'الامتثال', 'المحتوى و SEO']) expect(list).not.toContain(gone);
+  });
+  it("follows Leen's order: decision board under the media buyer, then social, listening, knowledge, connections", () => {
+    const list = items(me()) as (Item & { sub?: boolean })[];
+    const at = (t: string) => list.findIndex(i => i.text === t);
+    expect(at('لوحة القرارات')).toBe(at('الميديا باير') + 1);
+    expect(list[at('لوحة القرارات')]!.sub).toBe(true);
+    const order = ['احلم', 'التحليلات', 'الميديا باير', 'التواصل الاجتماعي', 'الرصد', 'المعرفة', 'الربط'].map(at);
+    expect(order.every(i => i >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 });
