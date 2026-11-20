@@ -207,6 +207,8 @@ const markStale = stale => (P.parts || []).map(x => (stale || []).includes(x.kin
 function startView() {
   P = null; setUrl(null);
   $('#start').hidden = false; $('#work').hidden = true;
+  // From the listening tab's «حوّلها لفكرة»: the mention becomes the idea to start from
+  if (q.get('idea') && !$('#idea').value) $('#idea').value = q.get('idea').slice(0, 4000);
   $('#idea').focus();
 }
 

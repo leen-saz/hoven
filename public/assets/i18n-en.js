@@ -10,6 +10,17 @@ export const EN = {
   'أضف الدرس': 'Add lesson', 'احفظ كدرس': 'Save as a lesson', 'أرسل للوحة القرارات': 'Send to the decision board',
   'أهدافك لكل منصة. اللي تخليه فاضي ما يُستخدم في الاقتراحات.': 'Your goals per platform. Empty fields are not used in recommendations.',
   'صرف الإعلانات (ر.س)': 'Ad spend (SAR)', 'طلبات من الإعلانات': 'Purchases from ads', 'تكلفة الطلب (ر.س)': 'Cost per purchase (SAR)',
+  // Social: a platform's own text, posting slots, week view (docs/PRD.md §3.5)
+  'نص خاص لكل منصة': 'Text per platform', 'فاضي = النص المشترك': 'Empty = the shared text',
+  'الخانة الجاية': 'Next slot', 'خانات النشر الثابتة': 'Fixed posting slots', 'ما فيه خانات. أضف يوم وساعة.': 'No slots yet. Add a day and a time.',
+  'الأحد': 'Sunday', 'الاثنين': 'Monday', 'الثلاثاء': 'Tuesday', 'الأربعاء': 'Wednesday', 'الخميس': 'Thursday', 'الجمعة': 'Friday', 'السبت': 'Saturday',
+  'الأسبوع': 'Week', 'الساعة': 'Time', 'العرض': 'View', 'احذف الخانة': 'Remove slot', 'انحفظت': 'Saved',
+  'حوّلها لفكرة في احلم': 'Turn into a Dream idea',
+  // Dream: parts, media and publishing
+  'فكرة جديدة': 'New idea', 'مشاريعك': 'Your projects', 'جهّز الحملة': 'Prepare the campaign', 'الحملة': 'Campaign', 'ابدأ': 'Start',
+  'رسالتك': 'Your message', 'فكرة الحملة': 'Campaign idea', 'أجزاء الحملة': 'Campaign parts',
+  'اكتب الفكرة ونتناقش فيها، وبعدها يطلع لك كل جزء جاهز تعدّله وتعتمده.': 'Write the idea and we think it through; then each part is ready to edit and approve.',
+  'رابط المتجر أو صفحة المنتج': 'Store or product page link', 'انشر': 'Publish',
   // Hoven's menu and «احلم»
   'احلم': 'Dream', 'الميديا باير': 'Media buyer', 'الرئيسية': 'Main', 'الأتمتة والرصد': 'Automation and listening', 'الربط والإعدادات': 'Connections and settings',
   'احلم · Hoven': 'Dream · Hoven', 'وش الحملة اللي تحلم فيها؟': 'What campaign are you dreaming of?',

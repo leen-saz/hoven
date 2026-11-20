@@ -1,8 +1,8 @@
 // /api/social/*: the post calendar of the user's company. Reads need the `social` dashboard, writes are same-origin.
 // Publishing itself runs from the Worker cron (src/modules/social/cron.ts), never from the browser.
-import { sb, json, readJson, handle, requireUser, audit, isOwner, type Cfg } from '../../lib/auth';
+import { sb, json, readJson, handle, requireUser, audit, isOwner, missingSchema, notApplied, type Cfg } from '../../lib/auth';
 import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
-import { SOCIAL, readiness, validate, canApprove, cleanApprovers, suggestPrompt, cleanSuggestion, retryPlan, checkConnection, type SocialPlatform, type Results } from './social';
+import { SOCIAL, readiness, validate, canApprove, cleanApprovers, suggestPrompt, cleanSuggestion, retryPlan, checkConnection, cleanSlots, nextSlot, type SocialPlatform, type Results } from './social';
 import { saveValues } from '../../lib/vault';
 import { META_PENDING, pageValues, type PageCand } from '../../lib/connectors';
 import { check } from '../compliance/compliance';
@@ -74,7 +74,7 @@ export const posts = {
     for (const pl of v.draft.platforms) if (ready[pl] && SOCIAL[pl].live) v.notices.push(`${SOCIAL[pl].name}: ${ready[pl]}`);
     const r = await sb<Row[]>(cfg, '/rest/v1/social_posts', { method: 'POST', admin: true, headers: { Prefer: 'return=representation' },
       body: { ...v.draft, company_id: user.co, status: 'scheduled', created_by: user.email } });
-    if (!r.ok) return json(500, { error: 'ما انحفظ المنشور' });
+    if (!r.ok) return json(missingSchema(r) ? 503 : 500, { error: missingSchema(r) ? notApplied(user, 'migration 035_social_more.sql') : 'ما انحفظ المنشور' });
     const post = rows(r.data)[0];
     await audit(cfg, user, 'social_scheduled', { target: { id: post?.id, platforms: v.draft.platforms, mode: v.draft.mode, publish_at: v.draft.publish_at } });
     return json(200, { ok: true, post, notices: v.notices });
@@ -217,3 +217,27 @@ export const suggest = { POST: handle(async (request, e: Parameters<typeof requi
   if (text.length < 20) return json(502, { error: 'ما طلع نص واضح، جرّب مرة ثانية' });
   return json(200, { body: text, engine: out.engine, compliance: check(text, await rulesFor(cfg, user.co)) });
 }) };
+
+// Posting slots (035_social_more.sql): GET the company's slots and the next free one; POST { slots } replaces them (approve level)
+export const slots = {
+  GET: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'social');
+    const r = await sb<Row[]>(cfg, scoped('/rest/v1/social_slots?select=weekday,at&order=weekday.asc,at.asc', user.co), { admin: true });
+    if (!r.ok) return json(200, { slots: [], next: null, setup: missingSchema(r) ? notApplied(user, 'migration 035_social_more.sql') : null });
+    const list = cleanSlots(rows(r.data).map(x => ({ weekday: x['weekday'], at: String(x['at'] || '').slice(0, 5) })));
+    const taken = await sb<Row[]>(cfg, scoped(`/rest/v1/social_posts?select=publish_at&status=in.(scheduled,publishing)&publish_at=gte.${new Date().toISOString()}&limit=500`, user.co), { admin: true });
+    return json(200, { slots: list, next: nextSlot(list, rows(taken.data).map(x => String(x['publish_at']))) });
+  }),
+  POST: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'social', { write: true, approve: true });
+    const list = cleanSlots((await readJson(request)).slots);
+    const del = await sb(cfg, scoped('/rest/v1/social_slots', user.co), { method: 'DELETE', admin: true });
+    if (!del.ok) return json(missingSchema(del) ? 503 : 500, { error: missingSchema(del) ? notApplied(user, 'migration 035_social_more.sql') : 'ما انحفظت الخانات' });
+    if (list.length) {
+      const w = await sb(cfg, '/rest/v1/social_slots', { method: 'POST', admin: true, body: list.map(x => ({ ...x, company_id: user.co, created_by: user.email })) });
+      if (!w.ok) return json(500, { error: 'ما انحفظت الخانات' });
+    }
+    await audit(cfg, user, 'social_slots', { after: list });
+    return json(200, { ok: true, slots: list });
+  }),
+};

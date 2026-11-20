@@ -32,6 +32,9 @@ export const list = {
     const r = await sb(cfg, '/rest/v1/connections?select=platform,method,names,shown,connected_by,connected_at,expires_at,checked', { admin: true });
     if (!r.ok) return json(500, { error: 'ما قدرت أقرأ حالة الربط. تأكد إن 005_connectors.sql انطبق على القاعدة' });
     const by = Object.fromEntries(rows(r.data).map(x => [String(x.platform), x]));
+    // Hourly account checks (src/lib/account-health.ts, 035): failing within the hour's grace, or down after it
+    const hr = await sb(cfg, `/rest/v1/connection_health?company_id=eq.${HOVEN_COMPANY}&select=platform,health,checked_at,failing_since`, { admin: true });
+    const health = Object.fromEntries((hr.ok ? rows(hr.data) : []).map(x => [String(x.platform), { health: x.health, checked: x.checked_at, since: x.failing_since }]));
     // Platforms the hourly pull reads with keys kept in GitHub secrets: the last ad write and the last metric day of each
     const PULL: Record<string, string> = { meta: 'meta', google: 'google_ads', snap: 'snap', tiktok: 'tiktok' };
     // One row per platform is enough (a single 5000-row read is cut at 1000 and could hold only one platform)
@@ -62,7 +65,7 @@ export const list = {
         oauth: !!o, oauthReady: !!(o && (o.mcpOAuth || appCreds(p, vars(e)))), expiresNote: o?.expires || null, logo: p.logo || null, color: p.color || null,
         fields: p.fields.map(f => ({ env: f.env, label: f.label, secret: f.secret, type: f.type, optional: !!f.optional, manual: !!f.manual,
           placeholder: f.placeholder || '', saved: have.has(f.env), shown: !f.secret && c ? shown[f.env] || '' : '' })),
-        status, lastPull: pull?.last || null, method: c && c.method, by: c && c.connected_by, at: c && c.connected_at, expires: c && c.expires_at, checked: c && c.checked,
+        status, health: health[p.id] || null, lastPull: pull?.last || null, method: c && c.method, by: c && c.connected_by, at: c && c.connected_at, expires: c && c.expires_at, checked: c && c.checked,
       };
     });
     return json(200, { platforms });
