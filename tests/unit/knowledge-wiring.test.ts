@@ -24,6 +24,7 @@ function world() {
       : url.includes('/knowledge?') ? [{ id: 1, kind: 'forbidden', title: '', body: SECRET, price: null, modules: [], active: true }]
       : url.includes('/content_plans?') ? [{ id: 3, site: 'https://x.sa', competitors: [], items: [{ id: 'a1', kind: 'article', title: 'ت', why: 'و', priority: 1, status: 'approved' }] }]
       : url.includes('/copy_projects?') ? [{ id: 5, name: 'مفارش', service: 'مفارش', audience: '', offer: '', voice: '', banned: [], competitors: [] }]
+      : url.includes('/dream_projects?') ? [{ id: 7, company_id: OWNER.id, idea: 'مفارش رمضان', platforms: ['meta'] }]
       : url.includes('/companies?') ? [{ id: OWNER.id, name: 'Hoven', paperclip_company_id: PC }]
       : [];
     return new Response(JSON.stringify(data));
@@ -53,6 +54,7 @@ const CALLS: Record<(typeof AI_MODULES)[number], (env: A.AuthEnv) => Promise<Res
   social: async env => ROUTES.social.suggest.POST(await post('/api/social/suggest', { brief: 'مفارش للبيت', platforms: ['facebook'] }), env),
   maestro: async env => ROUTES.maestro.task.POST(await post('/api/maestro/task', { title: 'اكتب منشور' }), env),
   journeys: async env => ROUTES.journeys.write.POST(await post('/api/journeys/write', { type: 'email', idea: 'متابعة' }), env),
+  dream: async env => ROUTES.dream.chat.POST(await post('/api/dream/chat', { id: 7, message: 'وش رايك؟' }), env),
   buyer: async env => ROUTES.buyer.chat.POST(await post('/api/buyer/chat', { messages: [{ role: 'user', content: 'وش أوقف؟' }] }), env),
 };
 
