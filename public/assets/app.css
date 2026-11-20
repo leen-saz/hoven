@@ -138,12 +138,12 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--ink);margin:0;cur
 /* ---- كروت وجداول */
 .card{background:var(--surface);border:0;border-radius:var(--r);box-shadow:var(--shadow)}
 .pad{padding:24px}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:4px 0 24px}
-.kpi{padding:4px 24px;border-inline-start:1px solid color-mix(in srgb,var(--ink) 14%,transparent);background:none;box-shadow:none;border-radius:0}
-.kpi:first-child{border-inline-start:0;padding-inline-start:0}
-.kpi .v{font:700 34px/1.1 var(--f-display);font-variant-numeric:tabular-nums}.kpi .v small{font:400 13px var(--f-ar);color:var(--muted);margin-inline-start:6px}
+/* KPI strip: as many columns as fit (any count of numbers, any width beside the sidebar). Each number keeps a divider on its
+   start side; the strip's negative margin and clip hide the divider of the first number in every row. */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));row-gap:18px;margin:4px -16px 24px;overflow-x:clip}
+.kpi{min-width:0;padding:4px 16px;margin-inline-start:-1px;border-inline-start:1px solid color-mix(in srgb,var(--ink) 14%,transparent);background:none;box-shadow:none;border-radius:0}
+.kpi .v{font:700 clamp(26px,1.2rem + 1.1vw,34px)/1.1 var(--f-display);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.kpi .v small{display:inline-block;font:400 13px var(--f-ar);color:var(--muted);margin-inline-start:6px}
 .kpi .k{font-size:14px;color:var(--muted);margin-top:6px}
-@media (max-width:900px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}.kpi:nth-child(3){border-inline-start:0;padding-inline-start:0}}
 .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .bar .grow{flex:1}
 .seg{display:inline-flex;padding:4px;gap:2px;background:var(--tint);border-radius:999px}
