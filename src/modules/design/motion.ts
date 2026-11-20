@@ -61,7 +61,7 @@ export function templateSpec(i: { headline: string; script: string; seconds: num
   return cleanSpec({
     move: 'in',
     scenes: texts.map((text, k) => ({ text, from: k * step, to: (k + 1) * step, anim: k === 0 ? 'pop' : anims[k % anims.length], pos: k === 0 ? 'center' : 'bottom', size: k === 0 ? 'l' : 'm' })),
-    cta: { text: 'احجز الحين', from: end },
+    cta: { text: 'اطلب الحين', from: end },
   }, i.seconds, i.ratio, i.colors);
 }
 
@@ -77,11 +77,11 @@ const SHAPE = `{"move":"in|out|left|right|none","colors":{"text":"#RRGGBB","band
 const RULES = `قواعد:
 - الأوقات بالثواني من 0 إلى المدة، والمشاهد ما تتداخل، وكل مشهد 1.5 ثانية على الأقل.
 - النص قصير (أقل من 90 حرف)، بلهجة سعودية، يخاطب المتلقي بالمذكر، ويمشي مع الكلام المسموع في وقته.
-- ممنوع وعود الشفاء أو المبالغة الطبية (أنظمة حماية المستهلك).
+- ممنوع المبالغة والادعاءات بدون دليل (الأرخص، الأفضل) والخصم الوهمي (أنظمة حماية المستهلك والتجارة الإلكترونية).
 - رد بـ JSON فقط بهالشكل: ${SHAPE}`;
 
 export function specPrompt(i: { headline: string; script: string; seconds: number; ratio: Ratio; colors: string[] }): Msg[] {
-  return [{ role: 'user', content: `أنت مصمم موشن جرافيك لإعلانات Hoven (رعاية صحية منزلية في السعودية).
+  return [{ role: 'user', content: `أنت مصمم موشن جرافيك لإعلانات Hoven (متجر مفارش ومنسوجات منزلية في السعودية).
 عندك تصميم معتمد (صورة ثابتة، مقاس ${i.ratio}) وتعليق صوتي معتمد مدته ${i.seconds} ثانية. اكتب خطة مشاهد تتحرك فوق التصميم على وقت الصوت.
 العنوان: ${i.headline || '—'}
 نص التعليق الصوتي: ${i.script || '—'}

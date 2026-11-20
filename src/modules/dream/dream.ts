@@ -34,8 +34,8 @@ export function latest(rows: PartRow[]): Partial<Record<Part, PartRow>> {
   return out;
 }
 
-/** What is missing before «انشر»: every needed part's newest version approved (text parts now; media parts once they exist). */
-export function missing(rows: PartRow[], need: Part[] = TEXT_PARTS): Part[] {
+/** What is missing before «انشر»: every needed part's newest version approved (REQUIRED: the text parts and the designs). */
+export function missing(rows: PartRow[], need: Part[] = ['strategy', 'audience', 'budget', 'copy', 'design']): Part[] {
   const l = latest(rows);
   return need.filter(k => l[k]?.status !== 'approved');
 }
@@ -93,9 +93,51 @@ export function cleanPart(kind: Part, raw: Record<string, unknown>, ctx: Ctx): R
       .map(i => ({ ...i, notices: check(`${i.headline}\n${i.body}\n${i.cta}`, ctx.rules || []).map(h => ({ level: h.level, title: h.title, fix: h.fix, match: h.match })) }));
     return items.length ? { items } : null;
   }
+  if (kind === 'voiceover') return cleanVoice(raw);
   return null;
 }
 
 export const cleanPlatforms = (x: unknown): Fam[] => [...new Set(arr(x, 8).map(fam).filter((f): f is Fam => !!f))];
 export const cleanTitle = (x: unknown) => str(x, 120);
 export const cleanIdea = (x: unknown) => str(x, 4000);
+
+// ---- Media parts (milestone 4). Design: one picture per ad text, drawn by the image model, the words laid on top by the page
+// (never baked into the photo). Voice-over: a script read by Gemini TTS. Motion: a scene plan over the approved design and voice.
+// What «انشر» needs: the text parts and the designs (an ad needs a picture); motion and voice-over are optional.
+export const REQUIRED: Part[] = [...TEXT_PARTS, 'design'];
+// Parts written by the text model through /api/dream/draft; design comes from /api/dream/draw + /api/dream/media
+export const DRAFTED: Part[] = [...TEXT_PARTS, 'voiceover', 'motion'];
+export const MAX_DESIGNS = 3;
+
+/** The picture prompt for one ad text: Hoven's look, the product feel, room for the text, and no words in the picture. */
+export function designPrompt(strategy: Record<string, unknown>, item: { platform?: string; format?: string; headline?: string; body?: string }, colors: string[] = []): string {
+  const tall = /ستوري|story|فيديو|reel/i.test(item.format || '');
+  return [
+    'Photograph for a Saudi home-textiles store (bedding, duvets, cushions): a calm, warm, real bedroom or living room in natural light, the textiles as the hero.',
+    'Premium but homely, Saudi taste, modest; no people\'s faces. Leave clean space for a headline. No text, no letters, no logos, no watermarks in the image.',
+    colors.length ? `Brand colours to echo softly: ${colors.slice(0, 3).join(', ')}.` : 'Palette: ivory, warm white, forest green accents, navy details.',
+    `Campaign idea (Arabic): ${String(strategy['message'] || strategy['goal'] || '').slice(0, 200)}`,
+    `Ad line (Arabic, for mood only, do not write it): ${String(item.headline || item.body || '').slice(0, 200)}`,
+    tall ? 'Vertical composition.' : 'Composition that crops well to square.',
+  ].join('\n');
+}
+
+const KEY = (co: string) => new RegExp(`^motion/${co}/[0-9a-f]{32}\\.(png|jpg|webp|wav|mp3|m4a)$`);
+/** A design version from the uploaded pictures: only this company's files, and the ad text each one is for. */
+export function cleanDesign(co: string, x: unknown): Record<string, unknown> | null {
+  const images = arr(x, 20).map(i => { const o = obj(i); return { key: str(o['key'], 200), platform: fam(o['platform']), format: str(o['format'], 40), headline: str(o['headline'], 120), body: str(o['body'], 300), cta: str(o['cta'], 40) }; })
+    .filter(i => KEY(co).test(i.key)).slice(0, MAX_DESIGNS);
+  return images.length ? { images } : null;
+}
+
+/** The voice-over: a short script and how to read it; about 2.3 words a second, as the voice tab counts. */
+export function cleanVoice(raw: Record<string, unknown>): Record<string, unknown> | null {
+  const script = str(raw['script'], 1500);
+  if (!script) return null;
+  const words = script.split(/\s+/).filter(Boolean).length;
+  const voice = ['Charon', 'Orus', 'Puck', 'Fenrir', 'Kore', 'Aoede', 'Zephyr', 'Leda'].includes(String(raw['voice'])) ? String(raw['voice']) : 'Charon';
+  const accent = ['najdi', 'hijazi', 'gulf', 'msa'].includes(String(raw['accent'])) ? String(raw['accent']) : 'najdi';
+  const tone = ['warm', 'energetic', 'calm', 'formal'].includes(String(raw['tone'])) ? String(raw['tone']) : 'warm';
+  return { script, voice, accent, tone, seconds: Math.max(3, Math.min(90, Math.ceil(words / 2.3))), audio_key: null };
+}
+export const ownFile = (co: string, key: unknown): key is string => typeof key === 'string' && KEY(co).test(key);
