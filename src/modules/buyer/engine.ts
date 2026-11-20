@@ -31,6 +31,7 @@ export type Kind = 'pause' | 'budget_down' | 'budget_up' | 'refresh_creative' | 
 export interface Rec {
   key: string; fam: Fam | 'store'; campaign: string | null; kind: Kind; pct?: number;
   why: string; measure: string; evidence: Record<string, number | null>;
+  managed?: boolean;   // a budget change on a campaign Leen has not marked managed is for information only
 }
 
 const n = (x: unknown) => { const v = Number(x); return Number.isFinite(v) ? v : 0; };
@@ -132,3 +133,19 @@ export function cleanGoals(x: unknown): Goals {
 
 // Rules in Arabic, one per line, as the owner writes them; trimmed and capped
 export const cleanRules = (x: unknown): string[] => (Array.isArray(x) ? x : String(x ?? '').split('\n')).map(r => String(r).trim().slice(0, 300)).filter(Boolean).slice(0, 40);
+
+// Managed campaigns (docs/PRD.md §6.3): the only ones the buyer may propose a budget change on, and later the only ones a
+// write may touch. Platform + exact campaign name, as on the page. None marked yet = every campaign (until Leen marks some).
+export interface Managed { platform: Fam; campaign: string }
+export function cleanManaged(x: unknown): Managed[] {
+  const seen = new Set<string>();
+  return (Array.isArray(x) ? x : []).flatMap(m => {
+    const o = (m && typeof m === 'object' ? m : {}) as Record<string, unknown>;
+    const platform = String(o.platform || '') as Fam, campaign = String(o.campaign || '').trim().slice(0, 200);
+    const k = `${platform}|${campaign}`;
+    if (!FAMS.includes(platform) || !campaign || seen.has(k)) return [];
+    seen.add(k); return [{ platform, campaign }];
+  }).slice(0, 200);
+}
+export const isManaged = (list: Managed[], r: Pick<Rec, 'fam' | 'campaign'>): boolean =>
+  !list.length || list.some(m => m.platform === r.fam && m.campaign === (r.campaign || '').trim());

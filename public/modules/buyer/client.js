@@ -27,14 +27,17 @@ function recs() {
   const can = S.canEdit && S.board;
   $('#sendAll').hidden = !can || !S.recs.some(r => r.fam !== 'store');
   $('#recs').innerHTML = S.recs.length ? S.recs.map(r => `<article class="card mb-rec">
-      ${r.fam !== 'store' && can ? `<input type="checkbox" data-key="${esc(r.key)}" aria-label="حدد ${esc(KIND[r.kind])} ${esc(r.campaign || '')}" checked>` : '<span></span>'}
-      <div><h3>${esc(KIND[r.kind])}${r.pct ? ` ${fmt(r.pct)}٪` : ''}${r.campaign ? ` · ${esc(r.campaign)}` : ''}</h3>
+      ${r.fam !== 'store' && can && r.managed !== false ? `<input type="checkbox" data-key="${esc(r.key)}" aria-label="حدد ${esc(KIND[r.kind])} ${esc(r.campaign || '')}" checked>` : '<span></span>'}
+      <div><h3>${esc(KIND[r.kind])}${r.pct ? ` ${fmt(r.pct)}٪` : ''}${r.campaign ? ` · ${esc(r.campaign)}` : ''}${r.managed === false ? ' <span class="mb-tag">للاطلاع: الحملة مو مُدارة</span>' : ''}</h3>
         <p>${esc(r.why)}</p><p class="muted">نقيس: ${esc(r.measure)}</p></div>
       <span class="mb-tag">${esc(FAM[r.fam])}</span></article>`).join('')
     : `<div class="card pad"><b>ما فيه اقتراحات الحين.</b><p class="muted" style="margin:6px 0 0">${Object.keys(S.goals).length ? 'الحملات ضمن أهدافك، أو الأرقام ما تكفي للحكم.' : 'حط أهدافك في تبويب «الأهداف» عشان أقدر أقارن الأرقام فيها.'}</p></div>`;
   const rows = S.summary.campaigns.slice(0, 40);
-  $('#camps').innerHTML = rows.length ? `<table class="dg-plat"><thead><tr><th>الحملة</th><th>المنصة</th><th>صرف</th><th>طلبات</th><th>تكلفة الطلب</th><th>نسبة النقر</th></tr></thead><tbody>
-      ${rows.map(c => `<tr><td>${esc(c.campaign)}${c.live ? '' : ' <span class="muted">(موقوفة)</span>'}</td><td>${esc(FAM[c.fam])}</td><td class="n">${sar(c.now.spend)}</td><td class="n">${fmt(c.now.purchases)}</td><td class="n">${sar(c.now.cpa)}</td><td class="n">${c.now.ctr == null ? '—' : fmt(c.now.ctr, 2) + '٪'}</td></tr>`).join('')}</tbody></table>`
+  // Managed: the campaigns the buyer may propose budget changes on (and the only ones a later write may touch)
+  const isM = c => (S.managed || []).some(m => m.platform === c.fam && m.campaign === c.campaign);
+  $('#camps').innerHTML = rows.length ? `${S.canApprove ? `<p class="muted" style="margin:0 0 8px">${(S.managed || []).length ? 'الحملات المُدارة: الميديا باير يقترح تغيير ميزانيتها بس.' : 'ما حددت حملات مُدارة للحين، فالاقتراحات على كل الحملات. حدد اللي تبي.'}</p>` : ''}
+      <table class="dg-plat"><thead><tr>${S.canApprove ? '<th>مُدارة</th>' : ''}<th>الحملة</th><th>المنصة</th><th>صرف</th><th>طلبات</th><th>تكلفة الطلب</th><th>نسبة النقر</th></tr></thead><tbody>
+      ${rows.map(c => `<tr>${S.canApprove ? `<td><input type="checkbox" data-managed="${esc(c.fam)}|${esc(c.campaign)}" aria-label="حملة مُدارة: ${esc(c.campaign)}"${isM(c) ? ' checked' : ''}></td>` : ''}<td>${esc(c.campaign)}${c.live ? '' : ' <span class="muted">(موقوفة)</span>'}</td><td>${esc(FAM[c.fam])}</td><td class="n">${sar(c.now.spend)}</td><td class="n">${fmt(c.now.purchases)}</td><td class="n">${sar(c.now.cpa)}</td><td class="n">${c.now.ctr == null ? '—' : fmt(c.now.ctr, 2) + '٪'}</td></tr>`).join('')}</tbody></table>`
     : '<p class="muted">ما فيه صرف آخر أسبوعين.</p>';
   $('#past').innerHTML = S.past.length ? `<div class="tbl"><table class="dg-plat"><thead><tr><th>الاقتراح</th><th>القرار</th><th>بعد ٣ أيام</th><th>بعد ٧ أيام</th></tr></thead><tbody>
       ${S.past.map(p => `<tr><td>${esc(KIND[p.kind] || p.kind)}${p.campaign ? ` · ${esc(p.campaign)}` : ''}</td><td>${esc(STATUS[p.status] || p.status)}</td>${[p.d3, p.d7].map(d => `<td>${d ? `<span class="mb-tag ${RES[d][1]}">${RES[d][0]}</span>` : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
@@ -56,8 +59,9 @@ function rules() {
 
 function lessons() {
   $('#lessonForm').hidden = !S.canEdit;
-  $('#lessons').innerHTML = S.lessons.length ? S.lessons.map(l => `<li class="card"><span>${esc(l.lesson)} ${l.status === 'approved' ? '' : '<span class="mb-tag">ينتظر الموافقة</span>'}</span>
-      ${S.canApprove ? `<button class="btn ghost sm" type="button" data-off="${l.id}">احذف</button>` : ''}</li>`).join('')
+  const SRC = { outcome: 'من نتيجة قرار', claude_chat: 'من محادثاتك مع Claude', chat: 'من المحادثة' };
+  $('#lessons').innerHTML = S.lessons.length ? S.lessons.map(l => `<li class="card"><span>${esc(l.lesson)} ${SRC[l.source] ? `<span class="mb-tag">${SRC[l.source]}</span>` : ''} ${l.status === 'approved' ? '' : '<span class="mb-tag">ينتظر الموافقة</span>'}</span>
+      ${S.canApprove ? `<span>${l.status === 'approved' ? '' : `<button class="btn secondary sm" type="button" data-ok="${l.id}">اعتمد</button> `}<button class="btn ghost sm" type="button" data-off="${l.id}">احذف</button></span>` : ''}</li>`).join('')
     : '<li class="muted">ما فيه دروس للحين. أضف درس هنا، أو احفظ رد من المحادثة كدرس.</li>';
 }
 
@@ -164,7 +168,23 @@ export default async function mount() {
     try { const r = await api('/api/buyer/lessons', { method: 'POST', body: { lesson: text } }); S.lessons.unshift(r.lesson); $('#lesson').value = ''; lessons(); say($('#lmsg'), 'انحفظ الدرس', true); }
     catch (err) { say($('#lmsg'), err.message); } finally { busy($('#addLesson'), false); }
   });
+  $('#camps').addEventListener('change', async e => {
+    if (!e.target.matches('[data-managed]')) return;
+    const managed = $$('#camps [data-managed]:checked').map(x => { const [platform, ...c] = x.dataset.managed.split('|'); return { platform, campaign: c.join('|') }; });
+    try { const r = await api('/api/buyer/managed', { method: 'POST', body: { managed } }); S.managed = r.managed; toast('انحفظت الحملات المُدارة'); await load(); }
+    catch (err) { e.target.checked = !e.target.checked; toast(err.message, true); }
+  });
   $('#lessons').addEventListener('click', async e => {
+    const ok = e.target.closest('[data-ok]');
+    if (ok) {
+      busy(ok, true);
+      try {
+        await api('/api/lessons/list', { method: 'PATCH', body: { module: 'buyer', id: Number(ok.dataset.ok), action: 'approve' } });
+        const l = S.lessons.find(x => x.id === Number(ok.dataset.ok)); if (l) l.status = 'approved';
+        lessons(); toast('اعتمدت الدرس: الميديا باير يقراه من الحين');
+      } catch (err) { toast(err.message, true); busy(ok, false); }
+      return;
+    }
     const b = e.target.closest('[data-off]');
     if (!b || !confirm('تحذف الدرس؟')) return;
     busy(b, true);

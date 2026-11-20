@@ -7,33 +7,22 @@ import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { knowledgeFor } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
-import { readAll } from '../../lib/paging';
-import { summarize, recommend, outcome, cleanGoals, cleanRules, addDays, famOf, type AdRow, type MetricRow, type SaleRow, type Goals, type Kind, type Result } from './engine';
-import { DEFAULT_RULES, PROPOSE, systemFor, toSuggestion, fromChat, splitProposals, type PastRec } from './prompt';
+import { summarize, recommend, cleanGoals, cleanRules, cleanManaged, isManaged, type Goals, type Managed } from './engine';
+import { numbers, measure, today } from './learn';
+import { DEFAULT_RULES, PROPOSE, systemFor, toSuggestion, fromChat, splitProposals } from './prompt';
 
 type Env = AuthEnv & LlmEnv & { BUYER_API_TOKEN?: string };
 type Row = Record<string, unknown>;
 const rows = <T = Row>(d: unknown): T[] => (Array.isArray(d) ? (d as T[]) : []);
-const today = () => new Date().toISOString().slice(0, 10);
 
-interface Settings { goals: Goals; rules: string[]; saved: boolean; missing: boolean }
+interface Settings { goals: Goals; rules: string[]; managed: Managed[]; saved: boolean; missing: boolean }
 async function settings(cfg: Cfg, co: string): Promise<Settings> {
-  const r = await sb(cfg, scoped('/rest/v1/buyer_settings?select=goals,rules', co), { admin: true });
-  if (!r.ok) return { goals: {}, rules: DEFAULT_RULES, saved: false, missing: missingSchema(r) };
+  // managed (032_buyer_learning.sql) is read on its own, so the page keeps working before that file is run
+  const [r, m] = await Promise.all([sb(cfg, scoped('/rest/v1/buyer_settings?select=goals,rules', co), { admin: true }), sb(cfg, scoped('/rest/v1/buyer_settings?select=managed', co), { admin: true })]);
+  if (!r.ok) return { goals: {}, rules: DEFAULT_RULES, managed: [], saved: false, missing: missingSchema(r) };
   const s = rows(r.data)[0];
   const rules = cleanRules(s?.rules);
-  return { goals: cleanGoals(s?.goals), rules: rules.length ? rules : DEFAULT_RULES, saved: !!s, missing: false };
-}
-
-// 14 complete days of ads and metrics (this week and the one before) plus Salla's days; 7 more for the outcome window
-async function numbers(cfg: Cfg, co: string, back = 21) {
-  const since = addDays(today(), -back);
-  const [a, m, s] = await Promise.all([
-    readAll<AdRow>(cfg, scoped('/rest/v1/ads?select=ad_key,campaign,live', co), 'ad_key.asc', 10),
-    readAll<MetricRow>(cfg, `/rest/v1/ad_metrics?select=ad_key,day,spend,impressions,clicks,leads,ads!inner(company_id)&ads.company_id=eq.${co}&day=gte.${since}`, 'ad_key.asc,day.asc', 40),
-    sb(cfg, scoped(`/rest/v1/salla_orders_daily?select=day,net_sales_sar,orders&day=gte.${since}&limit=100`, co), { admin: true }),
-  ]);
-  return { ads: a.rows, metrics: m.rows, sales: rows<SaleRow>(s.data), ok: a.ok && m.ok };
+  return { goals: cleanGoals(s?.goals), rules: rules.length ? rules : DEFAULT_RULES, managed: m.ok ? cleanManaged(rows(m.data)[0]?.managed) : [], saved: !!s, missing: false };
 }
 
 async function loadLessons(cfg: Cfg, co: string) {
@@ -41,45 +30,11 @@ async function loadLessons(cfg: Cfg, co: string) {
   return r.ok ? rows<{ id: number; lesson: string; status: string; source: string | null; created_at: string }>(r.data) : [];
 }
 
-// Learning loop: the buyer's proposals that were decided, with how the campaign did 3 and 7 days after the decision,
-// compared with the 7 days before it. Written to `outcomes` once each window is complete (so it is measured once).
-async function past(cfg: Cfg, data: Awaited<ReturnType<typeof numbers>>): Promise<PastRec[]> {
-  const r = await sb(cfg, "/rest/v1/suggestions?select=id,platform,kind,campaign,status,decided_at,params,outcomes(day,vs_expect)&params->>from=eq.buyer&status=neq.open&order=decided_at.desc&limit=30", { admin: true });
-  if (!r.ok) return [];
-  const byCamp = new Map(data.ads.map(a => [a.ad_key, (a.campaign || '').trim()]));
-  const window = (camp: string, fam: string, from: string, to: string) => {
-    let spend = 0, purchases = 0, impr = 0, clicks = 0;
-    for (const m of data.metrics) {
-      if (m.day < from || m.day > to || famOf(m.ad_key) !== fam || byCamp.get(m.ad_key) !== camp) continue;
-      spend += Number(m.spend) || 0; purchases += Number(m.leads) || 0; impr += Number(m.impressions) || 0; clicks += Number(m.clicks) || 0;
-    }
-    return { spend, purchases, cpa: purchases ? spend / purchases : null, ctr: impr ? (100 * clicks) / impr : null };
-  };
-  const out: PastRec[] = [];
-  for (const s of rows(r.data)) {
-    const done = new Map(rows<{ day: number; vs_expect: { result?: Result } | null }>(s.outcomes).map(o => [o.day, o.vs_expect?.result ?? null]));
-    const rec: PastRec = { kind: String(s.kind), campaign: (s.campaign as string) || null, platform: String(s.platform), status: String(s.status), d3: done.get(3) ?? null, d7: done.get(7) ?? null };
-    const at = typeof s.decided_at === 'string' ? s.decided_at.slice(0, 10) : null;
-    if (at && ['approved', 'executed', 'modified'].includes(rec.status) && rec.campaign) {
-      const before = window(rec.campaign, rec.platform, addDays(at, -7), addDays(at, -1));
-      for (const d of [3, 7] as const) {
-        if (done.has(d) || addDays(at, d) >= today()) continue;
-        const after = window(rec.campaign, rec.platform, at, addDays(at, d - 1));
-        const result = outcome(rec.kind as Kind, before, after);
-        const w = await sb(cfg, '/rest/v1/outcomes', { method: 'POST', admin: true, headers: { Prefer: 'resolution=ignore-duplicates' },
-          body: { suggestion_id: s.id, day: d, metrics: { before, after }, vs_expect: { result } } });
-        if (w.ok) { if (d === 3) rec.d3 = result; else rec.d7 = result; }
-      }
-    }
-    out.push(rec);
-  }
-  return out;
-}
-
 async function context(cfg: Cfg, user: Session) {
   const [st, data, ls, know] = await Promise.all([settings(cfg, user.co), numbers(cfg, user.co), loadLessons(cfg, user.co), knowledgeFor(cfg, user.co, 'buyer')]);
   const summary = summarize(data.ads, data.metrics, data.sales, today());
-  const recs = recommend(summary, st.goals);
+  // A budget change on a campaign Leen has not marked as managed is shown for information only
+  const recs = recommend(summary, st.goals).map(r => ({ ...r, managed: isManaged(st.managed, r) }));
   return { st, data, ls, know, summary, recs };
 }
 
@@ -89,17 +44,17 @@ export const state = { GET: handle(async (request, e: Env) => {
   const p = pick(e, 'buyer');
   return json(200, {
     summary: c.summary, recs: c.recs, goals: c.st.goals, rules: c.st.rules, customRules: c.st.saved, lessons: c.ls,
-    past: await past(cfg, c.data), dataOk: c.data.ok,
+    past: (await measure(cfg, c.data)).past, dataOk: c.data.ok, managed: c.st.managed,
     chat: p ? { ok: true, model: p.model, engine: p.provider } : { ok: false, why: notEnabled(user, 'محادثة الميديا باير', 'OPENROUTER_API_KEY') },
     setup: c.st.missing ? notApplied(user, 'migration 031_buyer.sql') : null,
     canEdit: atLeast(user, 'buyer', 'edit', cfg), canApprove: atLeast(user, 'buyer', 'approve', cfg), board: user.co === HOVEN_COMPANY,
   });
 }) };
 
-async function saveSettings(cfg: Cfg, user: Session, patch: Row): Promise<Response | null> {
+async function saveSettings(cfg: Cfg, user: Session, patch: Row, file = 'migration 031_buyer.sql'): Promise<Response | null> {
   const r = await sb(cfg, '/rest/v1/buyer_settings?on_conflict=company_id', { method: 'POST', admin: true, headers: { Prefer: 'resolution=merge-duplicates' },
     body: { company_id: user.co, ...patch, updated_by: user.email, updated_at: new Date().toISOString() } });
-  if (!r.ok) return json(missingSchema(r) ? 503 : 500, { error: missingSchema(r) ? notApplied(user, 'migration 031_buyer.sql') : 'ما انحفظ' });
+  if (!r.ok) return json(missingSchema(r) ? 503 : 500, { error: missingSchema(r) ? notApplied(user, file) : 'ما انحفظ' });
   return null;
 }
 
@@ -120,6 +75,17 @@ export const rules = { POST: handle(async (request, e) => {
   if (fail) return fail;
   await audit(cfg, user, 'buyer_rules', { after: list });
   return json(200, { ok: true, rules: list.length ? list : DEFAULT_RULES, customRules: list.length > 0 });
+}) };
+
+// The campaigns the buyer may propose budget changes on (and, later, the only ones a write may touch: docs/PRD.md §6.3).
+// Approve level: this list is a guardrail, not a preference.
+export const managed = { POST: handle(async (request, e) => {
+  const { cfg, user } = await requireUser(request, e, 'buyer', { write: true, approve: true });
+  const list = cleanManaged((await readJson(request)).managed);
+  const fail = await saveSettings(cfg, user, { managed: list }, 'migration 032_buyer_learning.sql');
+  if (fail) return fail;
+  await audit(cfg, user, 'buyer_managed', { after: list });
+  return json(200, { ok: true, managed: list });
 }) };
 
 // Equal-time compare for the owner's API token
@@ -147,7 +113,7 @@ export const lessons = {
     const status = who.approver ? 'approved' : 'new';
     const r = await sb(cfg, '/rest/v1/lessons', { method: 'POST', admin: true, headers: { Prefer: 'return=representation' },
       body: { company_id: who.co, module: 'buyer', kind: 'lesson', lesson, evidence: body.evidence && typeof body.evidence === 'object' ? body.evidence : {}, confidence: 1,
-        source: token ? 'api' : body.from === 'chat' ? 'chat' : 'manual', status, ...(who.approver ? { decided_by: who.email, decided_at: new Date().toISOString() } : {}) } });
+        source: token ? 'claude_chat' : body.from === 'chat' ? 'chat' : 'manual', status, ...(who.approver ? { decided_by: who.email, decided_at: new Date().toISOString() } : {}) } });
     if (!r.ok) return json(missingSchema(r) ? 503 : 500, { error: missingSchema(r) ? notApplied(who.user ?? null, 'migration 018_lessons_by_tab.sql') : 'ما انحفظ الدرس' });
     const saved = rows(r.data)[0];
     await audit(cfg, who.user ?? { email: who.email, co: who.co }, 'buyer_lesson_add', { target: { id: saved?.id, status } });
@@ -173,7 +139,7 @@ export const chat = { POST: handle(async (request, e: Env) => {
   if (!history.length || history[history.length - 1]!.role !== 'user') return json(400, { error: 'اكتب سؤالك' });
   if (!pick(e, 'buyer')) return json(503, { error: notEnabled(user, 'محادثة الميديا باير', 'OPENROUTER_API_KEY') });
   const c = await context(cfg, user);
-  const system = systemFor({ summary: c.summary, goals: c.st.goals, rules: c.st.rules, lessons: c.ls.filter(l => l.status === 'approved').map(l => l.lesson), knowledge: c.know, recs: c.recs, past: await past(cfg, c.data) }) + '\n\n' + PROPOSE;
+  const system = systemFor({ summary: c.summary, goals: c.st.goals, rules: c.st.rules, lessons: c.ls.filter(l => l.status === 'approved').map(l => l.lesson), knowledge: c.know, recs: c.recs, past: (await measure(cfg, c.data)).past }) + '\n\n' + PROPOSE;
   let out;
   try { out = await generate(e, 'buyer', { messages: [{ role: 'system', content: system }, ...history], max_tokens: 1800 }, fetch, usageCtx(cfg, user, 'buyer')); }
   catch (err) { return json(502, { error: (err as Error).message === 'cap_reached' ? 'خلص سقف الشهر للميديا باير' : 'ما رد النموذج، جرّب بعد شوي' }); }
@@ -195,8 +161,10 @@ export const send = { POST: handle(async (request, e) => {
     const c = await context(cfg, user);
     list = c.recs.filter(r => keys.has(r.key)).map(rec => ({ rec, source: 'rule' as const }));
   }
-  const sent: number[] = [], already: string[] = [];
+  const sent: number[] = [], already: string[] = [], unmanaged: string[] = [];
+  const st = await settings(cfg, user.co);
   for (const { rec, source } of list) {
+    if (rec.kind.startsWith('budget') && !isManaged(st.managed, rec)) { unmanaged.push(rec.key); continue; }
     const s = toSuggestion(rec, user.email, source);
     if (!s) continue;
     const r = await sb(cfg, '/rest/v1/suggestions', { method: 'POST', admin: true, headers: { Prefer: 'return=representation' }, body: s });
@@ -205,6 +173,6 @@ export const send = { POST: handle(async (request, e) => {
     else if (r.status === 409) already.push(rec.key);
     else return json(500, { error: 'ما انرسل للوحة القرارات' });
   }
-  if (!sent.length && !already.length) return json(400, { error: 'ما فيه شي ينرسل' });
-  return json(200, { ok: true, sent, already });
+  if (!sent.length && !already.length) return json(400, { error: unmanaged.length ? 'تغيير الميزانية بس على الحملات المُدارة: حددها في تبويب «الأهداف»' : 'ما فيه شي ينرسل' });
+  return json(200, { ok: true, sent, already, unmanaged });
 }) };
