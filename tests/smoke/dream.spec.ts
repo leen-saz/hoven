@@ -76,3 +76,41 @@ test('«ارسم التصاميم» draws, uploads and saves the designs as one 
   await expect(page.locator('.dr-design figcaption')).toContainText('مفارش رمضان');
   await expect(page.locator('#part [data-ok]')).toBeVisible();
 });
+
+test('«انشر» asks for the link and budgets, sends one key per click, then «شغّل» switches the campaign on', async ({ page, context, request }) => {
+  await addSession(context, await login(request, 'owner'));
+  const ok = (kind: string, id: number, content = {}) => ({ id, kind, version: 1, status: 'approved', content });
+  const parts = [ok('strategy', 1, { goal: 'م', message: 'م', kpi: 'ط' }), ok('audience', 2, { segments: [] }), ok('budget', 3, { split: [{ platform: 'meta', daily: 300 }], daily: 300, days: 14, total: 4200 }),
+    ok('copy', 4, { items: [] }), ok('design', 5, { images: [] })];
+  let launches: unknown[] = [];
+  const bodies: Record<string, unknown>[] = [];
+  await page.route('**/api/dream/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    const json = (o: unknown) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+    if (route.request().method() === 'POST') bodies.push({ path, ...route.request().postDataJSON() });
+    if (path.endsWith('/state')) return json({ chat: { ok: true }, draw: true, voice: true, files: true, parts: PARTS, textParts: PARTS.slice(0, 4), drafted: PARTS, required: [...PARTS.slice(0, 4), 'design'], names: NAMES, why: {} });
+    if (path.endsWith('/projects')) return json({ projects: [project] });
+    if (path.endsWith('/item')) return json({ project, messages: [], parts, missing: [], canEdit: true, canApprove: true });
+    if (path.endsWith('/launches')) return json({ launches, writers: ['meta'], owner: true });
+    if (path.endsWith('/publish')) { launches = [{ id: 3, platform: 'meta', status: 'created', daily_sar: 350 }]; return json({ launches: [{ platform: 'meta', status: 'created', launch: 3 }] }); }
+    if (path.endsWith('/activate')) { launches = [{ id: 3, platform: 'meta', status: 'active', daily_sar: 350 }]; return json({ ok: true, status: 'active' }); }
+    return json({});
+  });
+  await page.goto('/dream/?id=7');
+  await expect(page.locator('#pubForm')).toBeVisible();
+  await expect(page.locator('#b-meta')).toHaveValue('300');   // from the approved budget
+  await page.locator('#pubLink').fill('https://hoven.example/p');
+  await page.locator('#b-meta').fill('350');
+  page.on('dialog', d => d.accept());
+  await page.locator('#pubBtn').click();
+  await expect(page.locator('.dr-launches')).toContainText('منشأة وموقوفة');
+  const pub = bodies.find(b => String(b['path']).endsWith('/publish'))!;
+  expect(pub).toMatchObject({ id: 7, link: 'https://hoven.example/p', budgets: { meta: 350 } });
+  expect(String(pub['key'])).toMatch(/^[A-Za-z0-9_-]{16,80}$/);
+  await page.locator('[data-on="3"]').click();
+  await expect(page.locator('.dr-launches')).toContainText('شغّالة');
+  const act = bodies.find(b => String(b['path']).endsWith('/activate'))!;
+  expect(act).toMatchObject({ launch: 3, on: true });
+  expect(act['key']).not.toBe(pub['key']);
+  await expect(page.locator('[data-off="3"]')).toBeVisible();
+});
