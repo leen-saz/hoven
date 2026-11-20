@@ -1,7 +1,8 @@
 // أدوات مشتركة: الطلبات، والأيقونات، والتواريخ، وهيكل التطبيق (القائمة الجانبية والشريط العلوي)
 import { LANG, t, langSwitch, restoreDraft } from './i18n.js';
-import { sections, TIP } from './sidebar.js';
+import { sections, TIP, COUNTS } from './sidebar.js';
 import { ME_KEY, FRESH, readMe, slim } from './me-cache.js';
+import { palette } from './palette.js';
 export { LANG, t, langSwitch };
 // Pages switch with Astro's ClientRouter: listeners on document/window of one page are removed when it leaves
 let PAGE = new AbortController();
@@ -100,6 +101,8 @@ export function pageFailure(err) {
 
 // Lucide (خط 1.75)
 const P = {
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   plug: '<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
   chart: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
   image: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>',
@@ -187,14 +190,14 @@ function drawSide(side, me, active) {
       <div class="menu qc-menu" id="qcMenu" role="menu" hidden>${quick.map(([, href, t, ic]) => `<a href="${href}" role="menuitem">${icon(ic)}${t}</a>`).join('')}</div></div>` : ''}
     ${sections(me, L).map(sec => `<div class="side-sec"><small class="side-h">${esc(sec.label)}</small>${sec.items.map(it => {
       const ic = it.svg ? `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${it.svg}</svg>` : icon(it.ic);
-      if (it.state === 'ok' || it.state === 'soon') return `<a class="navi${it.state === 'soon' ? ' soon' : ''}" href="${it.href}" data-k="${esc(it.key)}"${FULL(it.href)}${it.key === active ? ' aria-current="page"' : ''}>${ic}<span>${esc(it.text)}</span>${it.state === 'soon' ? `<small class="tag">${L('قريباً', 'Soon')}</small>` : ''}</a>`;
+      if (it.state === 'ok' || it.state === 'soon') return `<a class="navi${it.state === 'soon' ? ' soon' : ''}${it.sub ? ' sub' : ''}" href="${it.href}" data-k="${esc(it.key)}"${FULL(it.href)}${it.key === active ? ' aria-current="page"' : ''}>${ic}<span>${esc(it.text)}</span>${it.state === 'soon' ? `<small class="tag">${L('قريباً', 'Soon')}</small>` : ''}</a>`;
       return `<span class="navi locked" aria-disabled="true" data-tip="${L(...TIP[it.state])}">${ic}<span>${esc(it.text)}</span>${icon('lock', 'lk')}</span>`;
     }).join('')}</div>`).join('')}
     <div class="grow"></div>
     <a class="navi" href="/settings/" data-k="settings"${active === 'settings' ? ' aria-current="page"' : ''}>${icon('settings')}<span>الإعدادات</span></a>
     <button class="me" id="meBtn" aria-haspopup="menu" aria-expanded="false"><span class="avatar">${esc(initials)}</span>
       <span class="who"><b>${esc(me.name || me.email || '')}</b><span class="muted">${me.role === 'owner' ? 'المالكة' : (me.departments || []).length ? 'مدير قسم' : 'عضو'}</span></span></button>
-    <div class="menu" id="meMenu" role="menu" hidden><a href="/account/" role="menuitem">${icon('user')}حسابي</a><form method="post" action="/api/auth/logout" style="margin:0"><button type="submit" role="menuitem">${icon('out')}خروج</button></form></div>`;
+    <div class="menu" id="meMenu" role="menu" hidden><a href="/account/" role="menuitem">${icon('user')}حسابي</a><button type="button" role="menuitem" id="themeBtn">${icon('moon')}<span>${L('المظهر', 'Theme')}: <b id="themeName"></b></span></button><form method="post" action="/api/auth/logout" style="margin:0"><button type="submit" role="menuitem">${icon('out')}خروج</button></form></div>`;
   side.querySelector('form')?.addEventListener('submit', () => { try { localStorage.removeItem(ME_KEY); } catch { /* storage blocked */ } });
   // Navigation labels as tooltips, used when the menu is folded to icons
   side.querySelectorAll('.navi').forEach(a => { const t = a.querySelector('span')?.textContent; if (t && !a.title) a.title = t; });
@@ -211,9 +214,42 @@ function fold(on) {
   try { localStorage.setItem('wl-mini', on ? '1' : '0'); } catch { /* storage blocked */ }
 }
 
+// Light → dark → automatic (the device's), remembered in this browser (/assets/theme.js)
+const THEME_AR = { light: ['فاتح', 'Light'], dark: ['داكن', 'Dark'], auto: ['تلقائي', 'Automatic'] };
+function bindTheme() {
+  const b = $('#themeBtn'), name = $('#themeName'), th = window.hovenTheme;
+  if (!b || !name || !th) { b?.remove(); return; }
+  const show = () => { name.textContent = THEME_AR[th.get()][LANG === 'en' ? 1 : 0]; };
+  show();
+  b.onclick = e => { e.stopPropagation(); const i = th.THEMES.indexOf(th.get()); th.set(th.THEMES[(i + 1) % th.THEMES.length]); show(); };
+}
+
+// Numbers next to the sidebar entries: what waits for a decision (/api/nav/counts), refreshed every minute and when the tab
+// comes back into view. A failed read leaves the last numbers.
+async function refreshCounts(side) {
+  let c;
+  try { c = await api('/api/nav/counts', { timeout: 15000 }); } catch { return; }
+  for (const [key, field] of Object.entries(COUNTS)) {
+    const a = side.querySelector(`.navi[data-k="${key}"]`); if (!a) continue;
+    let b = a.querySelector('.cnt');
+    const n = Number(c[field] || 0);
+    if (!n) { b?.remove(); continue; }
+    if (!b) { b = document.createElement('small'); b.className = 'cnt'; a.append(b); }
+    b.textContent = n > 99 ? '99+' : String(n);
+    b.setAttribute('aria-label', (LANG === 'en' ? 'waiting: ' : 'ينتظر: ') + b.textContent);
+  }
+}
+function countsLoop(side) {
+  refreshCounts(side);
+  const id = setInterval(() => { if (document.visibilityState === 'visible') refreshCounts(side); }, 60000);
+  pageSignal().addEventListener('abort', () => clearInterval(id));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshCounts(side); }, { signal: pageSignal() });
+}
+
 function bindMe() {
   const menu = $('#meMenu'), btn = $('#meBtn');
   if (!menu || !btn) return;
+  bindTheme();
   btn.onclick = e => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); };
   document.addEventListener('click', e => { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); } }, { signal: pageSignal() });
 }
@@ -244,6 +280,8 @@ export async function shell({ active, title, badge = '', tools = '' }) {
   document.addEventListener('click', e => { const m = $('#qcMenu'); if (m && !m.hidden && !e.target.closest('.qc')) { m.hidden = true; $('#qcBtn')?.setAttribute('aria-expanded', 'false'); } }, { signal: pageSignal() });
   bindMe();
   drawer(app, side);
+  countsLoop(side);
+  palette(me);   // Ctrl/⌘+K works as soon as the menu shows
   restoreDraft();
   warmAnalytics(app);
   import('./vitals.js').then(m => m.measure()).catch(() => {});

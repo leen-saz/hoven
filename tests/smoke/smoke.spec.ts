@@ -7,6 +7,8 @@ import { LIVE } from '../../src/modules/registry';
 const BASE = `http://localhost:${process.env['SMOKE_PORT'] || 8787}`;
 // Each live tab: its page and its main read-only API
 const TABS: { key: string; page: string; api: string }[] = [
+  { key: 'dream', page: '/dream/', api: '/api/dream/state' },
+  { key: 'buyer', page: '/buyer/', api: '/api/buyer/state' },
   { key: 'overview', page: '/overview/', api: '/api/overview/data' },
   { key: 'listening', page: '/listening/', api: '/api/listening/demand' },
   { key: 'design', page: '/design/', api: '/api/design/options' },
@@ -141,8 +143,8 @@ test.describe('old URLs redirect', () => {
     ['/history', '/control/?tab=log'],
     ['/review/history', '/control/?tab=log'],
     ['/analytics', '/'],
-    ['/home', '/today/'],
-    ['/start', '/today/'],
+    ['/home', '/dream/'],
+    ['/start', '/dream/'],
     ['/permissions', '/admin/'],
   ];
   for (const [from, to] of REDIRECTS) {
@@ -175,11 +177,37 @@ test.describe('sidebar and language (browser)', () => {
     await expect(page.locator('span.navi.locked').first()).toBeVisible();
     await expect(page.locator('a.navi[data-k="admin"]')).toHaveCount(0);
   });
-  test('the owner sees every live tab and the permissions page', async ({ page, context, request }) => {
+  // Hoven's short menu (Leen, 2026-11-16, docs/PRD.md §3.1): the other live tabs keep their pages but are not in the menu
+  test("the owner sees Hoven's menu in order, and the permissions page", async ({ page, context, request }) => {
     await addSession(context, await login(request, 'owner'));
     await page.goto('/today/');
-    for (const k of LIVE) await expect(page.locator(`a.navi[data-k="${k}"]`).first(), k).toBeVisible();
-    await expect(page.locator('a.navi[data-k="admin"]')).toBeVisible();
+    const MENU = ['dream', 'overview', 'buyer', 'control', 'social', 'listening', 'knowledge', 'connectors', 'admin'];
+    for (const k of MENU) await expect(page.locator(`a.navi[data-k="${k}"]`).first(), k).toBeVisible();
+    const order = await page.locator('a.navi[data-k]').evaluateAll(as => as.map(a => (a as HTMLElement).dataset['k']));
+    expect(order.filter(k => MENU.includes(k!))).toEqual(MENU);
+    for (const k of LIVE.filter(k => !MENU.includes(k))) await expect(page.locator(`a.navi[data-k="${k}"]`), k).toHaveCount(0);
+  });
+  test('Ctrl+K opens the command palette; Enter goes to the place typed', async ({ page, context, request }) => {
+    await addSession(context, await login(request, 'owner'));
+    await page.goto('/today/');
+    await expect(page.locator('a.navi[data-k="dream"]')).toBeVisible();
+    await page.keyboard.press('Control+k');
+    await expect(page.locator('#cmdk')).toBeVisible();
+    await page.locator('#cmdkQ').fill('الرصد');
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/listening\/$/);
+  });
+  test('the theme switch turns the page dark and the choice stays after a reload', async ({ page, context, request }) => {
+    await addSession(context, await login(request, 'owner'));
+    await page.goto('/today/');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await page.locator('#meBtn').click();
+    await page.locator('#themeBtn').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    const bg = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
+    expect(bg.toUpperCase()).toBe('#0F141C');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
   test('the language switch flips the page to English, left to right, and back', async ({ page, context, request }) => {
     await addSession(context, await login(request, 'owner'));

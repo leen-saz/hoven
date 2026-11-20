@@ -193,5 +193,5 @@ export default async function mount() {
     catch (err) { say($('#msg'), err.message); busy(b, false); }
   });
 
-  shell({ active: 'social', title: 'السوشال' }).then(loadApprovers).then(load).catch(pageFailure);
+  shell({ active: 'social', title: 'التواصل الاجتماعي' }).then(loadApprovers).then(load).catch(pageFailure);
 }

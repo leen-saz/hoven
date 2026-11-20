@@ -108,7 +108,10 @@ describe('auth', () => {
     r = await M(req('/', c));
     expect(status(r)).toBe(302);
     const u = new URL(location(r));
-    expect(u.pathname + u.search).toBe('/dream/');
+    // This member may not open Dream either, so the start page would refuse them too: they go to Today
+    expect(u.pathname + u.search).toBe('/today/');
+    const d = await cookieFor({ ...member, dashboards: [...(member.dashboards ?? []), 'dream'] });
+    expect(new URL(location(await M(req('/', d)))).pathname).toBe('/dream/');
     r = await M(req('/admin/', c));
     expect(status(r)).toBe(302);
     r = await M(req('/?view=creative', c));
