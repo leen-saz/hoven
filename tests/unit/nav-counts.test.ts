@@ -34,7 +34,7 @@ describe('nav counts', () => {
     const seen = world(owner, 3, 2);
     const r = await call(owner);
     expect(r.status).toBe(200);
-    expect(await r.json()).toEqual({ control: 3, social: 2 });
+    expect(await r.json()).toEqual({ control: 3, social: 2, dream: 0, connectors: 0 });
     expect(seen.find(u => u.includes('/suggestions'))).toContain('status=eq.open');
     const posts = seen.find(u => u.includes('/social_posts'))!;
     expect(posts).toContain('approved_at=is.null');

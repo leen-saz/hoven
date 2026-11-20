@@ -37,6 +37,15 @@ import { ClientRouter } from 'astro:transitions';
 .so-pick{display:grid;gap:8px;margin:10px 0}.so-pick label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .so-fail{border:1px solid #C0392B55;background:#C0392B0F}.so-fail ul{margin:6px 0 0;padding-inline-start:18px}
 .so-more{margin:6px 0 0;font-size:12px}.so-more summary{cursor:pointer}.so-more code{direction:ltr;unicode-bidi:plaintext;display:block;white-space:pre-wrap;word-break:break-word}
+.so-own{margin:6px 0 10px}.so-own textarea{min-height:70px}.so-own label{margin-top:8px}
+.so-at{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.so-at input,.so-at select{width:auto;flex:1 1 160px}
+.so-slot-list{list-style:none;margin:8px 0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.so-slot-list li{display:inline-flex;gap:6px;align-items:center;padding:4px 10px;border-radius:999px;background:var(--tint);font-size:13px}
+.so-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-top:8px}
+.so-week .d{min-height:120px;padding:8px;border-radius:12px;background:var(--tint)}
+.so-week .d h4{margin:0 0 6px;font-size:13px}
+.so-week .p{display:block;margin:0 0 6px;padding:6px 8px;border-radius:8px;background:var(--surface);font-size:12px;line-height:1.5}
+@media (max-width:900px){.so-week{grid-template-columns:1fr}}
 </style>
 </head>
 <body data-page="social" data-module>
@@ -53,12 +62,19 @@ import { ClientRouter } from 'astro:transitions';
             <label>المنصات</label><div class="checks" id="plats"></div>
             <label for="body">النص</label><textarea id="body" rows="6"></textarea>
             <p class="so-cnt muted" id="cnt"></p>
+            <details class="so-own" id="ownBox" hidden><summary>نص خاص لكل منصة <span class="muted">(اختياري)</span></summary><div id="own"></div></details>
             <div class="bar"><button class="btn sm secondary" type="button" id="suggest">اكتب لي نص من الفكرة</button></div>
             <label for="file">صورة أو فيديو <span class="muted">(اختياري)</span></label>
             <div class="so-up"><input type="file" id="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime"><span class="muted" id="upMsg"></span></div>
             <div class="so-prev" id="prev" hidden></div>
             <details class="so-link"><summary class="muted">أو حط رابط</summary><input type="url" id="media" dir="ltr" placeholder="https://"></details>
-            <label for="at">وقت النشر <span class="muted">(بتوقيت الرياض)</span></label><input type="datetime-local" id="at" required>
+            <label for="at">وقت النشر <span class="muted">(بتوقيت الرياض)</span></label>
+            <div class="so-at"><input type="datetime-local" id="at" required><button class="btn sm secondary" type="button" id="nextSlot" hidden>الخانة الجاية</button></div>
+            <details class="so-slots" id="slotsBox" hidden><summary class="muted">خانات النشر الثابتة</summary>
+              <ul id="slotList" class="so-slot-list"></ul>
+              <div class="so-at"><select id="slotDay" aria-label="اليوم"><option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option><option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option><option value="6">السبت</option></select>
+                <input type="time" id="slotAt" aria-label="الساعة" value="20:00"><button class="btn sm secondary" type="button" id="slotAdd">أضف</button></div>
+              <span class="msg" id="slotMsg" role="status"></span></details>
             <p class="so-note" id="who">كل منشور ينتظر اعتماد قبل ما ينشر.</p>
             <div class="bar" style="margin-top:20px"><button class="btn primary" type="submit">جدوِل</button></div>
             <div class="msg" id="msg" role="status"></div>
@@ -86,7 +102,10 @@ import { ClientRouter } from 'astro:transitions';
             <div class="checks" id="apprList"></div>
             <div class="bar" style="margin-top:12px"><button class="btn sm primary" type="button" id="apprSave">احفظ</button><span class="msg" id="apprMsg" role="status"></span></div>
           </section>
-          <div class="bar" style="justify-content:space-between"><h2 style="margin:0">التقويم</h2><span class="muted" id="range"></span></div>
+          <div class="bar" style="justify-content:space-between"><h2 style="margin:0">التقويم</h2>
+            <div class="seg" role="group" aria-label="العرض"><button type="button" id="viewList" aria-pressed="true">القائمة</button><button type="button" id="viewWeek" aria-pressed="false">الأسبوع</button></div>
+            <span class="muted" id="range"></span></div>
+          <div id="week" class="so-week" hidden></div>
           <div id="list"></div>
         </section>
       </div>

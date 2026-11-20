@@ -60,7 +60,7 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `lessons` | 004 (+014) | learning loop, every tab | yes (FK) | id, platform, kind, lesson, evidence, confidence, block, active, module, status, source, decided_by | Forever; set `active=false`/`ignored` instead of deleting. |
 | `connections` | 005 (+006) | connectors | yes, no FK | platform PK, method, names, shown, connected_by, connected_at, expires_at, checked. Secret values live in Supabase Vault, never here. | Forever; one row per platform. |
 | `companies` | 006 (+010, 011_modules, 013_social_approver) | tenant | n/a (is the company) | id, slug, name, plan, active, paperclip_company_id, disabled_modules, social_approvers | Forever. |
-| `social_posts` | 007 | social | yes (FK) | id, platforms, body, media, publish_at, mode, status, approved_by, results … | Keep published/failed 12 months; drafts never deleted automatically. Media in R2 `social/<company>/`: delete the file with the post. |
+| `social_posts` | 007 | social | yes (FK) | id, platforms, body, overrides (a platform's own text, 035), media, publish_at, mode, status, approved_by, results … | Keep published/failed 12 months; drafts never deleted automatically. Media in R2 `social/<company>/`: delete the file with the post. |
 | `journeys` | 008 | journeys | yes (FK) | id, name, trigger, steps, mode, active … | Forever. |
 | `journey_runs` | 008 | journeys | yes (FK) | id, journey_id, contact, status, log, started_at | `contact` is personal data: expire runs after 90 days. |
 | `content_plans` | 009 | content | yes (FK) | id, site, niche, competitors, analysis, items, engine … | Keep the last 20 per company; older ones can expire. |
@@ -84,6 +84,8 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `idempotency_keys` | 034 | ad writes (`src/lib/ads-write/idempotency.ts`) | yes (PK with key) | key, scope, request_hash, status, response | 24 hours: older keys are deleted on the next claim. |
 | `ad_changes` | 034 | ad writes (Dream «انشر» and «شغّل», later the buyer) | yes (FK) | platform, level, target_id, action, before, after, source, launch_id, suggestion_id, by, at, ok, error | Forever: the record of every write to an ad platform. |
 | `dream_launches` | 034 | Dream «انشر» | yes (FK; cascade with its project) | project_id, platform, status (pending, created, failed, active, paused), daily_sar, link, external (campaign, ad set, image, creative, ad ids), receipt, error; unique (project, platform) | With its project. |
+| `social_slots` | 035 | social (`/api/social/slots`) | yes (FK) | weekday (0 Sunday … 6 Saturday), at (Riyadh time), created_by; unique (company, weekday, at) | Replaced as a whole on save. |
+| `connection_health` | 035 | hourly account check (`src/lib/account-health.ts`) → connections page, sidebar count | yes (PK with platform) | platform, health (ok, failing, down), code, checked_at, failing_since. No token, no platform message. | One row per company and platform, overwritten each hour. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes

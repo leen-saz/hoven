@@ -167,7 +167,8 @@ async function listening() {
     $('#ments').innerHTML = list.slice(0, shown).map(m => `<article class="lx-m"><a href="${esc(m.url)}" target="_blank" rel="noopener" dir="auto">${esc(m.title || m.url)}</a>
         ${m.snippet ? `<p class="muted" style="margin:0;font-size:14px" dir="auto">${esc(m.snippet.slice(0, 220))}</p>` : ''}
         <div class="lx-meta"><span class="lx-s ${m.sentiment || 'unscored'}">${SENT[m.sentiment || 'unscored']}</span>${m.reason ? `<span>${esc(m.reason)}</span>` : ''}
-          <span>· ${esc(SOURCE[m.source] || m.source)}</span>${m.author ? `<span>· ${esc(m.author)}</span>` : ''}<span>· ${esc(name.get(m.watch_id) || '')}</span><span>· ${day(m.published_at)}</span></div></article>`).join('')
+          <span>· ${esc(SOURCE[m.source] || m.source)}</span>${m.author ? `<span>· ${esc(m.author)}</span>` : ''}<span>· ${esc(name.get(m.watch_id) || '')}</span><span>· ${day(m.published_at)}</span>
+          <a class="lx-idea" href="/dream/?new=1&idea=${encodeURIComponent(`فكرة من الرصد: ${(m.title || '').slice(0, 160)}${m.snippet ? `\n${m.snippet.slice(0, 300)}` : ''}\nالمصدر: ${m.url}`)}">حوّلها لفكرة في احلم</a></div></article>`).join('')
       || `<p class="muted" style="margin:0">${M.length ? 'ما فيه إشارات بهالفلتر.' : 'ما فيه إشارات للحين.'}</p>`;
     $('#more').hidden = list.length <= shown;
   }

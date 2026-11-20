@@ -80,6 +80,7 @@ export default async function mount() {
       $$('input[name="pl"]').forEach(x => x.addEventListener('change', counter));
     }
     $('#range').textContent = `${fmtDay(from)} ← ${fmtDay(to)}`;
+    POSTS = r.posts; drawWeek();
     const byDay = new Map();
     for (const p of r.posts) { const k = fmtDay(new Date(p.publish_at)); byDay.set(k, [...(byDay.get(k) || []), p]); }
     $('#list').innerHTML = byDay.size ? [...byDay].map(([d, ps]) => `<h3 class="so-day">${esc(d)}</h3><div class="cx-list" style="display:grid;gap:10px">${ps.map(postCard).join('')}</div>`).join('')
@@ -168,18 +169,68 @@ export default async function mount() {
     busy(btn, false);
   });
 
+  // ---- A platform's own text (optional): one box per chosen platform, with that platform's limit
+  function drawOwn() {
+    const chosen = $$('input[name="pl"]:checked').map(x => x.value);
+    $('#ownBox').hidden = !chosen.length;
+    const keep = Object.fromEntries($$('#own textarea').map(t => [t.dataset.p, t.value]));
+    $('#own').innerHTML = chosen.map(k => `<label for="own-${k}">${esc(PLATS[k]?.name || k)} <span class="muted">(حد ${PLATS[k]?.max ?? ''} حرف)</span></label>
+      <textarea id="own-${k}" data-p="${k}" maxlength="${PLATS[k]?.max ?? 5000}" placeholder="فاضي = النص المشترك">${esc(keep[k] || '')}</textarea>`).join('');
+  }
+  $('#plats').addEventListener('change', drawOwn);
+
+  // ---- Week view: the 7 days from today, each with its posts (Riyadh days)
+  let POSTS = [], WEEK = false;
+  function drawWeek() {
+    $('#week').hidden = !WEEK; $('#list').hidden = WEEK;
+    $('#viewList').setAttribute('aria-pressed', String(!WEEK)); $('#viewWeek').setAttribute('aria-pressed', String(WEEK));
+    if (!WEEK) return;
+    const days = Array.from({ length: 7 }, (_, i) => new Date(Date.now() + i * 864e5));
+    const key = d => new Date(d.getTime() + 3 * 3600e3).toISOString().slice(0, 10);
+    $('#week').innerHTML = days.map(d => {
+      const ps = POSTS.filter(p => key(new Date(p.publish_at)) === key(d));
+      return `<div class="d"><h4>${esc(fmtDay(d))}</h4>${ps.map(p => `<span class="p"><b>${esc(new Date(p.publish_at).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Riyadh' }))}</b> · ${esc((p.platforms || []).map(k => PLATS[k]?.name || k).join('، '))}<br>${esc(String(p.body || '').slice(0, 60))}</span>`).join('') || '<span class="muted">—</span>'}</div>`;
+    }).join('');
+  }
+  $('#viewList').addEventListener('click', () => { WEEK = false; drawWeek(); });
+  $('#viewWeek').addEventListener('click', () => { WEEK = true; drawWeek(); });
+
+  // ---- Posting slots: the next free one fills the time; approvers set the slots
+  const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+  let SLOTS = [];
+  async function loadSlots() {
+    let r; try { r = await api('/api/social/slots'); } catch { return; }
+    SLOTS = r.slots || [];
+    $('#nextSlot').hidden = !r.next; $('#nextSlot').dataset.at = r.next || '';
+    $('#slotsBox').hidden = false;
+    $('#slotList').innerHTML = SLOTS.map((x, i) => `<li>${DAYS[x.weekday]} ${esc(x.at)} <button class="btn ghost sm" type="button" data-rm="${i}" aria-label="احذف الخانة">×</button></li>`).join('') || '<li class="muted">ما فيه خانات. أضف يوم وساعة.</li>';
+    if (r.setup) say($('#slotMsg'), r.setup);
+  }
+  $('#nextSlot').addEventListener('click', e => {
+    const t = new Date(Date.parse(e.currentTarget.dataset.at) + 3 * 3600e3).toISOString().slice(0, 16);   // Riyadh, for datetime-local
+    $('#at').value = t;
+  });
+  const saveSlots = async list => {
+    try { await api('/api/social/slots', { method: 'POST', body: { slots: list } }); say($('#slotMsg'), 'انحفظت', true); await loadSlots(); }
+    catch (err) { say($('#slotMsg'), err.message); }
+  };
+  $('#slotAdd').addEventListener('click', () => saveSlots([...SLOTS, { weekday: Number($('#slotDay').value), at: $('#slotAt').value }]));
+  $('#slotList').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) saveSlots(SLOTS.filter((_, i) => i !== Number(b.dataset.rm))); });
+  loadSlots();
+
   $('#f').addEventListener('submit', async e => {
     e.preventDefault();
     const btn = e.submitter; busy(btn, true); $('#notices').innerHTML = '';
     const local = $('#at').value; // Riyadh time (UTC+3, no DST)
     const body = { platforms: $$('input[name="pl"]:checked').map(x => x.value), body: $('#body').value,
       media: uploaded ? [uploaded] : $('#media').value ? [{ url: $('#media').value, type: /\.(mp4|mov|webm)(\?|$)/i.test($('#media').value) ? 'video' : 'image' }] : [],
-      publish_at: local ? new Date(local + ':00+03:00').toISOString() : '' };
+      publish_at: local ? new Date(local + ':00+03:00').toISOString() : '',
+      overrides: Object.fromEntries($$('#own textarea').filter(t => t.value.trim()).map(t => [t.dataset.p, t.value.trim()])) };
     try {
       const r = await api('/api/social/posts', { method: 'POST', body });
       say($('#msg'), 'انجدول.', true);
       $('#notices').innerHTML = (r.notices || []).map(n => `<p class="so-note">${esc(n)}</p>`).join('');
-      $('#body').value = ''; $('#media').value = ''; $('#file').value = ''; uploaded = null; showPrev(null); $('#upMsg').textContent = ''; await load();
+      $('#body').value = ''; $('#media').value = ''; $('#file').value = ''; uploaded = null; showPrev(null); $('#upMsg').textContent = ''; $$('#own textarea').forEach(t => { t.value = ''; }); await load(); loadSlots();
     } catch (err) { say($('#msg'), err.message); }
     busy(btn, false);
   });

@@ -55,5 +55,5 @@ export function sections(me, L) {
   return HOVEN.map(([key, label, list]) => ({ key, label, items: list })).filter(s => s.items.length);
 }
 // Live counts of what waits for a decision (/api/nav/counts), shown next to these entries
-export const COUNTS = { control: 'control', social: 'social', dream: 'dream' };
+export const COUNTS = { control: 'control', social: 'social', dream: 'dream', connectors: 'connectors' };
 export const TIP = { noaccess: ['ما عندك صلاحية', 'No access'], locked: ['مقفل لشركتك', 'Locked for your company'] };

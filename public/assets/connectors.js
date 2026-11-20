@@ -56,6 +56,9 @@ export default async function mount() {
     if (p.expires) meta.push(`ينتهي ${when(p.expires)}`);
     if (p.status === 'github' && p.lastPull) meta.push(`آخر سحب ناجح ${when(p.lastPull)} · المفاتيح في أسرار GitHub، مو مربوطة من هذي الصفحة`);
     if (p.checked) meta.push(esc(p.checked));
+    // Hourly check (src/lib/account-health.ts): a failure waits an hour before it counts as a disconnect
+    if (p.health?.health === 'failing') meta.push(`<span class="warn-text">متعثر من ${when(p.health.since)}: نعيد الفحص كل ساعة قبل ما نعتبره منفصل</span>`);
+    if (p.health?.health === 'down') meta.push(`<span class="warn-text">منفصل من ${when(p.health.since)}: أعد الربط</span>`);
     const drop = !['none', 'mcp', 'github'].includes(p.status) && !p.fields.length
       ? `<button class="btn sm ghost" type="button" data-drop="${p.id}">${icon('x')}فك الربط</button>` : '';
     const note = p.mcp && S.open !== p.id ? `<p class="muted cx-meta">${esc(p.help)}</p>` : '';

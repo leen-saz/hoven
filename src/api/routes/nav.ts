@@ -17,6 +17,12 @@ export const counts = {
     // Social: posts scheduled and not yet approved
     if (can(user, 'social', cfg)) jobs.push(sb(cfg, scoped('/rest/v1/social_posts?select=id&status=eq.scheduled&approved_at=is.null&limit=100', user.co), { admin: true })
       .then(r => { if (r.ok) out['social'] = count(r.data); }));
+    // Dream: campaigns being drafted (parts waiting for «اعتمد»)
+    if (can(user, 'dream', cfg)) jobs.push(sb(cfg, scoped('/rest/v1/dream_projects?select=id&status=eq.drafting&limit=100', user.co), { admin: true })
+      .then(r => { if (r.ok) out['dream'] = count(r.data); }));
+    // Connections: accounts down after the hour's grace (src/lib/account-health.ts)
+    if (user.co === HOVEN_COMPANY && can(user, 'connectors', cfg)) jobs.push(sb(cfg, `/rest/v1/connection_health?select=platform&company_id=eq.${HOVEN_COMPANY}&health=eq.down&limit=100`, { admin: true })
+      .then(r => { if (r.ok) out['connectors'] = count(r.data); }));
     await Promise.all(jobs);
     return json(200, out);
   }),
