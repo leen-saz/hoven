@@ -77,7 +77,10 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `library_items` | 020 | shared library (copywriter and the other tabs) | yes (FK) | id, module, kind, title, content, platform, service, compliance_result, review_status, reviewed_by, approved_by, created_by, created_by_id | Forever; the owner edits and approves. Deleting is not offered yet. |
 | `library_favorites` | 020 | shared library | yes (FK) | item_id + user_id PK, created_at | Goes with its item (cascade). |
 | `web_vitals` | 022 | vitals beacon (`/api/vitals/report`) → data-health «الأداء» card | no (global: page path and timings only, no user, no company) | id, at, path (ids collapsed to `:id`), lcp, inp, cls, ttfb, mobile | 7 days: rows older than that are deleted when the owner opens the card. |
-| `buyer_settings` | 031 | media buyer (`/api/buyer/*`) | yes (PK) | company_id, goals (per platform: targetCpa, targetRoas, dailyBudget, stopSpend, maxStepPct), rules (Arabic lines), updated_by | One row per company, overwritten on save. |
+| `buyer_settings` | 031 (+032) | media buyer (`/api/buyer/*`) | yes (PK) | company_id, goals (per platform: targetCpa, targetRoas, dailyBudget, stopSpend, maxStepPct), rules (Arabic lines), managed (platform + campaign the buyer may propose budget changes on), updated_by | One row per company, overwritten on save. |
+| `dream_projects` | 033 | Dream (`/api/dream/*`) | yes (FK) | id, title, idea, platforms, status, created_by | Forever (a campaign's record); no customer data. |
+| `dream_messages` | 033 | Dream | yes (FK; cascade with its project) | id, project_id, role, content, model | With its project. Marketing ideas only; the page asks for no personal data. |
+| `dream_parts` | 033 | Dream | yes (FK; cascade with its project) | id, project_id, kind (strategy, audience, budget, copy, design, motion, voiceover), version, content, asset_keys, status (draft, approved, stale), instruction, approved_by | Never edited except status; with its project. Files in R2 `dream/<company>/<project>/`. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes

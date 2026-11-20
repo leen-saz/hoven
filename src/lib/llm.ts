@@ -16,13 +16,15 @@ export interface LlmInput { messages: Msg[]; max_tokens: number; response_format
 export interface LlmOut { response: string; engine: Provider; model: string }
 
 export const DEFAULTS = { openrouter: 'openrouter/auto', openrouterImage: 'openai/gpt-image-1', openai: 'gpt-6.1-sol', xai: 'grok-4.7', image: 'gpt-image-2' } as const;
-export const PROVIDER: Record<string, Provider> = { content: 'openai', design: 'openai', copy: 'openai', motion: 'openai', social: 'xai', maestro: 'xai', listening: 'xai' };
+export const PROVIDER: Record<string, Provider> = { dream: 'openai', content: 'openai', design: 'openai', copy: 'openai', motion: 'openai', social: 'xai', maestro: 'xai', listening: 'xai' };
 const URL_OF = { openrouter: 'https://openrouter.ai/api/v1/chat/completions', openai: 'https://api.openai.com/v1/responses', xai: 'https://api.x.ai/v1/responses' } as const;
 export const OPENROUTER_IMAGES = 'https://openrouter.ai/api/v1/images';
 const clean = (s: string | undefined) => (s || '').replace(/[^a-z0-9.\-_:]/gi, '').slice(0, 80);
 // OpenRouter model slugs are vendor/model[:variant], so the slash stays
 // The media buyer runs on Claude through OpenRouter (Leen, 2026-11-16); OPENROUTER_MODEL_BUYER changes it
-export const TAB_DEFAULT: Record<string, string> = { buyer: 'anthropic/claude-sonnet-5.5' };
+// «احلم» runs on ChatGPT through OpenRouter (Leen, 2026-11-19); OPENROUTER_MODEL_DREAM changes it. The slug follows the OpenAI
+// default below and is not checked against OpenRouter's list from here: set OPENROUTER_MODEL_DREAM if OpenRouter names it differently.
+export const TAB_DEFAULT: Record<string, string> = { buyer: 'anthropic/claude-sonnet-5.5', dream: 'openai/gpt-6.1-sol' };
 const slug = (s: string | undefined) => (s || '').replace(/[^a-z0-9.\-_:/]/gi, '').slice(0, 100);
 
 // The provider a tab would use now: its own if the key is there, else Workers AI if bound, else none
