@@ -2,6 +2,7 @@
 import { LANG, t, langSwitch, restoreDraft } from './i18n.js';
 import { sections, TIP, COUNTS } from './sidebar.js';
 import { ME_KEY, FRESH, readMe, slim } from './me-cache.js';
+import { palette } from './palette.js';
 export { LANG, t, langSwitch };
 // Pages switch with Astro's ClientRouter: listeners on document/window of one page are removed when it leaves
 let PAGE = new AbortController();
@@ -280,7 +281,7 @@ export async function shell({ active, title, badge = '', tools = '' }) {
   bindMe();
   drawer(app, side);
   countsLoop(side);
-  import('./palette.js').then(m => m.palette(me)).catch(() => {});
+  palette(me);   // Ctrl/⌘+K works as soon as the menu shows
   restoreDraft();
   warmAnalytics(app);
   import('./vitals.js').then(m => m.measure()).catch(() => {});
