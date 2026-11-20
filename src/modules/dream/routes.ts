@@ -300,3 +300,6 @@ export const speak = { POST: handle(async (request, e: Env) => {
   if (!r.ok) return json(502, { error: `ما انولد الصوت (${r.status})` });
   return new Response(r.body, { status: 200, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 }) };
+
+// «انشر» and «شغّل» (src/modules/dream/publish.ts): the paused campaigns on the platforms, behind the write guard
+export { publish, activate, launches } from './publish';

@@ -81,6 +81,9 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `dream_projects` | 033 | Dream (`/api/dream/*`) | yes (FK) | id, title, idea, platforms, status, created_by | Forever (a campaign's record); no customer data. |
 | `dream_messages` | 033 | Dream | yes (FK; cascade with its project) | id, project_id, role, content, model | With its project. Marketing ideas only; the page asks for no personal data. |
 | `dream_parts` | 033 | Dream | yes (FK; cascade with its project) | id, project_id, kind (strategy, audience, budget, copy, design, motion, voiceover), version, content, asset_keys, status (draft, approved, stale), instruction, approved_by | Never edited except status; with its project. Files in R2 `dream/<company>/<project>/`. |
+| `idempotency_keys` | 034 | ad writes (`src/lib/ads-write/idempotency.ts`) | yes (PK with key) | key, scope, request_hash, status, response | 24 hours: older keys are deleted on the next claim. |
+| `ad_changes` | 034 | ad writes (Dream «انشر» and «شغّل», later the buyer) | yes (FK) | platform, level, target_id, action, before, after, source, launch_id, suggestion_id, by, at, ok, error | Forever: the record of every write to an ad platform. |
+| `dream_launches` | 034 | Dream «انشر» | yes (FK; cascade with its project) | project_id, platform, status (pending, created, failed, active, paused), daily_sar, link, external (campaign, ad set, image, creative, ad ids), receipt, error; unique (project, platform) | With its project. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes

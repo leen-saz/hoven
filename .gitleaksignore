@@ -1,0 +1,3 @@
+# Findings checked by hand and known not to be secrets. One fingerprint per line (commit:file:rule:line).
+# b482f59: a synthetic idempotency key in a unit test ('key-on-again-…'), replaced by a helper in cc7d6a8. No credential.
+b482f59435c0805426e9b37cf34efce7fca18a5b:tests/unit/ads-write.test.ts:generic-api-key:215

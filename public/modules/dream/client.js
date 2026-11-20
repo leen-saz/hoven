@@ -72,12 +72,40 @@ function drawPart() {
   if (tab === 'motion') preview(p.content);
 }
 
+// «انشر»: once every required part is approved, Leen (the owner) gives the store link and confirms each platform's daily
+// budget; the platforms get the campaign PAUSED. Each launch then has «شغّل» / «أوقف». Every click carries its own
+// Idempotency-Key, so a double click or a retry never creates twice.
+const STATE_AR = { pending: 'قيد الإنشاء', created: 'منشأة وموقوفة', failed: 'ما انشأت', active: 'شغّالة', paused: 'موقوفة', soon: 'قريباً', refused: 'مرفوض' };
+const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/[^A-Za-z0-9_-]/g, '');
+
 function drawPublish() {
   const left = P.missing || [];
-  $('#publish').innerHTML = left.length
-    ? `<b>قبل «انشر»</b><span class="muted">باقي تعتمد: ${left.map(k => esc(ST.names[k])).join('، ')}.</span>`
-    : `<b>الحملة معتمدة ✓</b><span class="muted">«انشر» ينشئ الحملة في المنصات موقوفة، وأنت تشغّلها. يجي مع ربط المنصات في التحديث الجاي.</span>`;
-  $('#publish').insertAdjacentHTML('beforeend', '<button class="btn primary" type="button" disabled title="يجي مع ربط المنصات">انشر</button>');
+  const L = P.launches || [];
+  const rowsHtml = L.length ? `<ul class="dr-launches">${L.map(l => `<li><b>${esc(FAM[l.platform] || l.platform)}</b> <span class="dr-tag ${l.status === 'active' ? 'approved' : l.status === 'failed' ? 'stale' : ''}">${esc(STATE_AR[l.status] || l.status)}</span>
+      ${l.daily_sar ? `<span class="muted">${fmt(l.daily_sar)} ر.س يومياً</span>` : ''}${l.error ? `<span class="muted">${esc(l.error)}</span>` : ''}
+      ${P.owner && ['created', 'paused'].includes(l.status) ? `<button class="btn primary sm" type="button" data-on="${l.id}">شغّل</button>` : ''}
+      ${P.owner && l.status === 'active' ? `<button class="btn danger sm" type="button" data-off="${l.id}">أوقف</button>` : ''}</li>`).join('')}</ul>` : '';
+  if (left.length) {
+    $('#publish').innerHTML = `<b>قبل «انشر»</b><span class="muted">باقي تعتمد: ${left.map(k => esc(ST.names[k])).join('، ')}.</span>${rowsHtml}`;
+    return;
+  }
+  const split = latest('budget')?.content?.split || [];
+  const plats = P.project.platforms || [];
+  const done = new Set(L.filter(l => ['created', 'active', 'paused'].includes(l.status)).map(l => l.platform));
+  const todo = plats.filter(f => !done.has(f));
+  $('#publish').innerHTML = `<b>${todo.length ? 'الحملة معتمدة ✓' : 'انشرت الحملة ✓'}</b>
+    ${todo.length ? (P.owner ? `<form id="pubForm" class="dr-pub">
+      <label for="pubLink">رابط المتجر أو صفحة المنتج</label><input id="pubLink" type="url" inputmode="url" dir="ltr" placeholder="https://" value="${esc(P.link || '')}" required>
+      ${todo.map(f => `<label for="b-${f}">الميزانية اليومية في ${esc(FAM[f] || f)} (ر.س)${(P.writers || []).includes(f) ? '' : ' · <span class="muted">النشر التلقائي قريباً</span>'}</label>
+        <input id="b-${f}" data-budget="${f}" type="number" inputmode="decimal" min="1" step="any" value="${esc(split.find(s => s.platform === f)?.daily ?? '')}">`).join('')}
+      <p class="muted" style="margin:0">تنشأ الحملة <b>موقوفة</b> في كل منصة، وما تصرف شي لين تضغط «شغّل». الميزانية فوق خطتك لازم تكتبها بنفسك هنا.</p>
+      <button class="btn primary" type="submit" id="pubBtn">انشر</button></form>` : '<span class="muted">النشر على المنصات بموافقة لين بس.</span>') : ''}
+    ${rowsHtml}`;
+}
+
+async function loadLaunches() {
+  try { const r = await api(`/api/dream/launches?id=${P.project.id}`); P.launches = r.launches; P.writers = r.writers || []; P.owner = !!r.owner; if (r.setup) say($('#prog'), r.setup); }
+  catch { P.launches = P.launches || []; }
 }
 
 function drawChat() {
@@ -100,6 +128,7 @@ async function projects(select) {
 async function open(id) {
   P = await api(`/api/dream/item?id=${id}`);
   setUrl(id);
+  await loadLaunches();
   $('#start').hidden = true; $('#work').hidden = false;
   const first = (ST.required || ST.textParts).find(k => latest(k)?.status !== 'approved');
   tab = first || tab;
@@ -254,6 +283,30 @@ export default async function mount() {
   $('#ask').addEventListener('submit', e => { e.preventDefault(); const t = $('#q').value.trim(); if (!t) return; $('#q').value = ''; ask(t); });
   $('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ask').requestSubmit(); } });
   $('#prepBtn').addEventListener('click', e => prepare(e.currentTarget));
+
+  $('#publish').addEventListener('submit', async e => {
+    if (e.target.id !== 'pubForm') return;
+    e.preventDefault();
+    const link = $('#pubLink').value.trim(), budgets = {};
+    for (const i of $$('#publish [data-budget]')) if (i.value) budgets[i.dataset.budget] = Number(i.value);
+    const lines = Object.entries(budgets).map(([f, v]) => `${FAM[f] || f}: ${fmt(v)} ر.س يومياً`).join('\n');
+    if (!confirm(`تنشئ الحملة موقوفة في:\n${lines}\n\nالرابط: ${link}\n\nما تصرف شي لين تضغط «شغّل». تكمل؟`)) return;
+    const btn = $('#pubBtn'); busy(btn, true); P.link = link;
+    try {
+      const r = await api('/api/dream/publish', { method: 'POST', body: { id: P.project.id, key: newKey(), link, budgets }, timeout: 180000 });
+      const bad = r.launches.filter(l => ['failed', 'refused'].includes(l.status));
+      toast(bad.length ? bad.map(l => `${FAM[l.platform] || l.platform}: ${l.error}`).join(' · ') : 'انشأت الحملة موقوفة ✓', !!bad.length);
+      await loadLaunches(); drawPublish();
+    } catch (err) { toast(err.message, true); busy(btn, false); }
+  });
+  $('#publish').addEventListener('click', async e => {
+    const b = e.target.closest('[data-on],[data-off]'); if (!b) return;
+    const on = !!b.dataset.on, launch = Number(b.dataset.on || b.dataset.off);
+    if (on && !confirm('تشغّل الحملة؟ تبدأ تصرف بالميزانية اليومية اللي حددتها.')) return;
+    busy(b, true);
+    try { await api('/api/dream/activate', { method: 'POST', body: { launch, on, key: newKey() } }); toast(on ? 'اشتغلت الحملة' : 'وقفت الحملة'); await loadLaunches(); drawPublish(); }
+    catch (err) { toast(err.message, true); busy(b, false); }
+  });
 
   $('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; tab = b.dataset.k; drawTabs(); drawPart(); });
   $('#part').addEventListener('click', async e => {
