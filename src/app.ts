@@ -12,6 +12,8 @@ import { withWaiter } from './lib/usage';
 import { dispatchRefresh, type CronEnv } from './lib/cron';
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
 import { runSocial } from './modules/social/cron';
+import { runBuyerLearning } from './modules/buyer/learn';
+import { env as cfgOf } from './lib/auth';
 // Cloudflare Workflows: the class must be exported from the Worker entry
 export { JourneyRun } from './modules/journeys/workflow';
 
@@ -69,11 +71,18 @@ app.use(middleware());
 app.use(i18n());
 app.use(pages());
 
+// The buyer's learning run never stops the refresh: a missing setup or a failure is logged and skipped
+async function learn(e: AuthEnv): Promise<void> {
+  try { await runBuyerLearning(cfgOf(e)); } catch (err) { console.error('buyer learning failed', (err as Error).message); }
+}
+
 export default {
   fetch: app.fetch,
   // Cloudflare Cron Triggers (production only): the hourly data refresh on GitHub Actions, and every 5 minutes the due social posts
   scheduled(event: ScheduledController, env: CronEnv & AuthEnv, ctx: ExecutionContext) {
     // Every 5 minutes: due social posts, then one social-listening keyword that has not been fetched in a day
-    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)]) : dispatchRefresh(env)));
+    // Every 4 hours: the data refresh, and the media buyer measures its decided proposals (3 and 7 days on) and writes lessons
+    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv)])
+      : Promise.all([dispatchRefresh(env), learn(env)])));
   },
 };
