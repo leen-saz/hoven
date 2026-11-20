@@ -37,8 +37,13 @@ for (const t of TABS) {
       else await expect(alert).toBeVisible();
       await expect(alert).toContainText(m.text);
       failing = false;
-      await alert.locator('[data-retry]').click();
-      await expect(page.locator('[data-retry]')).toHaveCount(0);
+      // A tab click starts a fresh load that can land just after the API recovers and replace the error under the retry click:
+      // click retry while an error is still on screen, until none is left
+      const retry = page.locator('[data-retry]');
+      await expect(async () => {
+        if (await retry.count()) await retry.first().click({ timeout: 2000 });
+        await expect(retry).toHaveCount(0, { timeout: 2000 });
+      }).toPass({ timeout: 15_000 });
     });
   }
 }
