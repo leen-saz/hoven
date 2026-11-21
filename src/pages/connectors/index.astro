@@ -33,6 +33,10 @@ import { ClientRouter } from 'astro:transitions';
 .cx-logo.mono{color:#FFFFFF;font:700 18px var(--f-ar)}
 .cx form a{color:var(--accent)}
 .chip.ok{background:#E3F4EA;color:#14532D}.chip.warn{background:#FFF4D6;color:#7A4B00}
+.cx-mcp{padding:16px 20px;margin:0 0 16px;display:grid;gap:10px}.cx-mcp h2{margin:0;font-size:18px}
+.cx-url{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.cx-url code{direction:ltr;padding:8px 12px;border-radius:10px;background:var(--tint);font-size:13px;word-break:break-all}
+.cx-mcp ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}.cx-mcp li{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--tint)}
+.cx-perm{font-size:13px;direction:ltr;text-align:start}
 </style>
 </head>
 <body data-page="connectors">
@@ -45,6 +49,7 @@ import { ClientRouter } from 'astro:transitions';
       <p class="muted cx-intro">اربط منصات الإعلانات والتحليلات. المفاتيح تنحفظ مشفّرة في خزنة القاعدة وما تنعرض لأحد بعد الحفظ، والتحديث كل ساعة يقراها من هناك.</p>
       <div class="cx-tools"><input type="search" id="q" placeholder="ابحث عن منصة" aria-label="ابحث عن منصة"><span class="muted" id="sum"></span></div>
       <div class="msg" id="msg" role="status"></div>
+      <section id="mcp" aria-live="polite"></section>
       <div id="list" aria-live="polite"></div>
     </main>
   </div>

@@ -3,13 +3,16 @@
 // Every call: Leen only (the owner), the kill switch off (pausing always allowed), an Idempotency-Key per click, the
 // budget within her plan or typed by her, a row per object in ad_changes and a line in audit_log. The campaign a launch
 // creates joins the managed list, so the media buyer may propose on it later and nothing else is touched.
+// The platform calls go through Hoven's MCP server (src/mcp, docs/PRD.md §3.10); the checks here only shape the answer.
 import { sb, json, readJson, handle, requireUser, audit, isOwner, missingSchema, notApplied, type AuthEnv, type Cfg, type Session } from '../../lib/auth';
-import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
+import { scoped } from '../../lib/tenant';
 import { checkWrite, checkBudget } from '../../lib/ads-write/guard';
 import { claim, finish, KEY_RE } from '../../lib/ads-write/idempotency';
-import { createPaused, setStatus, metaConfig, ages, genders, type Done, type Plan, type Fetch } from '../../lib/ads-write/meta';
-import { cleanGoals, cleanManaged, type Fam } from '../buyer/engine';
-import { latest, missing, ownFile, type PartRow } from './dream';
+import { metaConfig, ages, genders, type Done, type Plan, type Fetch } from '../../mcp/adapters/meta';
+import { callTool, ctxFor, vault, killOn } from '../../mcp/core';
+import '../../mcp/tools/ads';
+import { cleanGoals, type Fam } from '../buyer/engine';
+import { latest, missing, type PartRow } from './dream';
 
 type Env = AuthEnv & { FILES?: R2Bucket };
 type Row = Record<string, unknown>;
@@ -18,19 +21,6 @@ const SETUP = 'migration 034_ad_writes.sql';
 export const WRITERS: Fam[] = ['meta'];   // platforms whose writer exists
 const now = () => new Date().toISOString();
 const LINK = /^https:\/\/[a-z0-9.-]+\.[a-z]{2,}(\/[^\s]*)?$/i;
-
-async function vault(cfg: Cfg, co: string): Promise<Record<string, string>> {
-  if (co !== HOVEN_COMPANY) return {};   // per-company vault names come with ADR-0006's next step
-  const v = await sb<{ name: string; value: string }[]>(cfg, '/rest/v1/rpc/connector_env', { method: 'POST', admin: true, body: {} });
-  return Object.fromEntries((v.ok && Array.isArray(v.data) ? v.data : []).map(x => [x.name, x.value]));
-}
-async function killOn(cfg: Cfg): Promise<boolean> {
-  const r = await sb(cfg, '/rest/v1/control_settings?platform=eq.global&select=guardrails', { admin: true });
-  // Cannot read the switch: treat it as on (never spend without knowing)
-  if (!r.ok) return true;
-  return !!(rows<{ guardrails?: { kill?: boolean } }>(r.data)[0]?.guardrails?.kill);
-}
-const change = (cfg: Cfg, user: Session, x: Row) => sb(cfg, '/rest/v1/ad_changes', { method: 'POST', admin: true, body: { company_id: user.co, source: 'dream', by: user.email, ...x } });
 
 // Run once per Idempotency-Key: a repeat returns the stored answer, a key still running answers 409
 async function once(cfg: Cfg, user: Session, key: unknown, scope: string, request: unknown, run: () => Promise<{ status: number; body: Row }>): Promise<Response> {
@@ -99,26 +89,18 @@ export const publish = { POST: handle(async (request, e: Env, f: Fetch = fetch) 
         if (!w.ok) return { status: missingSchema(w) ? 503 : 500, body: { error: missingSchema(w) ? notApplied(user, SETUP) : 'ما انحفظ النشر' } };
         launch = Number(rows(w.data)[0]?.['id']);
       }
-      const save = async (d: Done) => { await sb(cfg, `/rest/v1/dream_launches?id=eq.${launch}`, { method: 'PATCH', admin: true, body: { external: d, updated_at: now() } }); };
-      const getFile = async (key: string) => {
-        if (!ownFile(user.co, key) || !e.FILES) return null;
-        const o = await e.FILES.get(key);
-        return o ? { bytes: await o.arrayBuffer(), type: o.httpMetadata?.contentType || 'image/jpeg' } : null;
-      };
-      try {
-        const d = await createPaused(mc.cfg, plan, ex?.external || {}, getFile, save, f);
+      const save = async (d: unknown) => { await sb(cfg, `/rest/v1/dream_launches?id=eq.${launch}`, { method: 'PATCH', admin: true, body: { external: d, updated_at: now() } }); };
+      // Through Hoven's MCP server: the tool re-checks the guards, writes ad_changes and adds the campaign to the managed list
+      const ctx = { ...ctxFor(cfg, user, e, 'dream', f, isOwner(user, cfg)), onProgress: save };
+      const a = await callTool(ctx, 'ads.create_campaign', { platform, plan, done: ex?.external || {}, launch_id: launch, ...(Number.isFinite(t) && t > 0 ? { typed_daily: t } : {}) },
+        { key: `${String(body.key).slice(0, 70)}_${platform}` });
+      if (a.ok) {
+        const d = (a.data as { done: Done }).done;
         await sb(cfg, `/rest/v1/dream_launches?id=eq.${launch}`, { method: 'PATCH', admin: true, body: { status: 'created', external: d, error: null, receipt: { at: now(), ads: Object.keys(d.ads || {}).length }, updated_at: now() } });
-        await change(cfg, user, { platform, level: 'campaign', target_id: d.campaign_id, action: 'create_paused', after: { name: plan.name, daily_sar: next, ads: Object.keys(d.ads || {}).length, status: 'PAUSED' }, launch_id: launch });
-        // The new campaign joins the managed list (the only campaigns a write may change later)
-        const managed = cleanManaged([...(Array.isArray(st['managed']) ? st['managed'] as unknown[] : []), { platform, campaign: plan.name }]);
-        await sb(cfg, '/rest/v1/buyer_settings?on_conflict=company_id', { method: 'POST', admin: true, headers: { Prefer: 'resolution=merge-duplicates' },
-          body: { company_id: user.co, managed, updated_by: user.email, updated_at: now() } });
         out.push({ platform, status: 'created', launch, campaign_id: d.campaign_id, ads: Object.keys(d.ads || {}).length });
-      } catch (err) {
-        const msg = (err as Error).message.slice(0, 400);
-        await sb(cfg, `/rest/v1/dream_launches?id=eq.${launch}`, { method: 'PATCH', admin: true, body: { status: 'failed', error: msg, updated_at: now() } });
-        await change(cfg, user, { platform, level: 'campaign', target_id: null, action: 'create_paused', ok: false, error: msg, launch_id: launch });
-        out.push({ platform, status: 'failed', launch, error: msg });
+      } else {
+        await sb(cfg, `/rest/v1/dream_launches?id=eq.${launch}`, { method: 'PATCH', admin: true, body: { status: 'failed', error: a.error, ...(a.data?.['done'] ? { external: a.data['done'] } : {}), updated_at: now() } });
+        out.push({ platform, status: a.status === 403 ? 'refused' : 'failed', launch, error: a.error });
       }
     }
     const created = out.some(o => o['status'] === 'created');
@@ -137,23 +119,15 @@ export const activate = { POST: handle(async (request, e: Env, f: Fetch = fetch)
     const lid = parseInt(String(body.launch), 10) || 0;
     const l = rows<{ id: number; platform: Fam; status: string; external: Done; project_id: number }>((await sb(cfg, scoped(`/rest/v1/dream_launches?id=eq.${lid}&select=id,platform,status,external,project_id`, user.co), { admin: true })).data)[0];
     if (!l?.external?.campaign_id || !['created', 'active', 'paused'].includes(l.status)) return { status: 404, body: { error: 'ما فيه حملة منشأة لهالنشر' } };
-    // A campaign Dream created is on the managed list from its creation
-    const stop = checkWrite(on ? 'activate' : 'pause', { kill: await killOn(cfg), owner: isOwner(user, cfg), managed: true });
-    if (stop) return { status: 403, body: { error: stop } };
-    const mc = metaConfig(await vault(cfg, user.co));
-    if (!mc.cfg) return { status: 503, body: { error: `ناقص في صفحة الربط: ${mc.missing.join('، ')}` } };
-    try {
-      const got = await setStatus(mc.cfg, l.external.campaign_id, on ? 'ACTIVE' : 'PAUSED', f);
-      const status = on ? 'active' : 'paused';
-      await sb(cfg, `/rest/v1/dream_launches?id=eq.${l.id}`, { method: 'PATCH', admin: true, body: { status, receipt: { at: now(), ...got }, updated_at: now() } });
-      await change(cfg, user, { platform: l.platform, level: 'campaign', target_id: l.external.campaign_id, action: on ? 'activate' : 'pause', before: { status: l.status }, after: got, launch_id: l.id });
-      await audit(cfg, user, on ? 'dream_activate' : 'dream_pause', { target: { launch: l.id, platform: l.platform, campaign_id: l.external.campaign_id } });
-      return { status: 200, body: { ok: true, status, meta: got } };
-    } catch (err) {
-      const msg = (err as Error).message.slice(0, 400);
-      await change(cfg, user, { platform: l.platform, level: 'campaign', target_id: l.external.campaign_id, action: on ? 'activate' : 'pause', ok: false, error: msg, launch_id: l.id });
-      return { status: 502, body: { error: msg } };
-    }
+    // Through Hoven's MCP server: the guards (kill switch, managed campaign, the approver) and ad_changes live in the tool
+    const a = await callTool(ctxFor(cfg, user, e, 'dream', f, isOwner(user, cfg)), 'ads.set_status',
+      { platform: l.platform, campaign_id: l.external.campaign_id, status: on ? 'ACTIVE' : 'PAUSED', launch_id: l.id }, { key: `${String(body.key).slice(0, 70)}_${on ? 'on' : 'off'}` });
+    if (!a.ok) return { status: a.status, body: { error: a.error } };
+    const got = a.data as { status: string; effective: string };
+    const status = on ? 'active' : 'paused';
+    await sb(cfg, `/rest/v1/dream_launches?id=eq.${l.id}`, { method: 'PATCH', admin: true, body: { status, receipt: { at: now(), status: got.status, effective: got.effective }, updated_at: now() } });
+    await audit(cfg, user, on ? 'dream_activate' : 'dream_pause', { target: { launch: l.id, platform: l.platform, campaign_id: l.external.campaign_id } });
+    return { status: 200, body: { ok: true, status, meta: { status: got.status, effective: got.effective } } };
   });
 }) };
 

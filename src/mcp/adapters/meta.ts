@@ -1,9 +1,10 @@
+// The Meta adapter of Hoven's MCP server (src/mcp, docs/PRD.md §3.10): the only code that talks to the Graph API for ads.
 // Meta Marketing API writes (Graph v23.0) for «انشر» in Dream (docs/PRD.md §3.4, §6.3). The campaign is created PAUSED;
 // its ad sets and ads are created active under it, so nothing delivers until Leen switches the campaign on (one click,
 // one call), and pausing it again stops everything (the reversal).
 // Resumable: every object created is written to `done` as it happens; a retry skips what exists and goes on from there,
 // so a failure halfway never makes a second campaign. The token never leaves the server and never reaches a log.
-import { minor } from './guard';
+import { minor } from '../../lib/ads-write/guard';
 
 export const GRAPH = 'https://graph.facebook.com/v23.0/';
 
@@ -115,4 +116,62 @@ export function metaConfig(v: Record<string, string>): { cfg?: MetaConfig; missi
   const missing = Object.values(need).filter(k => !(v[k] || '').trim());
   if (missing.length) return { missing };
   return { cfg: { token: v[need.token]!.trim(), account: v[need.account]!.trim(), page: v[need.page]!.trim(), pixel: v[need.pixel]!.trim() }, missing: [] };
+}
+
+// ---- Reads and budget changes (MCP tools ads.get_campaign, ads.list_campaigns, ads.set_budget)
+async function get(f: Fetch, token: string, path: string, fields: string): Promise<Record<string, unknown>> {
+  const sep = path.includes('?') ? '&' : '?';
+  const r = await f(`${GRAPH}${path}${sep}fields=${encodeURIComponent(fields)}&access_token=${encodeURIComponent(token)}`);
+  const j = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!r.ok || j['error']) {
+    const e = (j['error'] || {}) as { message?: string; error_user_msg?: string; code?: number };
+    throw Object.assign(new Error(String(e.error_user_msg || e.message || `Meta ${r.status}`).slice(0, 400)), { code: e.code, status: r.status });
+  }
+  return j;
+}
+
+export interface Campaign { id: string; name: string; status: string; effective: string; daily: number | null; level: 'campaign' | 'adset' | null; budget_id: string | null }
+const sar = (x: unknown) => (x == null || x === '' ? null : Math.round(Number(x)) / 100);
+
+/**
+ * One campaign with where its daily budget lives: on the campaign (CBO) or, with a single ad set, on that ad set.
+ * Several ad sets with their own budgets: no single budget to change (daily null).
+ */
+export async function getCampaign(cfg: MetaConfig, id: string, f: Fetch = fetch): Promise<Campaign> {
+  const c = await get(f, cfg.token, id, 'id,name,status,effective_status,daily_budget');
+  const base = { id: String(c['id']), name: String(c['name'] || ''), status: String(c['status'] || ''), effective: String(c['effective_status'] || '') };
+  if (c['daily_budget'] != null) return { ...base, daily: sar(c['daily_budget']), level: 'campaign', budget_id: base.id };
+  const s = await get(f, cfg.token, `${id}/adsets?limit=3`, 'id,daily_budget');
+  const sets = (Array.isArray(s['data']) ? s['data'] : []) as { id: string; daily_budget?: string }[];
+  if (sets.length === 1 && sets[0]!.daily_budget != null) return { ...base, daily: sar(sets[0]!.daily_budget), level: 'adset', budget_id: String(sets[0]!.id) };
+  return { ...base, daily: null, level: null, budget_id: null };
+}
+
+/** The account's campaigns (name, status, campaign budget), newest first, at most 100. */
+export async function listCampaigns(cfg: MetaConfig, f: Fetch = fetch): Promise<{ id: string; name: string; status: string; effective: string; daily: number | null }[]> {
+  const j = await get(f, cfg.token, `${act(cfg.account)}/campaigns?limit=100`, 'id,name,status,effective_status,daily_budget');
+  return ((Array.isArray(j['data']) ? j['data'] : []) as Record<string, unknown>[]).map(c => ({
+    id: String(c['id']), name: String(c['name'] || ''), status: String(c['status'] || ''), effective: String(c['effective_status'] || ''), daily: sar(c['daily_budget']),
+  }));
+}
+
+/** Set the daily budget where it lives (campaign or its single ad set), then read it back. */
+export async function setBudget(cfg: MetaConfig, c: Campaign, daily: number, f: Fetch = fetch): Promise<{ daily: number | null }> {
+  if (!c.budget_id) throw new Error('هالحملة ميزانيتها موزعة على أكثر من مجموعة: غيّرها من مدير الإعلانات');
+  await call(f, cfg.token, c.budget_id, { daily_budget: String(minor(daily)) });
+  const j = await get(f, cfg.token, c.budget_id, 'daily_budget');
+  return { daily: sar(j['daily_budget']) };
+}
+
+// What Hoven's MCP needs from a Meta connection to write (docs/PRD.md §3.10). Checked against what Meta says the token holds.
+export const META_WRITE_SCOPES = ['ads_management', 'ads_read', 'business_management', 'pages_show_list', 'pages_read_engagement',
+  'pages_manage_posts', 'pages_manage_engagement', 'pages_messaging', 'instagram_basic', 'instagram_content_publish',
+  'instagram_manage_comments', 'instagram_manage_messages'] as const;
+
+/** The permissions the token holds (granted only) and the write permissions it lacks. */
+export async function permissions(token: string, f: Fetch = fetch): Promise<{ granted: string[]; missing: string[] }> {
+  const j = await get(f, token, 'me/permissions', 'permission,status');
+  const granted = ((Array.isArray(j['data']) ? j['data'] : []) as { permission?: string; status?: string }[])
+    .filter(p => p.status === 'granted' && p.permission).map(p => String(p.permission));
+  return { granted, missing: META_WRITE_SCOPES.filter(s => !granted.includes(s)) };
 }
