@@ -25,6 +25,8 @@ export interface Ctx {
   agent: Agent;
   env: McpEnv;
   f: Fetch;
+  /** Set by the tools when an agent writes on its own («تلقائي», src/mcp/auto.ts): the change is recorded as source auto */
+  auto?: boolean;
   /** In-process callers only: progress of a long write, saved as it happens so a retry resumes */
   onProgress?: (state: unknown) => Promise<void>;
 }
@@ -100,7 +102,7 @@ export async function buyerSettings(cfg: Cfg, co: string): Promise<Row> {
 }
 /** One platform change, with the state before and after (ad_changes). */
 export const change = (ctx: Ctx, x: Row) => sb(ctx.cfg, '/rest/v1/ad_changes', { method: 'POST', admin: true,
-  body: { company_id: ctx.co, source: ctx.agent === 'dream' || ctx.agent === 'buyer' ? ctx.agent : ctx.agent === 'claude' ? 'claude' : 'manual', by: ctx.by, ...x } });
+  body: { company_id: ctx.co, source: ctx.auto ? 'auto' : ctx.agent === 'dream' || ctx.agent === 'buyer' ? ctx.agent : ctx.agent === 'claude' ? 'claude' : 'manual', by: ctx.by, ...x } });
 
 /** The first change today (Riyadh day) to a target: its `before` is where the day started. */
 export async function startOfDay(ctx: Ctx, platform: string, target: string, now = Date.now()): Promise<Row | null> {

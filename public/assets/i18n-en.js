@@ -16,6 +16,12 @@ export const EN = {
   'الأحد': 'Sunday', 'الاثنين': 'Monday', 'الثلاثاء': 'Tuesday', 'الأربعاء': 'Wednesday', 'الخميس': 'Thursday', 'الجمعة': 'Friday', 'السبت': 'Saturday',
   'الأسبوع': 'Week', 'الساعة': 'Time', 'العرض': 'View', 'احذف الخانة': 'Remove slot', 'انحفظت': 'Saved',
   'حوّلها لفكرة في احلم': 'Turn into a Dream idea',
+  // «تلقائي» for the media buyer (docs/PRD.md §6.3)
+  'وضع الميديا باير': 'Media buyer mode', 'احفظ الوضع': 'Save mode', 'أطفئ التلقائي': 'Turn automatic off',
+  '«بموافقتي»: كل تغيير يروح للوحة القرارات. «تلقائي»: يوقف ويغيّر ميزانيات الحملات المُدارة بنفسه ضمن الحدود تحت، وكل تغيير ينكتب في السجل وينقاس بعد ٣ و٧ أيام.': '«With my approval»: every change goes to the decision board. «Automatic»: it pauses and changes budgets of managed campaigns on its own within the limits below; every change is logged and measured after 3 and 7 days.',
+  'أقصى رفع للميزانية في اليوم (٪، ٢٠ بالكثير)': 'Largest budget raise per day (%, 20 at most)', 'سقف الميزانية اليومية لحملة وحدة (ر.س)': 'Daily budget ceiling per campaign (SAR)', 'سقف مجموع الرفع في اليوم (ر.س)': 'Ceiling on total raises per day (SAR)',
+  'بدونه: يوقف وينزّل بس': 'Without it: pause and lower only', 'تغيير الوضع للمالكة بس.': 'Only the owner changes the mode.', 'الميديا باير صار تلقائي': 'The media buyer is now automatic', 'الميديا باير على موافقتك': 'The media buyer waits for your approval',
+  'انطفى التلقائي: كل شي يرجع لموافقتك': 'Automatic is off: everything waits for your approval again',
   // Hoven's MCP server on the connectors page (docs/PRD.md §3.10)
   'MCP هوفن': 'Hoven MCP', 'التطبيقات المربوطة': 'Connected apps', 'صلاحيات الكتابة لكل حساب': 'Write permissions per account', 'انسخ': 'Copy', 'افصل': 'Disconnect', 'انفصل': 'Disconnected',
   'أضف هالرابط في Claude (Settings ← Connectors ← Add custom connector) وسجّل دخولك لهوفن: Claude يقدر يقرا ويكتب بنفس حدود هوفن.': 'Add this link in Claude (Settings → Connectors → Add custom connector) and sign in to Hoven: Claude can read and write within Hoven\'s limits.',
