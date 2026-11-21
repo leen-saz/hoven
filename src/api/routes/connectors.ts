@@ -226,7 +226,10 @@ export const mcp = {
     const by = new Map<string, Row>();
     for (const r of rows(t.data)) if (!by.has(String(r['client_id']))) by.set(String(r['client_id']), { client_id: r['client_id'], name: (r['client'] as Row | null)?.['name'] ?? '', scope: r['scope'], since: r['created_at'] });
     const perms = await callTool(ctxFor(cfg, user, e as McpEnv, 'manual', fetch, true), 'connections.permissions');
-    return json(200, { url: new URL('/mcp', request.url).toString(), ready: t.ok, connections: [...by.values()], permissions: perms.ok ? (perms.data as Row)['permissions'] : null });
+    // The latest events; opening this page marks them seen (the sidebar count goes back to the accounts that are down)
+    const ev = await sb(cfg, `/rest/v1/mcp_events?company_id=eq.${user.co}&select=id,kind,data,seen,at&order=at.desc&limit=20`, { admin: true });
+    if (ev.ok && rows(ev.data).some(x => !x['seen'])) await sb(cfg, `/rest/v1/mcp_events?company_id=eq.${user.co}&seen=eq.false`, { method: 'PATCH', admin: true, body: { seen: true } });
+    return json(200, { url: new URL('/mcp', request.url).toString(), ready: t.ok, connections: [...by.values()], permissions: perms.ok ? (perms.data as Row)['permissions'] : null, events: ev.ok ? rows(ev.data) : [] });
   }),
   // POST { client_id }: end that connection (every token it holds)
   POST: handle(async (request, e) => {

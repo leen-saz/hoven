@@ -230,7 +230,7 @@ describe('tools keep the rules whoever calls', () => {
 });
 
 describe('one MCP for every platform action', () => {
-  // Platform API hosts may appear only in the adapters, and in the places still moving there (docs/PRD.md §3.10, milestone 11).
+  // Platform API hosts may appear only in the adapters (docs/PRD.md §3.10), apart from connection setup.
   const src = import.meta.glob('../../src/**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
   const HOSTS = /https:\/\/(graph\.facebook\.com|graph\.instagram\.com|adsapi\.snapchat\.com|business-api\.tiktok\.com\/open_api|googleads\.googleapis\.com|api\.(?:twitter|x)\.com\/2)/;
   const ALLOWED = [
@@ -238,11 +238,41 @@ describe('one MCP for every platform action', () => {
     /\.test\.ts$/, /graph-mock\.ts$/,
     // connection setup (OAuth and the key check on save): the token vault side, not a platform action
     /\/src\/lib\/connectors\.ts$/, /\/src\/lib\/mcp-oauth\.ts$/,
-    // moving behind MCP tools in milestone 11
-    /\/src\/lib\/account-health\.ts$/, /\/src\/modules\/social\/social\.ts$/, /\/src\/modules\/journeys\/journeys\.ts$/,
   ];
   it('no other module calls a platform API', () => {
     const bad = Object.entries(src).filter(([f, s]) => HOSTS.test(s) && !ALLOWED.some(a => a.test(f))).map(([f]) => f);
     expect(bad).toEqual([]);
+  });
+});
+
+describe('milestone 11: social, health, events and jobs through the MCP server', () => {
+  const ctx = (over: Partial<Ctx> = {}): Ctx => ({ cfg, co: HOVEN_COMPANY, by: 'owner@example.test', owner: true, scope: 'read_write', agent: 'claude', env: {}, f: fetch, ...over });
+  const post = (o: Row = {}) => ({ id: 9, company_id: HOVEN_COMPANY, platforms: ['facebook'], body: 'hi', media: [], publish_at: '2026-11-01T10:00:00Z', mode: 'manual', status: 'scheduled', results: {}, company: null, ...o });
+
+  it('social.publish leaves an unapproved post alone, and posts an approved due one once', async () => {
+    const graph: string[] = [];
+    const { db } = store({ social_posts: [post()], vault: [{ name: 'META_PAGE_ACCESS_TOKEN', value: 't' }, { name: 'META_PAGE_ID', value: 'p' }] },
+      { graph: url => { graph.push(url); return new Response(JSON.stringify({ id: 'g1' }), { status: 200 }); } });
+    expect(await callTool(ctx(), 'social.publish', { post_id: 9 })).toMatchObject({ ok: false, status: 409 });
+    expect(graph).toHaveLength(0);
+    db['social_posts']![0]!['approved_at'] = '2026-11-01T09:00:00Z';
+    expect(await callTool(ctx(), 'social.publish', { post_id: 9 })).toMatchObject({ ok: true, data: { status: 'published' } });
+    expect(graph).toHaveLength(1);
+    expect(db['mcp_events']!.at(-1)).toMatchObject({ kind: 'social.published', tool: 'social.publish' });
+    // published: a second call does nothing
+    expect(await callTool(ctx(), 'social.publish', { post_id: 9 })).toMatchObject({ ok: false });
+    expect(graph).toHaveLength(1);
+  });
+  it('jobs.get and events.list read state in one shape', async () => {
+    store({ social_posts: [post({ status: 'published' })], mcp_events: [{ id: 1, company_id: HOVEN_COMPANY, kind: 'account.down', seen: false, at: '2026-11-01T10:00:00Z' }] });
+    expect(await callTool(ctx({ scope: 'read' }), 'jobs.get', { kind: 'social_post', id: 9 })).toMatchObject({ ok: true, data: { status: 'published', done: true } });
+    expect(await callTool(ctx({ scope: 'read' }), 'events.list', { unseen: true })).toMatchObject({ ok: true, data: { events: [{ kind: 'account.down' }] } });
+  });
+  it('an account that goes down raises an event once', async () => {
+    const { runAccountHealth } = await import('../../src/lib/account-health');
+    const { db } = store({ vault: [{ name: 'META_ACCESS_TOKEN', value: 't' }], connection_health: [{ company_id: HOVEN_COMPANY, platform: 'meta', health: 'failing', failing_since: '2026-11-01T08:00:00Z', code: 'token' }] });
+    const dead = (async () => new Response('{}', { status: 401 })) as unknown as typeof fetch;
+    await runAccountHealth(cfg, dead, Date.parse('2026-11-01T10:00:00Z'));
+    expect(db['mcp_events']!.filter(e => e['kind'] === 'account.down')).toHaveLength(1);
   });
 });

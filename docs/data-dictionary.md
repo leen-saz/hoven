@@ -89,6 +89,7 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `mcp_clients` | 036 | Hoven's MCP server, OAuth registration (`src/mcp/oauth.ts`) | nullable (FK) | client_id, name, redirect_uris | Until removed; its codes and tokens go with it. |
 | `mcp_codes` | 036 | MCP OAuth (`/oauth/authorize` → `/oauth/token`) | yes (FK) | code_hash (SHA-256, never the code), client_id, user_id, email, scope (read, read_write), challenge (PKCE S256), redirect_uri, expires_at (10 min), used | Spent once; expired rows are harmless. |
 | `mcp_tokens` | 036 | MCP OAuth and `/mcp` (`bearer()`), connectors page (revoke) | yes (FK) | token_hash (SHA-256, never the token), kind (access 1 h, refresh 30 days), client_id, user_id, email, scope, expires_at, revoked | Revoked on use (refresh rotation) or from the connectors page. |
+| `mcp_events` | 037 | MCP outbound events (`src/mcp/core.ts` `event()`): social posts, account health, automatic changes → sidebar count, connectors page, `events.list` | yes (FK) | kind (social.published, social.failed, social.partial, account.down, account.ok, auto.change …), tool, agent, data (ids and codes only), seen, at | Kept; marked seen when Leen opens them. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes

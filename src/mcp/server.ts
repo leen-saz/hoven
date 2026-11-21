@@ -7,6 +7,8 @@ import { bearer, CORS } from './oauth';
 import { callTool, tools, type Ctx, type McpEnv } from './core';
 import './tools/ads';
 import './tools/connections';
+import './tools/social';
+import './tools/events';
 
 export const PROTOCOL = '2025-06-18';
 const KNOWN = ['2025-06-18', '2025-03-26', '2024-11-05'];

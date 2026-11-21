@@ -4,6 +4,8 @@
 // Meta (ads key) and the Facebook page today; the other platforms join as their keys move to the vault.
 import { sb, type Cfg } from './auth';
 import { HOVEN_COMPANY } from './tenant';
+import { pingToken, pingPage } from '../mcp/adapters/meta';
+import { event } from '../mcp/core';
 
 export const GRACE_MS = 3600e3;
 export type Health = 'ok' | 'failing' | 'down';
@@ -16,21 +18,10 @@ export function nextHealth(prev: State | null, ok: boolean, code: string | null,
   return { health: now - Date.parse(since) >= GRACE_MS ? 'down' : 'failing', failing_since: since, code };
 }
 
-const GRAPH = 'https://graph.facebook.com/v23.0/';
 type Check = (v: Record<string, string>, f: typeof fetch) => Promise<{ ok: boolean; code: string | null } | null>;
-// null = not connected (nothing to check)
-const meta: Check = async (v, f) => {
-  if (!v['META_ACCESS_TOKEN']) return null;
-  const r = await f(`${GRAPH}me?fields=id&access_token=${encodeURIComponent(v['META_ACCESS_TOKEN'])}`).catch(() => null);
-  if (!r) return { ok: false, code: 'network' };
-  return r.ok ? { ok: true, code: null } : { ok: false, code: r.status === 401 || r.status === 400 ? 'token' : `http_${r.status}` };
-};
-const pages: Check = async (v, f) => {
-  if (!v['META_PAGE_ACCESS_TOKEN'] || !v['META_PAGE_ID']) return null;
-  const r = await f(`${GRAPH}${encodeURIComponent(v['META_PAGE_ID'])}?fields=id&access_token=${encodeURIComponent(v['META_PAGE_ACCESS_TOKEN'])}`).catch(() => null);
-  if (!r) return { ok: false, code: 'network' };
-  return r.ok ? { ok: true, code: null } : { ok: false, code: r.status === 401 || r.status === 400 ? 'token' : `http_${r.status}` };
-};
+// null = not connected (nothing to check). The calls themselves live in the Meta adapter of Hoven's MCP server.
+const meta: Check = (v, f) => (v['META_ACCESS_TOKEN'] ? pingToken(v['META_ACCESS_TOKEN'], f) : Promise.resolve(null));
+const pages: Check = (v, f) => (v['META_PAGE_ACCESS_TOKEN'] && v['META_PAGE_ID'] ? pingPage(v['META_PAGE_ACCESS_TOKEN'], v['META_PAGE_ID'], f) : Promise.resolve(null));
 export const CHECKS: Record<string, Check> = { meta, meta_pages: pages };
 
 /** One round for Hoven's vault (per-company vault names come with ADR-0006). Returns the states written. */
@@ -46,6 +37,9 @@ export async function runAccountHealth(cfg: Cfg, f: typeof fetch = fetch, now = 
     if (!got) continue;
     const st = nextHealth(prev.get(platform) ?? null, got.ok, got.code, now);
     out[platform] = st;
+    // An account that just went down, or came back: an event for the sidebar (and Claude's events.list)
+    const was = prev.get(platform)?.health;
+    if (st.health !== was && (st.health === 'down' || (was === 'down' && st.health === 'ok'))) await event({ cfg, co: HOVEN_COMPANY, agent: 'cron' }, st.health === 'down' ? 'account.down' : 'account.ok', 'connections.check', { platform, code: st.code });
     await sb(cfg, '/rest/v1/connection_health?on_conflict=company_id,platform', { method: 'POST', admin: true, headers: { Prefer: 'resolution=merge-duplicates' },
       body: { company_id: HOVEN_COMPANY, platform, ...st, checked_at: new Date(now).toISOString() } });
   }
