@@ -96,7 +96,9 @@ async function send(btn, body) {
   busy(btn, true);
   try {
     const r = await api('/api/buyer/send', { method: 'POST', body });
-    toast(r.sent.length ? `انرسل ${fmt(r.sent.length)} للوحة القرارات، ينتظر موافقتك` : 'موجود في لوحة القرارات من قبل');
+    const done = (r.auto || []).filter(a => a.ok).length;
+    if (done) toast(`نفّذ التلقائي ${fmt(done)}${r.sent.length ? `، وانرسل ${fmt(r.sent.length)} للوحة القرارات` : ''}`);
+    else toast(r.sent.length ? `انرسل ${fmt(r.sent.length)} للوحة القرارات، ينتظر موافقتك` : 'موجود في لوحة القرارات من قبل');
     return true;
   } catch (e) { toast(e.message, true); return false; } finally { busy(btn, false); }
 }
@@ -104,6 +106,7 @@ async function send(btn, body) {
 export default async function mount() {
   await shell({ active: 'buyer', title: 'الميديا باير' });
   try { await load(); } catch (e) { failure($('#content'), e, () => location.reload()); return; }
+  autoCard();
   $$('[data-tab]').forEach(b => b.addEventListener('click', () => show(b.dataset.tab)));
 
   $('#sendAll').addEventListener('click', async e => {
@@ -190,5 +193,41 @@ export default async function mount() {
     busy(b, true);
     try { await api('/api/buyer/lessons', { method: 'DELETE', body: { id: Number(b.dataset.off) } }); S.lessons = S.lessons.filter(l => l.id !== Number(b.dataset.off)); lessons(); toast('انحذف'); }
     catch (err) { toast(err.message, true); busy(b, false); }
+  });
+}
+
+// «تلقائي» (docs/PRD.md §6.3): the buyer's mode and the caps Hoven's MCP server enforces. Leen only switches it.
+async function autoCard() {
+  const box = $('#auto');
+  if (!box) return;
+  let r;
+  try { r = await api('/api/buyer/auto'); } catch { box.hidden = true; return; }
+  const m = r.modes.find(x => x.agent === 'buyer') || { mode: 'approve', caps: { max_raise_pct: 20 } };
+  const on = m.mode === 'auto', dis = r.canSwitch ? '' : ' disabled';
+  const v = x => (x == null ? '' : esc(String(x)));
+  box.hidden = false;
+  box.innerHTML = `<h2 id="autoH" style="margin:0 0 6px;font-size:18px">وضع الميديا باير</h2>
+    <p class="muted" style="margin:0 0 10px">«بموافقتي»: كل تغيير يروح للوحة القرارات. «تلقائي»: يوقف ويغيّر ميزانيات الحملات المُدارة بنفسه ضمن الحدود تحت، وكل تغيير ينكتب في السجل وينقاس بعد ٣ و٧ أيام.</p>
+    <form id="autoForm" style="display:grid;gap:10px;max-width:560px">
+      <fieldset style="border:0;padding:0;margin:0;display:flex;gap:16px;flex-wrap:wrap"><legend class="sr-only">الوضع</legend>
+        <label><input type="radio" name="mode" value="approve"${on ? '' : ' checked'}${dis}> بموافقتي</label>
+        <label><input type="radio" name="mode" value="auto"${on ? ' checked' : ''}${dis}> تلقائي</label></fieldset>
+      <label for="capPct">أقصى رفع للميزانية في اليوم (٪، ٢٠ بالكثير)</label><input id="capPct" name="max_raise_pct" type="number" min="1" max="20" step="1" value="${v(m.caps.max_raise_pct)}"${dis}>
+      <label for="capDaily">سقف الميزانية اليومية لحملة وحدة (ر.س)</label><input id="capDaily" name="max_daily_sar" type="number" min="1" step="1" value="${v(m.caps.max_daily_sar)}" placeholder="بدونه: يوقف وينزّل بس"${dis}>
+      <label for="capTotal">سقف مجموع الرفع في اليوم (ر.س)</label><input id="capTotal" name="max_total_daily_sar" type="number" min="1" step="1" value="${v(m.caps.max_total_daily_sar)}" placeholder="اختياري"${dis}>
+      ${r.canSwitch ? `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="submit" id="autoSave">احفظ الوضع</button>${on ? '<button class="btn secondary" type="button" id="autoOff">أطفئ التلقائي</button>' : ''}</div>` : '<p class="muted" style="margin:0">تغيير الوضع للمالكة بس.</p>'}
+      <div class="msg" id="amsg" role="status"></div></form>`;
+  $('#autoForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = e.currentTarget, btn = $('#autoSave');
+    const caps = { max_raise_pct: f.max_raise_pct.value, max_daily_sar: f.max_daily_sar.value, max_total_daily_sar: f.max_total_daily_sar.value };
+    busy(btn, true);
+    try { await api('/api/buyer/auto', { method: 'POST', body: { agent: 'buyer', mode: f.mode.value, caps } }); toast(f.mode.value === 'auto' ? 'الميديا باير صار تلقائي' : 'الميديا باير على موافقتك'); await autoCard(); }
+    catch (err) { say($('#amsg'), err.message); busy(btn, false); }
+  });
+  $('#autoOff')?.addEventListener('click', async e => {
+    busy(e.currentTarget, true);
+    try { await api('/api/buyer/auto', { method: 'POST', body: { off: true } }); toast('انطفى التلقائي: كل شي يرجع لموافقتك'); await autoCard(); }
+    catch (err) { say($('#amsg'), err.message); busy(e.currentTarget, false); }
   });
 }

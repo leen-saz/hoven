@@ -2,7 +2,7 @@
 // goals and rules, the knowledge module and approved lessons; proposes. Nothing here touches an ad platform: a proposal
 // is an open row on the decision board (suggestions), and only an approval there moves it on.
 // Tables missing (031_buyer.sql not run yet): the page still works with default rules and no saved goals.
-import { sb, json, readJson, handle, requireUser, audit, atLeast, missingSchema, notApplied, notEnabled, env, type AuthEnv, type Cfg, type Session } from '../../lib/auth';
+import { sb, json, readJson, handle, requireUser, audit, atLeast, isOwner, missingSchema, notApplied, notEnabled, env, type AuthEnv, type Cfg, type Session } from '../../lib/auth';
 import { scoped, HOVEN_COMPANY } from '../../lib/tenant';
 import { knowledgeFor } from '../knowledge/knowledge';
 import { generate, pick, type LlmEnv } from '../../lib/llm';
@@ -10,6 +10,9 @@ import { usageCtx } from '../../lib/usage';
 import { summarize, recommend, cleanGoals, cleanRules, cleanManaged, isManaged, type Goals, type Managed } from './engine';
 import { numbers, measure, today } from './learn';
 import { DEFAULT_RULES, PROPOSE, systemFor, toSuggestion, fromChat, splitProposals } from './prompt';
+import { canAuto, runAuto, type AutoResult } from './auto-run';
+import { modes, modeOf, setMode, allOff, cleanCaps, isAgent } from '../../mcp/auto';
+import type { McpEnv } from '../../mcp/core';
 
 type Env = AuthEnv & LlmEnv & { BUYER_API_TOKEN?: string };
 type Row = Record<string, unknown>;
@@ -161,18 +164,52 @@ export const send = { POST: handle(async (request, e) => {
     const c = await context(cfg, user);
     list = c.recs.filter(r => keys.has(r.key)).map(rec => ({ rec, source: 'rule' as const }));
   }
-  const sent: number[] = [], already: string[] = [], unmanaged: string[] = [];
+  const sent: number[] = [], already: string[] = [], unmanaged: string[] = [], auto: AutoResult[] = [];
   const st = await settings(cfg, user.co);
+  // «تلقائي» (docs/PRD.md §6.3): the buyer carries out what it can on its own, within the caps the MCP tools enforce;
+  // anything refused (a cap, the kill switch, another platform) still goes to the board for Leen's click
+  const mode = await modeOf(cfg, user.co, 'buyer');
   for (const { rec, source } of list) {
     if (rec.kind.startsWith('budget') && !isManaged(st.managed, rec)) { unmanaged.push(rec.key); continue; }
     const s = toSuggestion(rec, user.email, source);
     if (!s) continue;
+    if (mode?.mode === 'auto' && canAuto(rec)) {
+      const a = await runAuto(cfg, user, e as McpEnv, rec, s);
+      auto.push(a);
+      if (a.ok) continue;
+      s.reason = `${s.reason}\n(التلقائي ما نفّذه: ${a.error})`.slice(0, 1000);
+    }
     const r = await sb(cfg, '/rest/v1/suggestions', { method: 'POST', admin: true, headers: { Prefer: 'return=representation' }, body: s });
     const row = r.ok ? rows(r.data)[0] : undefined;
     if (row) { sent.push(Number(row.id)); await audit(cfg, user, 'buyer_proposed', { target: { id: row.id, platform: s.platform, kind: s.kind, campaign: s.campaign, source } }); }
     else if (r.status === 409) already.push(rec.key);
     else return json(500, { error: 'ما انرسل للوحة القرارات' });
   }
-  if (!sent.length && !already.length) return json(400, { error: unmanaged.length ? 'تغيير الميزانية بس على الحملات المُدارة: حددها في تبويب «الأهداف»' : 'ما فيه شي ينرسل' });
-  return json(200, { ok: true, sent, already, unmanaged });
+  if (!sent.length && !already.length && !auto.some(a => a.ok)) return json(400, { error: unmanaged.length ? 'تغيير الميزانية بس على الحملات المُدارة: حددها في تبويب «الأهداف»' : 'ما فيه شي ينرسل' });
+  return json(200, { ok: true, sent, already, unmanaged, auto });
 }) };
+
+// GET: every agent's mode and caps. POST { agent, mode, caps } (Leen only): switch one agent; POST { off: true }:
+// «أطفئ التلقائي», every agent back to «بموافقتي» at once.
+export const auto = {
+  GET: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'buyer', { well: true });
+    return json(200, { modes: await modes(cfg, user.co), canSwitch: isOwner(user, cfg) });
+  }),
+  POST: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'buyer', { write: true, approve: true, well: true });
+    if (!isOwner(user, cfg)) return json(403, { error: 'تشغيل «تلقائي» للمالكة بس' });
+    const body = await readJson(request);
+    if (body.off === true) {
+      if (!(await allOff(cfg, user.co, user.email))) return json(503, { error: notApplied(user, 'migration 038_agent_modes.sql') });
+      await audit(cfg, user, 'automation_off', { target: { all: true } });
+      return json(200, { ok: true, modes: await modes(cfg, user.co) });
+    }
+    if (!isAgent(body.agent)) return json(400, { error: 'الوكيل مو معروف' });
+    const mode = body.mode === 'auto' ? 'auto' : 'approve';
+    const caps = cleanCaps(body.caps);
+    if (!(await setMode(cfg, user.co, user.email, body.agent, mode, caps))) return json(503, { error: notApplied(user, 'migration 038_agent_modes.sql') });
+    await audit(cfg, user, mode === 'auto' ? 'automation_on' : 'automation_off', { target: { agent: body.agent, caps } });
+    return json(200, { ok: true, modes: await modes(cfg, user.co) });
+  }),
+};

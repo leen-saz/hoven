@@ -276,3 +276,84 @@ describe('milestone 11: social, health, events and jobs through the MCP server',
     expect(db['mcp_events']!.filter(e => e['kind'] === 'account.down')).toHaveLength(1);
   });
 });
+
+describe('milestone 12: «تلقائي» per agent, caps inside the server', async () => {
+  const { autoRefusal, cleanCaps } = await import('../../src/mcp/auto');
+  const auto = (caps: Row = {}) => ({ agent: 'buyer' as const, mode: 'auto' as const, caps: cleanCaps(caps) });
+  const budget = (o: Partial<{ before: number; startOfDay: number; next: number; raisedToday: number }>) => ({ action: 'set_budget' as const, before: 100, startOfDay: 100, next: 110, raisedToday: 0, ...o });
+
+  it('«بموافقتي» refuses; «تلقائي» pauses and lowers without caps, raises only within them', () => {
+    expect(autoRefusal({ ...auto(), mode: 'approve' }, { action: 'pause' })).toContain('بموافقتي');
+    expect(autoRefusal(null, { action: 'pause' })).not.toBeNull();
+    expect(autoRefusal(auto(), { action: 'pause' })).toBeNull();
+    expect(autoRefusal(auto(), budget({ next: 80 }))).toBeNull();
+    expect(autoRefusal(auto(), budget({ next: 110 }))).toContain('سقف');
+    expect(autoRefusal(auto({ max_daily_sar: 500 }), budget({ next: 110 }))).toBeNull();
+    expect(autoRefusal(auto({ max_daily_sar: 500, max_raise_pct: 5 }), budget({ next: 110 }))).toContain('5٪');
+    expect(autoRefusal(auto({ max_daily_sar: 105 }), budget({ next: 110 }))).toContain('105');
+    expect(autoRefusal(auto({ max_daily_sar: 500, max_total_daily_sar: 15 }), budget({ next: 110, raisedToday: 10 }))).toContain('مجموع');
+    expect(autoRefusal(auto({ max_daily_sar: 500 }), { action: 'activate', daily: 600 })).not.toBeNull();
+    expect(cleanCaps({ max_raise_pct: 50 }).max_raise_pct).toBe(20);
+  });
+
+  const VAULT = [{ name: 'META_ACCESS_TOKEN', value: 'T' }, { name: 'META_AD_ACCOUNT_ID', value: '1' }, { name: 'META_PAGE_ID', value: 'P' }, { name: 'META_PIXEL_ID', value: 'X' }];
+  const graph = (writes: string[]) => (url: string, init?: RequestInit) => {
+    if (init?.method === 'POST') { writes.push(url); return new Response('{"success":true}', { status: 200 }); }
+    if (url.includes('/555?') && url.includes('fields=daily_budget&')) return new Response(JSON.stringify({ daily_budget: '11000' }), { status: 200 });
+    if (url.includes('/555?')) return new Response(JSON.stringify({ id: '555', name: 'شتاء', status: 'ACTIVE', effective_status: 'ACTIVE', daily_budget: '10000' }), { status: 200 });
+    return null;
+  };
+  const seed = (mode: Row | null) => ({ vault: VAULT, buyer_settings: [{ company_id: HOVEN_COMPANY, goals: {}, managed: [{ platform: 'meta', campaign: 'شتاء' }] }],
+    control_settings: [{ platform: 'global', guardrails: { kill: false } }], agent_modes: mode ? [{ company_id: HOVEN_COMPANY, agent: 'buyer', ...mode }] : [] });
+  const buyer = (): Ctx => ({ cfg, co: HOVEN_COMPANY, by: 'owner@example.test', owner: false, scope: 'read_write', agent: 'buyer', env: {}, f: fetch });
+
+  it('the buyer in «تلقائي» changes a managed budget within its caps, recorded as auto with an event', async () => {
+    const writes: string[] = [];
+    const { db } = store(seed({ mode: 'auto', caps: { max_daily_sar: 500 } }), { graph: graph(writes) });
+    const r = await callTool(buyer(), 'ads.set_budget', { platform: 'meta', campaign_id: '555', daily: 110 }, { key: 'e'.repeat(20) });
+    expect(r, JSON.stringify(r)).toMatchObject({ ok: true, data: { before: 100, daily: 110 } });
+    expect(db['ad_changes']!.at(-1)).toMatchObject({ source: 'auto', action: 'set_budget' });
+    expect(db['mcp_events']!.at(-1)).toMatchObject({ kind: 'auto.change', agent: 'buyer' });
+  });
+  it('past a cap, or on «بموافقتي», nothing is written and the refusal is an event', async () => {
+    const writes: string[] = [];
+    let s = store(seed({ mode: 'auto', caps: { max_daily_sar: 105 } }), { graph: graph(writes) });
+    expect(await callTool(buyer(), 'ads.set_budget', { platform: 'meta', campaign_id: '555', daily: 110 }, { key: 'f'.repeat(20) })).toMatchObject({ ok: false, status: 403 });
+    expect(s.db['mcp_events']!.at(-1)).toMatchObject({ kind: 'auto.blocked' });
+    s = store(seed({ mode: 'approve', caps: {} }), { graph: graph(writes) });
+    expect(await callTool(buyer(), 'ads.set_status', { platform: 'meta', campaign_id: '555', status: 'PAUSED' }, { key: 'g'.repeat(20) })).toMatchObject({ ok: false, status: 403 });
+    expect(writes).toHaveLength(0);
+  });
+  it('«أطفئ التلقائي» puts every agent back on «بموافقتي»', async () => {
+    const { allOff, modes } = await import('../../src/mcp/auto');
+    const { db } = store(seed({ mode: 'auto', caps: { max_daily_sar: 500 } }));
+    expect(await allOff(cfg, HOVEN_COMPANY, 'owner@example.test')).toBe(true);
+    expect(db['agent_modes']![0]!['mode']).toBe('approve');
+    expect((await modes(cfg, HOVEN_COMPANY)).every(m => m.mode === 'approve')).toBe(true);
+  });
+});
+
+describe('the media buyer in «تلقائي»', () => {
+  it('carries out a budget proposal through the tools and records it as a decided suggestion for the learning loop', async () => {
+    const { runAuto } = await import('../../src/modules/buyer/auto-run');
+    const writes: string[] = [];
+    const { db } = store({
+      vault: [{ name: 'META_ACCESS_TOKEN', value: 'T' }, { name: 'META_AD_ACCOUNT_ID', value: '1' }, { name: 'META_PAGE_ID', value: 'P' }, { name: 'META_PIXEL_ID', value: 'X' }],
+      buyer_settings: [{ company_id: HOVEN_COMPANY, goals: {}, managed: [{ platform: 'meta', campaign: 'شتاء' }] }],
+      control_settings: [{ platform: 'global', guardrails: { kill: false } }],
+      agent_modes: [{ company_id: HOVEN_COMPANY, agent: 'buyer', mode: 'auto', caps: { max_daily_sar: 500 } }],
+      suggestions: [],
+    }, { graph: (url, init) => {
+      if (init?.method === 'POST') { writes.push(url); return new Response('{"success":true}', { status: 200 }); }
+      if (url.includes('act_1/campaigns')) return new Response(JSON.stringify({ data: [{ id: '555', name: 'شتاء', status: 'ACTIVE', effective_status: 'ACTIVE', daily_budget: '10000' }] }), { status: 200 });
+      if (url.includes('/555?') && url.includes('fields=daily_budget&')) return new Response(JSON.stringify({ daily_budget: '11000' }), { status: 200 });
+      if (url.includes('/555?')) return new Response(JSON.stringify({ id: '555', name: 'شتاء', status: 'ACTIVE', effective_status: 'ACTIVE', daily_budget: '10000' }), { status: 200 });
+      return null;
+    } });
+    const rec = { key: 'meta|شتاء|budget_up', fam: 'meta' as const, campaign: 'شتاء', kind: 'budget_up' as const, pct: 10, why: 'تكلفة الطلب تحت الهدف', measure: 'الطلبات', evidence: {} };
+    const r = await runAuto(cfg, { co: HOVEN_COMPANY, email: 'owner@example.test', uid: owner.id, role: 'owner' }, {}, rec, { platform: 'meta', kind: 'budget_up', campaign: 'شتاء', params: { from: 'buyer', pct: 10 }, status: 'open' });
+    expect(r).toMatchObject({ ok: true, before: 100, after: 110 });
+    expect(writes).toHaveLength(1);
+    expect(db['suggestions']!.at(-1)).toMatchObject({ status: 'executed', decided_by: 'auto', params: { from: 'buyer', auto: true } });
+  });
+});

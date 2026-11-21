@@ -6,7 +6,8 @@ import { sb } from '../../lib/auth';
 import { cleanGoals, cleanManaged, isManaged, type Fam } from '../../modules/buyer/engine';
 import { ownFile } from '../../modules/dream/dream';
 import { createPaused, setStatus, metaConfig, getCampaign, listCampaigns, setBudget, type Done, type Plan, type MetaConfig } from '../adapters/meta';
-import { register, ToolError, vault, killOn, buyerSettings, change, startOfDay, type Ctx } from '../core';
+import { register, ToolError, vault, killOn, buyerSettings, change, startOfDay, event, type Ctx } from '../core';
+import { autoRefusal, modeOf, raisedToday, type AutoAction } from '../auto';
 
 export const ADAPTERS: Fam[] = ['meta'];
 const PLATFORM = { type: 'string', enum: ['meta', 'snap', 'tiktok', 'google'], description: 'المنصة' };
@@ -18,8 +19,19 @@ async function meta(ctx: Ctx, platform: unknown): Promise<MetaConfig> {
   return mc.cfg;
 }
 const id = (x: unknown) => { const s = String(x ?? '').trim(); if (!/^[A-Za-z0-9_]{1,40}$/.test(s)) throw new ToolError(400, 'رقم الحملة مو صحيح'); return s; };
-// The approver for every write: Leen (the owner) until she names another one or switches an agent to «تلقائي»
-const approver = (ctx: Ctx) => ctx.owner;
+// The approver for every write: Leen's own click (or her Claude connection). An agent writes on its own only in
+// «تلقائي» and within its caps (src/mcp/auto.ts); a refusal raises an event so Leen sees what was held back.
+async function approver(ctx: Ctx, tool: string, a: AutoAction, about: Record<string, unknown> = {}): Promise<boolean> {
+  if (ctx.owner) return true;
+  const why = autoRefusal(await modeOf(ctx.cfg, ctx.co, ctx.agent), a);
+  if (why) {
+    await event(ctx, 'auto.blocked', tool, { ...about, why });
+    throw new ToolError(403, why);
+  }
+  ctx.auto = true;
+  return true;
+}
+const done = (ctx: Ctx, tool: string, data: Record<string, unknown>) => (ctx.auto ? event(ctx, 'auto.change', tool, data) : Promise.resolve());
 // A Dream launch the change belongs to (in-process callers), recorded in ad_changes
 const launchOf = (i: Record<string, unknown>) => (Number.isInteger(i['launch_id']) ? i['launch_id'] : null);
 const stop = (msg: string | null) => { if (msg) throw new ToolError(403, msg); };
@@ -57,7 +69,7 @@ register(
       launch_id: { type: 'integer', description: 'Dream launch this belongs to' },
     } },
     run: async (ctx, i) => {
-      stop(checkWrite('create_paused', { kill: await killOn(ctx.cfg), owner: approver(ctx), managed: true }));
+      stop(checkWrite('create_paused', { kill: await killOn(ctx.cfg), owner: await approver(ctx, 'ads.create_campaign', { action: 'create_paused' }), managed: true }));
       const cfg = await meta(ctx, i['platform']);
       const plan = i['plan'] as Plan;
       if (!plan || typeof plan !== 'object' || !Array.isArray(plan.ads) || !plan.ads.length) throw new ToolError(400, 'الخطة ناقصة: اسم وميزانية ورابط وإعلان واحد على الأقل');
@@ -99,10 +111,13 @@ register(
       const cfg = await meta(ctx, i['platform']);
       const cid = id(i['campaign_id']);
       const before = await getCampaign(cfg, cid, ctx.f);
-      stop(checkWrite(on ? 'activate' : 'pause', { kill: await killOn(ctx.cfg), owner: approver(ctx), managed: await managedFor(ctx, 'meta', before.name) }));
+      const kill = await killOn(ctx.cfg), managed = await managedFor(ctx, 'meta', before.name);
+      stop(checkWrite(on ? 'activate' : 'pause', { kill, owner: true, managed }));   // the rules first, then who may do it
+      await approver(ctx, 'ads.set_status', on ? { action: 'activate', daily: before.daily } : { action: 'pause' }, { platform: 'meta', campaign: before.name });
       try {
         const got = await setStatus(cfg, cid, on ? 'ACTIVE' : 'PAUSED', ctx.f);
         await change(ctx, { platform: 'meta', level: 'campaign', target_id: cid, launch_id: launchOf(i), action: on ? 'activate' : 'pause', before: { status: before.status }, after: got });
+        await done(ctx, 'ads.set_status', { platform: 'meta', campaign: before.name, action: on ? 'activate' : 'pause' });
         return { campaign_id: cid, ...got };
       } catch (err) {
         const msg = String((err as Error).message).slice(0, 400);
@@ -114,20 +129,23 @@ register(
   {
     name: 'ads.set_budget', title: 'تغيير الميزانية اليومية', write: true, money: true,
     description: 'Set a managed campaign\'s daily budget (SAR). Never more than 20% above where the Riyadh day started; lowering is always within the limit.',
-    input: { type: 'object', required: ['platform', 'campaign_id', 'daily'], properties: { platform: PLATFORM, campaign_id: { type: 'string' }, daily: { type: 'number', description: 'SAR per day' }, why: { type: 'string' } } },
+    input: { type: 'object', required: ['platform', 'campaign_id', 'daily'], properties: { platform: PLATFORM, campaign_id: { type: 'string' }, daily: { type: 'number', description: 'SAR per day' }, why: { type: 'string' }, suggestion_id: { type: 'integer' } } },
     run: async (ctx, i) => {
       const cfg = await meta(ctx, i['platform']);
       const cid = id(i['campaign_id']);
       const c = await getCampaign(cfg, cid, ctx.f);
-      stop(checkWrite('set_budget', { kill: await killOn(ctx.cfg), owner: approver(ctx), managed: await managedFor(ctx, 'meta', c.name) }));
+      stop(checkWrite('set_budget', { kill: await killOn(ctx.cfg), owner: true, managed: await managedFor(ctx, 'meta', c.name) }));
       if (c.daily == null) throw new ToolError(409, 'هالحملة ميزانيتها موزعة على أكثر من مجموعة: غيّرها من مدير الإعلانات');
       const first = await startOfDay(ctx, 'meta', cid);
       const begin = Number((first?.['before'] as { daily?: number } | undefined)?.daily ?? c.daily);
       const next = Number(i['daily']);
       stop(checkBudget({ startOfDay: begin, next }));
+      await approver(ctx, 'ads.set_budget', { action: 'set_budget', before: c.daily, startOfDay: begin, next, raisedToday: ctx.owner ? 0 : await raisedToday(ctx) }, { platform: 'meta', campaign: c.name, before: c.daily, next });
       try {
         const got = await setBudget(cfg, c, next, ctx.f);
-        await change(ctx, { platform: 'meta', level: c.level === 'adset' ? 'adset' : 'campaign', target_id: cid, action: 'set_budget', before: { daily: c.daily }, after: { daily: got.daily, why: String(i['why'] || '').slice(0, 300) } });
+        await change(ctx, { platform: 'meta', level: c.level === 'adset' ? 'adset' : 'campaign', target_id: cid, action: 'set_budget', ...(Number.isInteger(i['suggestion_id']) ? { suggestion_id: i['suggestion_id'] } : {}),
+          before: { daily: c.daily }, after: { daily: got.daily, why: String(i['why'] || '').slice(0, 300) } });
+        await done(ctx, 'ads.set_budget', { platform: 'meta', campaign: c.name, before: c.daily, after: got.daily });
         return { campaign_id: cid, before: c.daily, daily: got.daily };
       } catch (err) {
         const msg = String((err as Error).message).slice(0, 400);

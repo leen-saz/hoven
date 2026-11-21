@@ -90,6 +90,7 @@ by code that is live on main; open «المدير ← صحة الداتا ← ا
 | `mcp_codes` | 036 | MCP OAuth (`/oauth/authorize` → `/oauth/token`) | yes (FK) | code_hash (SHA-256, never the code), client_id, user_id, email, scope (read, read_write), challenge (PKCE S256), redirect_uri, expires_at (10 min), used | Spent once; expired rows are harmless. |
 | `mcp_tokens` | 036 | MCP OAuth and `/mcp` (`bearer()`), connectors page (revoke) | yes (FK) | token_hash (SHA-256, never the token), kind (access 1 h, refresh 30 days), client_id, user_id, email, scope, expires_at, revoked | Revoked on use (refresh rotation) or from the connectors page. |
 | `mcp_events` | 037 | MCP outbound events (`src/mcp/core.ts` `event()`): social posts, account health, automatic changes → sidebar count, connectors page, `events.list` | yes (FK) | kind (social.published, social.failed, social.partial, account.down, account.ok, auto.change …), tool, agent, data (ids and codes only), seen, at | Kept; marked seen when Leen opens them. |
+| `agent_modes` | 038 | «تلقائي» per agent (`src/mcp/auto.ts`, `/api/buyer/auto`) | yes (PK with agent) | agent (buyer, dream, social), mode (approve, auto), caps (max_raise_pct ≤ 20, max_daily_sar, max_total_daily_sar), updated_by, updated_at | One row per company and agent; «أطفئ التلقائي» sets every row back to approve. |
 | `motion_versions` | 018 | design (video) | yes (FK) | id, project_id, version, parent_version, change_request, spec, engine, model | Never edited; goes with its project. |
 
 ## Indexes against the queries the code makes
