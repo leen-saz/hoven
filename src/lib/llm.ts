@@ -24,7 +24,8 @@ const clean = (s: string | undefined) => (s || '').replace(/[^a-z0-9.\-_:]/gi, '
 // The media buyer runs on Claude through OpenRouter (Leen, 2026-11-16); OPENROUTER_MODEL_BUYER changes it
 // «احلم» runs on ChatGPT through OpenRouter (Leen, 2026-11-19); OPENROUTER_MODEL_DREAM changes it. The slug follows the OpenAI
 // default below and is not checked against OpenRouter's list from here: set OPENROUTER_MODEL_DREAM if OpenRouter names it differently.
-export const TAB_DEFAULT: Record<string, string> = { buyer: 'anthropic/claude-sonnet-5.5', dream: 'openai/gpt-6.1-sol' };
+// social: Grok on OpenRouter (Leen, 2026-11-21) for posts and the replies to comments and messages
+export const TAB_DEFAULT: Record<string, string> = { buyer: 'anthropic/claude-sonnet-5.5', dream: 'openai/gpt-6.1-sol', social: 'x-ai/grok-4.7' };
 const slug = (s: string | undefined) => (s || '').replace(/[^a-z0-9.\-_:/]/gi, '').slice(0, 100);
 
 // The provider a tab would use now: its own if the key is there, else Workers AI if bound, else none

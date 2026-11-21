@@ -46,6 +46,10 @@ import { ClientRouter } from 'astro:transitions';
 .so-week .d h4{margin:0 0 6px;font-size:13px}
 .so-week .p{display:block;margin:0 0 6px;padding:6px 8px;border-radius:8px;background:var(--surface);font-size:12px;line-height:1.5}
 @media (max-width:900px){.so-week{grid-template-columns:1fr}}
+.so-inbox{display:grid;gap:10px}.so-inbox h2{margin:0}.so-msgs{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.so-msg{padding:12px 14px;border-radius:12px;background:var(--tint);display:grid;gap:8px}.so-msg q{quotes:none;white-space:pre-wrap}
+.so-msg textarea{min-height:70px}.so-msg .bar{gap:8px;flex-wrap:wrap}.so-tag{font-size:12px;padding:2px 10px;border-radius:999px;background:var(--surface)}
+.so-tag.esc{background:color-mix(in srgb,var(--pulse) 18%,transparent)}
 </style>
 </head>
 <body data-page="social" data-module>
@@ -102,6 +106,7 @@ import { ClientRouter } from 'astro:transitions';
             <div class="checks" id="apprList"></div>
             <div class="bar" style="margin-top:12px"><button class="btn sm primary" type="button" id="apprSave">احفظ</button><span class="msg" id="apprMsg" role="status"></span></div>
           </section>
+          <section class="card pad so-inbox" id="inbox" aria-labelledby="inboxH" hidden></section>
           <div class="bar" style="justify-content:space-between"><h2 style="margin:0">التقويم</h2>
             <div class="seg" role="group" aria-label="العرض"><button type="button" id="viewList" aria-pressed="true">القائمة</button><button type="button" id="viewWeek" aria-pressed="false">الأسبوع</button></div>
             <span class="muted" id="range"></span></div>

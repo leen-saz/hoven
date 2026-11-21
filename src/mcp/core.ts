@@ -8,13 +8,15 @@
 import { sb, audit, type Cfg } from '../lib/auth';
 import { HOVEN_COMPANY, scoped } from '../lib/tenant';
 import { claim, finish, KEY_RE } from '../lib/ads-write/idempotency';
+import type { LlmEnv } from '../lib/llm';
 
 export type Scope = 'read' | 'read_write';
 // Who is calling: Hoven's agents in process, Claude over MCP, a scheduled job, or Leen's own click in a page
 export type Agent = 'dream' | 'buyer' | 'social' | 'claude' | 'cron' | 'manual';
 export type Fetch = typeof fetch;
 
-export interface McpEnv { FILES?: R2Bucket }
+// The Worker's bindings a tool may use: files (R2) and the model keys (Grok drafts replies through OpenRouter)
+export interface McpEnv extends LlmEnv { FILES?: R2Bucket }
 export interface Ctx {
   cfg: Cfg;
   co: string;

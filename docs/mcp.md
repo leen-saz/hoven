@@ -25,8 +25,24 @@
 | `ads.set_budget` (٢٠٪ في اليوم بالكثير) | نعم | نعم |
 | `connections.list` | لا | لا |
 | `connections.permissions` | لا | لا |
+| `social.publish` (منشور معتمد وحان وقته) | نعم | لا |
+| `social.get_post` | لا | لا |
+| `inbox.sync` (يسحب التعليقات والرسائل وقروك يكتب الردود، ما يرسل شي) | نعم | لا |
+| `inbox.list` | لا | لا |
+| `inbox.reply` (بموافقة لين أو المعتمد، والرسالة الخاصة خلال ٢٤ ساعة) | نعم | لا |
+| `inbox.ignore` | نعم | لا |
+| `events.list` | لا | لا |
+| `jobs.get` | لا | لا |
 
 الحدود داخل الأدوات نفسها: موافقة المالكة، والحملات الجديدة موقوفة، والحملات المُدارة بس، وزر الطوارئ. كل كتابة تنكتب في `ad_changes` (قبل وبعد) وفي `audit_log`.
 
 ## إضافة منصة
 Adapter جديد في `src/mcp/adapters/<platform>.ts`، وأدواته في `src/mcp/tools/`. اختبار `tests/unit/mcp.test.ts` يمنع أي عنوان API لمنصة خارج مجلد الـ adapters.
+
+## ردود قروك على التواصل الاجتماعي
+- كل ربع ساعة (`inbox.sync`): تعليقات آخر ١٠ منشورات في فيسبوك وانستقرام، وآخر الرسائل الخاصة (Messenger و Instagram Direct).
+- قروك عبر OpenRouter (`TAB_DEFAULT.social = x-ai/grok-4.7`، ويتغيّر بـ `OPENROUTER_MODEL_SOCIAL`) يصنّف ويكتب رد من «المعرفة».
+- الشكاوى والاسترجاع والسلبي: بدون رد، وتطلع لين «يحتاجك» مع حدث. الدعاية: تتجاهل.
+- ما ينرسل شي إلا بـ «أرسل» من لين أو المعتمد (تبويب التواصل الاجتماعي ← «الردود»).
+- الرسائل الخاصة تنمسح بعد ٩٠ يوم (PDPL). ميتا تسمح بالرد على رسالة خاصة خلال ٢٤ ساعة بس.
+- صلاحيات ميتا المطلوبة: `pages_read_engagement`، و`pages_manage_engagement`، و`pages_messaging`، و`instagram_manage_comments`، و`instagram_manage_messages`.

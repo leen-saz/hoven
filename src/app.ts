@@ -12,10 +12,11 @@ import { withTheme } from './lib/theme';
 import { withWaiter } from './lib/usage';
 import { dispatchRefresh, type CronEnv } from './lib/cron';
 import { runListening, type ListenEnv } from './modules/listening/fetcher';
-import { runSocial } from './modules/social/cron';
+import { runSocial, runInbox } from './modules/social/cron';
 import { runBuyerLearning } from './modules/buyer/learn';
 import { runAccountHealth } from './lib/account-health';
 import { env as cfgOf } from './lib/auth';
+import type { McpEnv } from './mcp/core';
 // Cloudflare Workflows: the class must be exported from the Worker entry
 export { JourneyRun } from './modules/journeys/workflow';
 
@@ -90,7 +91,9 @@ export default {
     // Every 4 hours: the data refresh, and the media buyer measures its decided proposals (3 and 7 days on) and writes lessons
     // The 5-minute run in the first 5 minutes of each hour also checks the connected accounts (hourly, apart from the pull)
     const hourly = new Date(event.scheduledTime).getUTCMinutes() < 5;
-    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv), ...(hourly ? [health(env)] : [])])
+    // Every 15 minutes: Grok reads the new comments and private messages and drafts replies (src/mcp/tools/inbox.ts)
+    const quarter = new Date(event.scheduledTime).getUTCMinutes() % 15 < 5;
+    withWaiter(p => ctx.waitUntil(p), () => ctx.waitUntil(event.cron === SOCIAL_CRON ? Promise.all([runSocial(env), runListening(env as ListenEnv), ...(hourly ? [health(env)] : []), ...(quarter ? [runInbox(env as AuthEnv & McpEnv)] : [])])
       : Promise.all([dispatchRefresh(env), learn(env)])));
   },
 };

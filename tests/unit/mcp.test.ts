@@ -49,7 +49,7 @@ function store(seed: Record<string, Row[]> = {}, opts: { graph?: (url: string, i
       return new Response(JSON.stringify(out), { status: 200 });
     }
     if (method === 'POST') {
-      const add = ((Array.isArray(body) ? body : [body]) as Row[]).map(a => ({ ...(table === 'mcp_codes' ? { used: false } : table === 'mcp_tokens' ? { revoked: false } : {}), ...a }));
+      const add = ((Array.isArray(body) ? body : [body]) as Row[]).map(a => ({ id: t.length + 1 + Math.random(), ...(table === 'mcp_codes' ? { used: false } : table === 'mcp_tokens' ? { revoked: false } : {}), ...a }));
       if (table === 'idempotency_keys' && add.some(a => t.some(r => r['key'] === (a as Row)['key']))) return new Response('[]', { status: 201 });
       t.push(...add);
       return new Response(JSON.stringify(add), { status: 201 });
@@ -355,5 +355,68 @@ describe('the media buyer in «تلقائي»', () => {
     expect(r).toMatchObject({ ok: true, before: 100, after: 110 });
     expect(writes).toHaveLength(1);
     expect(db['suggestions']!.at(-1)).toMatchObject({ status: 'executed', decided_by: 'auto', params: { from: 'buyer', auto: true } });
+  });
+});
+
+describe('Grok replies on social (039_social_inbox.sql)', async () => {
+  const I = await import('../../src/modules/social/inbox');
+  it('sorts the answer: a draft only for questions and general messages; complaints and refunds go to Leen', () => {
+    expect(I.parseReply('```json\n{"category":"question","reply":"الشحن خلال ٣ أيام"}\n```', 'comment')).toEqual({ category: 'question', draft: 'الشحن خلال ٣ أيام' });
+    expect(I.parseReply('{"category":"refund","reply":"تم"}', 'dm')).toEqual({ category: 'refund', draft: null });
+    expect(I.parseReply('kalam', 'dm')).toEqual({ category: 'other', draft: null });
+    expect(I.statusFor('complaint', null)).toBe('escalated');
+    expect(I.statusFor('spam', null)).toBe('ignored');
+    expect(I.statusFor('question', 'x')).toBe('drafted');
+    expect(I.parseReply(`{"category":"other","reply":"${'ا'.repeat(900)}"}`, 'comment').draft!.length).toBe(600);
+  });
+  it('a private message is answered within 24 hours only, and deleted after 90 days', () => {
+    const now = Date.parse('2026-11-21T12:00:00Z');
+    expect(I.inWindow('2026-11-21T00:00:00Z', now)).toBe(true);
+    expect(I.inWindow('2026-11-20T11:00:00Z', now)).toBe(false);
+    expect(I.dmCutoff(now)).toBe('2026-08-23T12:00:00.000Z');
+    expect(I.replyPrompt({ platform: 'instagram', kind: 'dm', author: 'سارة', text: 'كم الشحن؟' })).toContain('لا تطلب بيانات بطاقة');
+  });
+
+  const VAULT = [{ name: 'META_PAGE_ACCESS_TOKEN', value: 'PT' }, { name: 'META_PAGE_ID', value: 'PAGE' }];
+  const recent = new Date(Date.now() - 3600e3).toISOString();
+  const meta = (sent: string[]) => (url: string, init?: RequestInit) => {
+    if (url.startsWith('https://openrouter.ai/')) {
+      const body = String(init?.body || '');
+      const reply = body.includes('ليش ما وصل') ? '{"category":"complaint","reply":""}' : '{"category":"question","reply":"الشحن خلال ٣ أيام"}';
+      return new Response(JSON.stringify({ choices: [{ message: { content: reply } }] }), { status: 200 });
+    }
+    if (init?.method === 'POST') { sent.push(url); return new Response(JSON.stringify({ id: 'R1', message_id: 'M9' }), { status: 200 }); }
+    if (url.includes('PAGE/feed')) return new Response(JSON.stringify({ data: [{ id: 'P1', message: 'مفارش جديدة', comments: { data: [
+      { id: 'C1', from: { id: 'U1', name: 'نورة' }, message: 'كم الشحن للرياض؟', created_time: recent },
+      { id: 'C2', from: { id: 'PAGE', name: 'Hoven' }, message: 'ردنا', created_time: recent },
+    ] } }] }), { status: 200 });
+    if (url.includes('PAGE/conversations')) return new Response(JSON.stringify({ data: [{ id: 'T1', messages: { data: [{ id: 'D1', from: { id: 'U2', name: 'خالد' }, message: 'ليش ما وصل طلبي', created_time: recent }] } }] }), { status: 200 });
+    return null;
+  };
+  const ctx = (over: Partial<Ctx> = {}): Ctx => ({ cfg, co: HOVEN_COMPANY, by: 'owner@example.test', owner: true, scope: 'read_write', agent: 'cron', env: { OPENROUTER_API_KEY: 'k' }, f: fetch, ...over });
+
+  it('sync stores each message once, drafts a question and sends a complaint to Leen; nothing is sent', async () => {
+    const sent: string[] = [];
+    const { db } = store({ vault: VAULT, social_inbox: [] }, { graph: meta(sent) });
+    const r = await callTool(ctx(), 'inbox.sync', {});
+    expect(r).toMatchObject({ ok: true, data: { added: 2, drafted: 1, escalated: 1 } });
+    expect(db['social_inbox']!.map(x => [x['external_id'], x['status']])).toEqual([['C1', 'drafted'], ['D1', 'escalated']]);
+    expect(db['mcp_events']!.at(-1)).toMatchObject({ kind: 'inbox.escalated' });
+    expect(sent).toHaveLength(0);
+  });
+  it('a reply goes out only with the approver, once', async () => {
+    const sent: string[] = [];
+    const { db } = store({ vault: VAULT, companies: [{ id: HOVEN_COMPANY, social_approvers: [] }], social_inbox: [
+      { id: 1, company_id: HOVEN_COMPANY, platform: 'facebook', kind: 'comment', external_id: 'C1', thread_id: 'P1', author_id: 'U1', text: 'كم الشحن؟', at: recent, status: 'drafted', draft: 'خلال ٣ أيام' },
+      { id: 2, company_id: HOVEN_COMPANY, platform: 'facebook', kind: 'dm', external_id: 'D1', thread_id: 'T1', author_id: 'U2', text: 'مرحبا', at: '2026-01-01T00:00:00Z', status: 'drafted', draft: 'هلا' },
+    ] }, { graph: meta(sent) });
+    expect(await callTool(ctx({ owner: false, by: 'm@example.test', agent: 'social' }), 'inbox.reply', { id: 1 })).toMatchObject({ ok: false, status: 403 });
+    expect(await callTool(ctx({ agent: 'social' }), 'inbox.reply', { id: 1 })).toMatchObject({ ok: true, data: { status: 'sent', reply_id: 'R1' } });
+    expect(sent).toEqual(['https://graph.facebook.com/v23.0/C1/comments']);
+    expect(await callTool(ctx({ agent: 'social' }), 'inbox.reply', { id: 1 })).toMatchObject({ ok: true, data: { already: true } });
+    expect(sent).toHaveLength(1);
+    // A private message past Meta's 24 hours is not sent from here
+    expect(await callTool(ctx({ agent: 'social' }), 'inbox.reply', { id: 2 })).toMatchObject({ ok: false, status: 409 });
+    expect(db['social_inbox']!.find(x => x['id'] === 2)!['status']).toBe('expired');
   });
 });

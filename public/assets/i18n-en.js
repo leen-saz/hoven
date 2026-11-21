@@ -16,6 +16,11 @@ export const EN = {
   'الأحد': 'Sunday', 'الاثنين': 'Monday', 'الثلاثاء': 'Tuesday', 'الأربعاء': 'Wednesday', 'الخميس': 'Thursday', 'الجمعة': 'Friday', 'السبت': 'Saturday',
   'الأسبوع': 'Week', 'الساعة': 'Time', 'العرض': 'View', 'احذف الخانة': 'Remove slot', 'انحفظت': 'Saved',
   'حوّلها لفكرة في احلم': 'Turn into a Dream idea',
+  // Grok's replies on social (039_social_inbox.sql)
+  'الردود': 'Replies', 'اسحب الحين': 'Fetch now', 'تجاهل': 'Ignore', 'الرد': 'Reply', 'رسالة خاصة': 'Private message', 'تعليق': 'Comment', 'ينتظر قروك': 'Waiting for Grok', 'رد جاهز': 'Reply ready', 'يحتاجك': 'Needs you',
+  'انرد عليه': 'Replied', 'متجاهل': 'Ignored', 'ما انرسل': 'Not sent', 'فات وقت الرد': 'Too late to reply', 'سؤال': 'Question', 'شكوى': 'Complaint', 'استرجاع': 'Refund', 'دعاية': 'Spam', 'عام': 'General',
+  'قروك ما رد على هذي: اكتب ردك بنفسك': 'Grok did not answer this one: write your own reply', 'ما فيه شي ينتظر رد.': 'Nothing waits for a reply.', 'الذكاء الاصطناعي غير مفعّل في هالبيئة.': 'AI is not enabled in this environment.',
+  'قروك يقرا تعليقات ورسائل فيسبوك وانستقرام كل ربع ساعة ويكتب رد، وما ينرسل شي إلا بعد «أرسل». الشكاوى والاسترجاع تجيك بدون رد. الرسائل الخاصة تنمسح بعد ٩٠ يوم.': 'Grok reads Facebook and Instagram comments and messages every 15 minutes and drafts a reply; nothing is sent until «Send». Complaints and refunds come to you without a reply. Private messages are deleted after 90 days.',
   // «تلقائي» for the media buyer (docs/PRD.md §6.3)
   'وضع الميديا باير': 'Media buyer mode', 'احفظ الوضع': 'Save mode', 'أطفئ التلقائي': 'Turn automatic off',
   '«بموافقتي»: كل تغيير يروح للوحة القرارات. «تلقائي»: يوقف ويغيّر ميزانيات الحملات المُدارة بنفسه ضمن الحدود تحت، وكل تغيير ينكتب في السجل وينقاس بعد ٣ و٧ أيام.': '«With my approval»: every change goes to the decision board. «Automatic»: it pauses and changes budgets of managed campaigns on its own within the limits below; every change is logged and measured after 3 and 7 days.',

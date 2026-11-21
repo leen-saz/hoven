@@ -11,13 +11,16 @@ export const counts = {
     const { cfg, user } = await requireUser(request, e, 'any');
     const out: Record<string, number> = {};
     const jobs: Promise<void>[] = [];
-    let events = 0;
+    let events = 0, inbox = 0;
     // Decision board: open suggestions (Hoven's alone, as on /api/today/state)
     if (user.co === HOVEN_COMPANY && can(user, 'control', cfg)) jobs.push(sb(cfg, '/rest/v1/suggestions?select=id&status=eq.open&limit=100', { admin: true })
       .then(r => { if (r.ok) out['control'] = count(r.data); }));
     // Social: posts scheduled and not yet approved
     if (can(user, 'social', cfg)) jobs.push(sb(cfg, scoped('/rest/v1/social_posts?select=id&status=eq.scheduled&approved_at=is.null&limit=100', user.co), { admin: true })
       .then(r => { if (r.ok) out['social'] = count(r.data); }));
+    // Social: replies waiting (Grok's drafts and the messages that need Leen, 039_social_inbox.sql), added to the same entry
+    if (can(user, 'social', cfg)) jobs.push(sb(cfg, scoped('/rest/v1/social_inbox?select=id&status=in.(drafted,escalated)&limit=100', user.co), { admin: true })
+      .then(r => { if (r.ok) inbox = count(r.data); }));
     // Dream: campaigns being drafted (parts waiting for «اعتمد»)
     if (can(user, 'dream', cfg)) jobs.push(sb(cfg, scoped('/rest/v1/dream_projects?select=id&status=eq.drafting&limit=100', user.co), { admin: true })
       .then(r => { if (r.ok) out['dream'] = count(r.data); }));
@@ -28,6 +31,7 @@ export const counts = {
     if (isOwner(user, cfg)) jobs.push(sb(cfg, scoped('/rest/v1/mcp_events?select=id&seen=eq.false&limit=100', user.co), { admin: true })
       .then(r => { if (r.ok) events = count(r.data); }));
     await Promise.all(jobs);
+    if (inbox) out['social'] = Math.min((out['social'] || 0) + inbox, CAP + 1);
     if (events) out['connectors'] = Math.min((out['connectors'] || 0) + events, CAP + 1);
     return json(200, out);
   }),
