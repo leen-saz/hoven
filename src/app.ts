@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { actions, middleware, notFound, pages, i18n } from 'astro/hono';
 import { cf } from '@astrojs/cloudflare/hono';
 import { api } from './api/index';
+import { mcp } from './mcp/index';
 import { gate } from './lib/gate';
 import type { AuthEnv } from './lib/auth';
 import { withSecurityHeaders } from './lib/headers';
@@ -58,6 +59,7 @@ app.use(async (c, next) => {
   }
   return next();
 });
+app.route('/', mcp);
 app.route('/', api);
 // Dashboards built by the pipeline, from R2 (phase 4.1)
 app.use(async (c, next) => {

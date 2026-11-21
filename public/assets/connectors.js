@@ -117,6 +117,39 @@ export default async function mount() {
   });
   $('#q').addEventListener('input', e => { S.q = e.target.value; render(); });
 
+  // Hoven's MCP server (docs/PRD.md §3.10): the address to add in Claude, the live connections, the write permissions
+  // each account lacks (reconnect it with them). The owner only: anyone else gets 403 and the section stays empty.
+  const PNAME = { meta: 'ميتا (فيسبوك وانستقرام)', tiktok: 'تيك توك', snap: 'سناب شات', google_ads: 'جوجل', x: 'X' };
+  function perms(p) {
+    return Object.entries(p || {}).map(([k, v]) => {
+      const state = v.checked ? (v.missing.length ? `<span class="chip warn">${icon('alert')}ناقص ${v.missing.length}</span>` : `<span class="chip ok">${icon('check')}كاملة</span>`)
+        : `<span class="chip line">${v.error ? 'ما قدرنا نتأكد' : 'تأكد منها وقت الربط'}</span>`;
+      const list = v.checked && v.missing.length ? v.missing : v.needed;
+      return `<li><span><b>${esc(PNAME[k] || k)}</b> ${state}</span><span class="cx-perm muted">${list.map(esc).join(', ')}</span></li>`;
+    }).join('');
+  }
+  async function loadMcp() {
+    const box = $('#mcp');
+    let r;
+    try { r = await api('/api/connectors/mcp'); } catch { box.innerHTML = ''; return; }
+    const conns = r.connections.length
+      ? `<ul>${r.connections.map(c => `<li><span><b>${esc(c.name || 'تطبيق')}</b> · ${c.scope === 'read_write' ? 'قراءة وكتابة' : 'قراءة بس'} · من ${when(c.since)}</span><button class="btn sm ghost" type="button" data-mcp-off="${esc(c.client_id)}">${icon('x')}افصل</button></li>`).join('')}</ul>`
+      : `<p class="muted" style="margin:0">${r.ready ? 'ما فيه تطبيق مربوط للحين.' : 'شغّل migration 036_mcp.sql أول.'}</p>`;
+    box.innerHTML = `<article class="card cx-mcp"><h2>${icon('plug')}MCP هوفن</h2>
+      <p class="muted" style="margin:0">أضف هالرابط في Claude (Settings ← Connectors ← Add custom connector) وسجّل دخولك لهوفن: Claude يقدر يقرا ويكتب بنفس حدود هوفن.</p>
+      <div class="cx-url"><code id="mcpUrl">${esc(r.url)}</code><button class="btn sm secondary" type="button" id="mcpCopy">${icon('copy')}انسخ</button></div>
+      <h3 style="margin:6px 0 0;font-size:15px">التطبيقات المربوطة</h3>${conns}
+      ${r.permissions ? `<h3 style="margin:6px 0 0;font-size:15px">صلاحيات الكتابة لكل حساب</h3><p class="muted" style="margin:0">أي حساب ناقص: اضغط «أعد الربط» تحت ووافق على كل الصلاحيات.</p><ul>${perms(r.permissions)}</ul>` : ''}</article>`;
+    $('#mcpCopy').onclick = async () => { try { await navigator.clipboard.writeText(r.url); toast('انسخ'); } catch { say($('#msg'), r.url); } };
+  }
+  $('#mcp').addEventListener('click', async e => {
+    const b = e.target.closest('[data-mcp-off]'); if (!b) return;
+    if (!confirm(t('تفصل هالتطبيق؟ بيحتاج يربط من جديد عشان يرجع.'))) return;
+    busy(b, true);
+    try { await api('/api/connectors/mcp', { method: 'POST', body: { client_id: b.dataset.mcpOff } }); toast('انفصل'); await loadMcp(); }
+    catch (err) { busy(b, false); say($('#msg'), err.message); }
+  });
+
   shell({ active: 'connectors', title: 'الربط' }).then(() => {
     const u = new URLSearchParams(location.search);
     if (u.get('ok')) toast('انربط ✓');
@@ -125,5 +158,6 @@ export default async function mount() {
     if (u.get('err') && u.get('p')) { S.fallback.add(u.get('p')); S.open = u.get('p'); }
     if (u.get('ok') || u.get('err')) history.replaceState(null, '', '/connectors/');
     load().then(() => { if (S.open) $(`#cx_${S.open}`)?.scrollIntoView({ block: 'center' }); });
+    loadMcp();
   }).catch(() => {});
 }

@@ -16,6 +16,12 @@ export const EN = {
   'الأحد': 'Sunday', 'الاثنين': 'Monday', 'الثلاثاء': 'Tuesday', 'الأربعاء': 'Wednesday', 'الخميس': 'Thursday', 'الجمعة': 'Friday', 'السبت': 'Saturday',
   'الأسبوع': 'Week', 'الساعة': 'Time', 'العرض': 'View', 'احذف الخانة': 'Remove slot', 'انحفظت': 'Saved',
   'حوّلها لفكرة في احلم': 'Turn into a Dream idea',
+  // Hoven's MCP server on the connectors page (docs/PRD.md §3.10)
+  'MCP هوفن': 'Hoven MCP', 'التطبيقات المربوطة': 'Connected apps', 'صلاحيات الكتابة لكل حساب': 'Write permissions per account', 'انسخ': 'Copy', 'افصل': 'Disconnect', 'انفصل': 'Disconnected',
+  'أضف هالرابط في Claude (Settings ← Connectors ← Add custom connector) وسجّل دخولك لهوفن: Claude يقدر يقرا ويكتب بنفس حدود هوفن.': 'Add this link in Claude (Settings → Connectors → Add custom connector) and sign in to Hoven: Claude can read and write within Hoven\'s limits.',
+  'ما فيه تطبيق مربوط للحين.': 'No app connected yet.', 'قراءة وكتابة': 'Read and write', 'قراءة بس': 'Read only', 'كاملة': 'Complete', 'ما قدرنا نتأكد': 'Could not check', 'تأكد منها وقت الربط': 'Check when connecting',
+  'أي حساب ناقص: اضغط «أعد الربط» تحت ووافق على كل الصلاحيات.': 'Any account missing some: press «Reconnect» below and accept every permission.',
+  'تفصل هالتطبيق؟ بيحتاج يربط من جديد عشان يرجع.': 'Disconnect this app? It will need to connect again.', 'ميتا (فيسبوك وانستقرام)': 'Meta (Facebook and Instagram)', 'سناب شات': 'Snapchat', 'جوجل': 'Google',
   // Dream: parts, media and publishing
   'فكرة جديدة': 'New idea', 'مشاريعك': 'Your projects', 'جهّز الحملة': 'Prepare the campaign', 'الحملة': 'Campaign', 'ابدأ': 'Start',
   'رسالتك': 'Your message', 'فكرة الحملة': 'Campaign idea', 'أجزاء الحملة': 'Campaign parts',

@@ -1,11 +1,13 @@
 // /api/connectors/*. Port of web/lib/routes/connectors/*.js (#43). Values go to Supabase Vault through the
 // service-role-only RPCs of 005_connectors.sql and never come back to the browser; audit logs names only.
 import {
-  env, sb, json, html, readJson, handle, requireUser, audit, sign, verify, readCookie, loadProfile, sessionFor, can,
+  env, sb, json, html, readJson, handle, requireUser, audit, sign, verify, readCookie, loadProfile, sessionFor, can, isOwner,
   type AuthEnv, type Cfg, type Session,
 } from '../../lib/auth';
 import { HOVEN_COMPANY } from '../../lib/tenant';
 import { saveValues } from '../../lib/vault';
+import { callTool, ctxFor, type McpEnv } from '../../mcp/core';
+import '../../mcp/tools/connections';
 import { TIKTOK_MCP_DAYS, pkce, registerClient, authorizeUrl as mcpAuthorizeUrl, exchangeCode } from '../../lib/mcp-oauth';
 import { PLATFORMS, OAUTH, byId, appCreds, authorizeUrl, exchange, oauth1, check, pullState, type Platform, type Values, type Exchanged, CORE } from '../../lib/connectors';
 
@@ -212,4 +214,29 @@ export const callback = {
     }
     return back(`/connectors/?ok=${encodeURIComponent(p.id)}`, true);
   },
+};
+
+// ---- Hoven's MCP server (docs/PRD.md §3.10): the address Claude connects to, the live connections (one click revokes
+// one), and the write permissions each platform connection lacks. The owner only.
+export const mcp = {
+  GET: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'connectors', { well: true });
+    if (!isOwner(user, cfg)) return json(403, { error: 'للمالكة بس' });
+    const t = await sb(cfg, `/rest/v1/mcp_tokens?company_id=eq.${user.co}&kind=eq.refresh&revoked=eq.false&expires_at=gt.${new Date().toISOString()}&select=client_id,scope,created_at,client:mcp_clients(name)&order=created_at.desc&limit=200`, { admin: true });
+    const by = new Map<string, Row>();
+    for (const r of rows(t.data)) if (!by.has(String(r['client_id']))) by.set(String(r['client_id']), { client_id: r['client_id'], name: (r['client'] as Row | null)?.['name'] ?? '', scope: r['scope'], since: r['created_at'] });
+    const perms = await callTool(ctxFor(cfg, user, e as McpEnv, 'manual', fetch, true), 'connections.permissions');
+    return json(200, { url: new URL('/mcp', request.url).toString(), ready: t.ok, connections: [...by.values()], permissions: perms.ok ? (perms.data as Row)['permissions'] : null });
+  }),
+  // POST { client_id }: end that connection (every token it holds)
+  POST: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'connectors', { write: true, well: true });
+    if (!isOwner(user, cfg)) return json(403, { error: 'للمالكة بس' });
+    const id = String((await readJson(request)).client_id || '');
+    if (!/^hoven_[A-Za-z0-9_-]{10,40}$/.test(id)) return json(400, { error: 'الربط مو موجود' });
+    const r = await sb(cfg, `/rest/v1/mcp_tokens?company_id=eq.${user.co}&client_id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', admin: true, body: { revoked: true } });
+    if (!r.ok) return json(500, { error: 'ما انفصل الربط، جرّب مرة ثانية' });
+    await audit(cfg, user, 'mcp_disconnect', { target: { client: id } });
+    return json(200, { ok: true });
+  }),
 };

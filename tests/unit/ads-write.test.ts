@@ -5,7 +5,7 @@ import * as A from '../../src/lib/auth';
 import { api } from '../../src/api/index';
 import { HOVEN_COMPANY } from '../../src/lib/tenant';
 import { checkWrite, checkBudget, minor } from '../../src/lib/ads-write/guard';
-import { bodies, createPaused, setStatus, metaConfig, ages, genders, ctaOf, type MetaConfig, type Plan } from '../../src/lib/ads-write/meta';
+import { bodies, createPaused, setStatus, metaConfig, ages, genders, ctaOf, type MetaConfig, type Plan } from '../../src/mcp/adapters/meta';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
