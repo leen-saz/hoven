@@ -1,6 +1,7 @@
 // الرحلات: التحقق من الخطوات، والإرسال لكل قناة. التشغيل نفسه في src/modules/journeys/workflow.ts (Cloudflare Workflows).
 // واتساب مدفوع من Meta لكل محادثة (الاستثناء المسموح، مع تنويه بالتسعيرة). الإيميل من Gmail بحساب الشركة (OAuth).
 import { check, notice, type Rule } from '../compliance/compliance';
+import { sendTemplate } from '../../mcp/adapters/whatsapp';
 
 export const CHANNELS = {
   wait: { name: 'انتظر' },
@@ -78,14 +79,7 @@ export async function send(step: Step, c: Contact, t: Tokens, f: typeof fetch = 
   if (step.type === 'whatsapp') {
     if (!c.phone) return { ok: false, error: 'ما فيه رقم جوال' };
     if (!t.WHATSAPP_TOKEN || !t.WHATSAPP_PHONE_ID) return { ok: false, error: 'اربط واتساب للأعمال من صفحة الربط' };
-    const r = await f(`https://graph.facebook.com/v23.0/${t.WHATSAPP_PHONE_ID}/messages`, {
-      method: 'POST', headers: { authorization: `Bearer ${t.WHATSAPP_TOKEN}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ messaging_product: 'whatsapp', to: c.phone, type: 'template',
-        template: { name: step.template, language: { code: step.lang },
-          ...(c.name ? { components: [{ type: 'body', parameters: [{ type: 'text', text: c.name }] }] } : {}) } }),
-    });
-    const j = (await r.json()) as { messages?: unknown[]; error?: { message?: string } };
-    return j.messages ? { ok: true } : { ok: false, error: j.error?.message || 'ما انرسلت' };
+    return sendTemplate({ token: t.WHATSAPP_TOKEN, phoneId: t.WHATSAPP_PHONE_ID }, c.phone, { name: step.template, lang: step.lang, ...(c.name ? { name_param: c.name } : {}) }, f);
   }
   if (step.type === 'email') {
     if (!c.email) return { ok: false, error: 'ما فيه إيميل' };

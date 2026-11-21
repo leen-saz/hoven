@@ -119,7 +119,8 @@ export default async function mount() {
 
   // Hoven's MCP server (docs/PRD.md §3.10): the address to add in Claude, the live connections, the write permissions
   // each account lacks (reconnect it with them). The owner only: anyone else gets 403 and the section stays empty.
-  const PNAME = { meta: 'ميتا (فيسبوك وانستقرام)', tiktok: 'تيك توك', snap: 'سناب شات', google_ads: 'جوجل', x: 'X' };
+  const PNAME = { meta: 'ميتا (فيسبوك وانستقرام)', meta_pages: 'صفحة فيسبوك', tiktok: 'تيك توك', snap: 'سناب شات', google_ads: 'جوجل', x: 'X' };
+  const EVENT = { 'social.published': 'انشر منشور', 'social.partial': 'منشور انشر في بعض المنصات', 'social.failed': 'منشور ما انشر', 'account.down': 'حساب انفصل', 'account.ok': 'حساب رجع يشتغل', 'auto.change': 'تغيير تلقائي من الميديا باير', 'auto.blocked': 'تغيير تلقائي انرفض' };
   function perms(p) {
     return Object.entries(p || {}).map(([k, v]) => {
       const state = v.checked ? (v.missing.length ? `<span class="chip warn">${icon('alert')}ناقص ${v.missing.length}</span>` : `<span class="chip ok">${icon('check')}كاملة</span>`)
@@ -139,6 +140,7 @@ export default async function mount() {
       <p class="muted" style="margin:0">أضف هالرابط في Claude (Settings ← Connectors ← Add custom connector) وسجّل دخولك لهوفن: Claude يقدر يقرا ويكتب بنفس حدود هوفن.</p>
       <div class="cx-url"><code id="mcpUrl">${esc(r.url)}</code><button class="btn sm secondary" type="button" id="mcpCopy">${icon('copy')}انسخ</button></div>
       <h3 style="margin:6px 0 0;font-size:15px">التطبيقات المربوطة</h3>${conns}
+      ${r.events?.length ? `<h3 style="margin:6px 0 0;font-size:15px">آخر الأحداث</h3><ul>${r.events.map(ev => `<li><span>${ev.seen ? '' : `<span class="chip warn">${icon('alert')}جديد</span> `}${esc(EVENT[ev.kind] || ev.kind)}${ev.data?.platform ? ` · ${esc(PNAME[ev.data.platform] || ev.data.platform)}` : ''}${ev.data?.campaign ? ` · ${esc(ev.data.campaign)}` : ''}</span><span class="muted">${when(ev.at)}</span></li>`).join('')}</ul>` : ''}
       ${r.permissions ? `<h3 style="margin:6px 0 0;font-size:15px">صلاحيات الكتابة لكل حساب</h3><p class="muted" style="margin:0">أي حساب ناقص: اضغط «أعد الربط» تحت ووافق على كل الصلاحيات.</p><ul>${perms(r.permissions)}</ul>` : ''}</article>`;
     $('#mcpCopy').onclick = async () => { try { await navigator.clipboard.writeText(r.url); toast('انسخ'); } catch { say($('#msg'), r.url); } };
   }

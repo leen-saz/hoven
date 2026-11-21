@@ -175,3 +175,15 @@ export async function permissions(token: string, f: Fetch = fetch): Promise<{ gr
     .filter(p => p.status === 'granted' && p.permission).map(p => String(p.permission));
   return { granted, missing: META_WRITE_SCOPES.filter(s => !granted.includes(s)) };
 }
+
+// ---- Health checks (src/lib/account-health.ts, hourly): one light read with the stored key. Codes only, no message.
+export type Ping = { ok: boolean; code: string | null };
+async function ping(f: Fetch, url: string): Promise<Ping> {
+  const r = await f(url).catch(() => null);
+  if (!r) return { ok: false, code: 'network' };
+  return r.ok ? { ok: true, code: null } : { ok: false, code: r.status === 401 || r.status === 400 ? 'token' : `http_${r.status}` };
+}
+/** The ads token still answers. */
+export const pingToken = (token: string, f: Fetch = fetch) => ping(f, `${GRAPH}me?fields=id&access_token=${encodeURIComponent(token)}`);
+/** The page token still reaches the page. */
+export const pingPage = (token: string, page: string, f: Fetch = fetch) => ping(f, `${GRAPH}${encodeURIComponent(page)}?fields=id&access_token=${encodeURIComponent(token)}`);

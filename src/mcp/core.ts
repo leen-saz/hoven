@@ -114,3 +114,14 @@ export async function startOfDay(ctx: Ctx, platform: string, target: string, now
 export function ctxFor(cfg: Cfg, user: { co: string; email: string; uid: string; role: string }, env: McpEnv, agent: Agent, f: Fetch = fetch, owner = false): Ctx {
   return { cfg, co: user.co, by: user.email, uid: user.uid, owner, scope: 'read_write', agent, env, f };
 }
+
+// ---- Outbound events (docs/PRD.md §3.10): what happened that Leen should see without asking (a post went out or failed,
+// an account went down, an automatic change). Written to mcp_events (037); the sidebar counts the unseen ones and the
+// tool events.list reads them. A missing table never breaks the action that raised the event.
+export async function event(ctx: Pick<Ctx, 'cfg' | 'co' | 'agent'>, kind: string, toolName: string, data: Record<string, unknown> = {}): Promise<void> {
+  await sb(ctx.cfg, '/rest/v1/mcp_events', { method: 'POST', admin: true, headers: { Prefer: 'return=minimal' },
+    body: { company_id: ctx.co, kind, tool: toolName, agent: ctx.agent, data } }).catch(() => null);
+}
+
+/** The context of a scheduled job (no person behind it): it may only do what an earlier approval allowed. */
+export const cronCtx = (cfg: Cfg, f: Fetch = fetch, env: McpEnv = {}): Ctx => ({ cfg, co: HOVEN_COMPANY, by: 'cron', owner: false, scope: 'read_write', agent: 'cron', env, f });
