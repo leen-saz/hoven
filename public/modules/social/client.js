@@ -244,5 +244,39 @@ export default async function mount() {
     catch (err) { say($('#msg'), err.message); busy(b, false); }
   });
 
-  shell({ active: 'social', title: 'التواصل الاجتماعي' }).then(loadApprovers).then(load).catch(pageFailure);
+  // Grok's replies to comments and private messages: drafts wait for «أرسل» (an approver), complaints go to Leen
+  const CAT = { question: 'سؤال', complaint: 'شكوى', refund: 'استرجاع', negative: 'سلبي', spam: 'دعاية', other: 'عام' };
+  const IST = { new: 'ينتظر قروك', drafted: 'رد جاهز', escalated: 'يحتاجك', sent: 'انرد عليه', ignored: 'متجاهل', failed: 'ما انرسل', expired: 'فات وقت الرد' };
+  const PF = { facebook: 'فيسبوك', instagram: 'انستقرام' };
+  async function loadInbox() {
+    const box = $('#inbox');
+    let r;
+    try { r = await api('/api/social/inbox'); } catch { box.hidden = true; return; }
+    box.hidden = false;
+    const open = r.items.filter(x => ['drafted', 'escalated', 'new', 'failed'].includes(x.status));
+    const done = r.items.filter(x => !open.includes(x)).slice(0, 10);
+    const one = x => `<li class="so-msg" data-in="${x.id}"><div class="bar"><b>${esc(x.author || '—')}</b><span class="so-tag">${esc(PF[x.platform] || x.platform)} · ${x.kind === 'dm' ? 'رسالة خاصة' : 'تعليق'}</span>${x.category ? `<span class="so-tag${['complaint', 'refund', 'negative'].includes(x.category) ? ' esc' : ''}">${esc(CAT[x.category] || x.category)}</span>` : ''}<span class="muted">${esc(IST[x.status] || x.status)}</span></div>
+      <q dir="auto">${esc(x.text)}</q>${x.post_text ? `<span class="muted" dir="auto">على: ${esc(x.post_text.slice(0, 120))}</span>` : ''}
+      ${['drafted', 'escalated', 'failed', 'new'].includes(x.status) && r.canSend ? `<label class="sr-only" for="rep${x.id}">الرد</label><textarea id="rep${x.id}" dir="auto" placeholder="${x.status === 'escalated' ? 'قروك ما رد على هذي: اكتب ردك بنفسك' : 'الرد'}">${esc(x.draft || '')}</textarea>
+        <div class="bar"><button class="btn sm primary" type="button" data-iact="send">أرسل</button><button class="btn sm ghost" type="button" data-iact="ignore">تجاهل</button>${x.error ? `<span class="muted">${esc(x.error)}</span>` : ''}</div>` : x.draft ? `<span class="muted" dir="auto">الرد: ${esc(x.draft)}</span>` : ''}</li>`;
+    box.innerHTML = `<div class="bar" style="justify-content:space-between"><h2 id="inboxH">الردود</h2>${r.canSend ? '<button class="btn sm secondary" type="button" id="inboxSync">اسحب الحين</button>' : ''}</div>
+      <p class="muted" style="margin:0">قروك يقرا تعليقات ورسائل فيسبوك وانستقرام كل ربع ساعة ويكتب رد، وما ينرسل شي إلا بعد «أرسل». الشكاوى والاسترجاع تجيك بدون رد. الرسائل الخاصة تنمسح بعد ٩٠ يوم.</p>
+      ${r.setup ? `<p class="muted" style="margin:0">${esc(r.setup)}</p>` : ''}${r.model === false ? '<p class="muted" style="margin:0">الذكاء الاصطناعي غير مفعّل في هالبيئة.</p>' : ''}
+      ${open.length ? `<ul class="so-msgs">${open.map(one).join('')}</ul>` : '<p class="muted" style="margin:0">ما فيه شي ينتظر رد.</p>'}
+      ${done.length ? `<details><summary>آخر اللي انتهى (${done.length})</summary><ul class="so-msgs" style="margin-top:8px">${done.map(one).join('')}</ul></details>` : ''}`;
+  }
+  $('#inbox').addEventListener('click', async e => {
+    const b = e.target.closest('[data-iact], #inboxSync'); if (!b) return;
+    busy(b, true);
+    try {
+      if (b.id === 'inboxSync') { const r = await api('/api/social/inbox', { method: 'POST', body: { action: 'sync' }, timeout: 120000 }); say($('#msg'), `جديد ${r.added} · ردود جاهزة ${r.drafted} · يحتاجك ${r.escalated}`, true); }
+      else {
+        const li = b.closest('[data-in]'), id = Number(li.dataset.in);
+        await api('/api/social/inbox', { method: 'POST', body: b.dataset.iact === 'send' ? { action: 'send', id, text: $('textarea', li)?.value } : { action: 'ignore', id } });
+      }
+      await loadInbox();
+    } catch (err) { say($('#msg'), err.message); busy(b, false); }
+  });
+
+  shell({ active: 'social', title: 'التواصل الاجتماعي' }).then(loadApprovers).then(load).then(loadInbox).catch(pageFailure);
 }

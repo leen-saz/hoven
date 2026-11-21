@@ -6,11 +6,23 @@
 //    what went out is never repeated, what never started starts, what may have gone out is marked 'unconfirmed' for a person to decide;
 //  - a retry of the failed platforms (routes.ts) goes through the same path with the failed entries cleared.
 import { env, type AuthEnv } from '../../lib/auth';
-import { cronCtx } from '../../mcp/core';
+import { cronCtx, type McpEnv } from '../../mcp/core';
+import { sync } from '../../mcp/tools/inbox';
 import { runDue } from '../../mcp/tools/social';
 
 export async function runSocial(e: AuthEnv, now = Date.now(), f: typeof fetch = fetch): Promise<number> {
   let cfg;
   try { cfg = env(e); } catch { console.error('social: setup incomplete'); return 0; }
   return runDue(cronCtx(cfg, f), now);
+}
+
+// Every 15 minutes: new comments and private messages, sorted and drafted by Grok (nothing is sent without approval).
+// A failure is logged and skipped: it never stops the posts above.
+export async function runInbox(e: AuthEnv & McpEnv, f: typeof fetch = fetch): Promise<void> {
+  let cfg;
+  try { cfg = env(e); } catch { return; }
+  try {
+    const r = await sync(cronCtx(cfg, f, e));
+    console.log(`social inbox: +${r.added} drafted ${r.drafted} escalated ${r.escalated} deleted ${r.deleted}${r.skipped ? ` (${r.skipped})` : ''}`);
+  } catch (err) { console.error('social inbox failed', (err as Error).message); }
 }

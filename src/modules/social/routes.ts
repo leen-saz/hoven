@@ -11,6 +11,8 @@ import { generate, pick, type LlmEnv } from '../../lib/llm';
 import { usageCtx } from '../../lib/usage';
 import { MEDIA_TYPES, MEDIA_MAX, mediaKey } from './media';
 import { guard, meter } from '../../lib/quotas';
+import { callTool, ctxFor, type McpEnv } from '../../mcp/core';
+import '../../mcp/tools/inbox';
 
 type Row = Record<string, unknown>;
 const rows = (d: unknown): Row[] => (Array.isArray(d) ? (d as Row[]) : []);
@@ -239,5 +241,31 @@ export const slots = {
     }
     await audit(cfg, user, 'social_slots', { after: list });
     return json(200, { ok: true, slots: list });
+  }),
+};
+
+// Grok's replies (039_social_inbox.sql), through Hoven's MCP server: GET the list (waiting first) and whether this user
+// may send; POST { action: 'send', id, text? } | { action: 'ignore', id } | { action: 'sync' } (fetch and draft now).
+export const inbox = {
+  GET: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'social');
+    const ctx = ctxFor(cfg, user, e as McpEnv, 'social', fetch, isOwner(user, cfg));
+    const r = await callTool(ctx, 'inbox.list', { limit: 100 });
+    if (!r.ok) return json(200, { items: [], setup: r.status === 503 ? notApplied(user, 'migration 039_social_inbox.sql') : r.error });
+    const co = await sb(cfg, `/rest/v1/companies?id=eq.${user.co}&select=social_approvers`, { admin: true });
+    const approvers = cleanApprovers((Array.isArray(co.data) ? co.data[0] as Record<string, unknown> | undefined : undefined)?.['social_approvers']);
+    return json(200, { items: (r.data as { items: unknown[] }).items, canSend: canApprove(user.email, approvers, isOwner(user, cfg)), model: !!pick(e as LlmEnv, 'social') });
+  }),
+  POST: handle(async (request, e) => {
+    const { cfg, user } = await requireUser(request, e, 'social', { write: true });
+    const b = await readJson(request);
+    const ctx = ctxFor(cfg, user, e as McpEnv, 'social', fetch, isOwner(user, cfg));
+    const action = String(b.action || '');
+    const r = action === 'send' ? await callTool(ctx, 'inbox.reply', { id: Number(b.id), ...(typeof b.text === 'string' ? { text: b.text } : {}) })
+      : action === 'ignore' ? await callTool(ctx, 'inbox.ignore', { id: Number(b.id) })
+      : action === 'sync' ? await callTool(ctx, 'inbox.sync', {})
+      : null;
+    if (!r) return json(400, { error: 'الطلب مو مكتوب صح' });
+    return r.ok ? json(200, r.data) : json(r.status, { error: r.error });
   }),
 };

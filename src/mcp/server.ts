@@ -9,6 +9,7 @@ import './tools/ads';
 import './tools/connections';
 import './tools/social';
 import './tools/events';
+import './tools/inbox';
 
 export const PROTOCOL = '2025-06-18';
 const KNOWN = ['2025-06-18', '2025-03-26', '2024-11-05'];
